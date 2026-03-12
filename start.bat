@@ -28,6 +28,11 @@ if %errorlevel% equ 0 (
 )
 echo.
 
+:: Open Cashier app in Chrome
+echo Opening Le Vantage POS in browser...
+start "" "https://levantage-pos.vercel.app/cashier"
+echo.
+
 echo Starting Print Proxy...
 echo Listening for print jobs from Supabase...
 echo.

@@ -287,10 +287,11 @@ function buildBillPrintData(data) {
   }
 
   // Grand Total — large, bold, like Petpooja
+  // DOUBLE_SIZE = 2x width, so effective line is 16 chars (32/2)
   receipt += COMMANDS.SEPARATOR;
   receipt += COMMANDS.BOLD_ON;
   receipt += COMMANDS.DOUBLE_SIZE;
-  receipt += formatLine('Grand Total', '\u20B9' + roundedTotal.toFixed(0)) + '\n';
+  receipt += formatLine('Total', 'Rs.' + roundedTotal.toFixed(0), 16) + '\n';
   receipt += COMMANDS.NORMAL_SIZE;
   receipt += COMMANDS.BOLD_OFF;
   receipt += COMMANDS.SEPARATOR;

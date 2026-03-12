@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+Petpooja Screenshots/
+.claude/
+TESTING.md
+print-server/node_modules/

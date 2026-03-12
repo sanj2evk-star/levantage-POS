@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - Le Vantage Cafe</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fffbeb, #fed7aa);
+      color: #78350f;
+      padding: 1rem;
+    }
+    .container { text-align: center; max-width: 400px; }
+    .icon-wrap {
+      width: 80px; height: 80px;
+      margin: 0 auto 1.5rem;
+      background: #fef3c7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-wrap svg { width: 40px; height: 40px; color: #92400e; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #78350f; }
+    p { color: #92400e; margin-bottom: 2rem; font-size: 0.95rem; line-height: 1.5; }
+    button {
+      background: #d97706;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #b45309; }
+    button:active { background: #92400e; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
+        <path d="M12 9v4"/>
+        <path d="M12 17h.01"/>
+      </svg>
+    </div>
+    <h1>You're Offline</h1>
+    <p>Check your WiFi connection and try again. The POS system requires an internet connection to process orders.</p>
+    <button onclick="window.location.reload()">Retry Connection</button>
+  </div>
+</body>
+</html>

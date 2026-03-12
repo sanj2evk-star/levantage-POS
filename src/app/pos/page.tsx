@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Category, MenuItem, CartItem, Table as TableType, StationType, Profile } from '@/types/database'
-import { TABLE_SECTIONS, STATIONS } from '@/lib/constants'
+import { STATIONS } from '@/lib/constants'
+import { getTableDisplayName, groupTablesByDisplayGroup } from '@/lib/utils/table-display'
 import { printKOT } from '@/lib/utils/print'
 import { usePrintStatus } from '@/hooks/use-print-status'
 import { Button } from '@/components/ui/button'
@@ -47,6 +48,8 @@ import {
   Settings,
   X,
   ChevronRight,
+  ArrowLeft,
+  LayoutGrid,
   UtensilsCrossed,
   Receipt,
   ClipboardList,
@@ -66,6 +69,7 @@ export default function POSPage() {
 
   // POS State
   const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [menuView, setMenuView] = useState<'categories' | 'items'>('categories')
   const [searchQuery, setSearchQuery] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedTable, setSelectedTable] = useState<string>('')
@@ -297,6 +301,22 @@ export default function POSPage() {
 
   const selectedTableObj = tables.find((t) => t.id === selectedTable)
 
+  // Category item counts for cards
+  const categoryItemCounts = new Map<string, number>()
+  menuItems.forEach(item => {
+    categoryItemCounts.set(item.category_id, (categoryItemCounts.get(item.category_id) || 0) + 1)
+  })
+
+  function selectCategory(catId: string) {
+    setActiveCategory(catId)
+    setMenuView('items')
+    setSearchQuery('')
+  }
+
+  const activeCategoryName = activeCategory === 'all'
+    ? 'All Items'
+    : categories.find(c => c.id === activeCategory)?.name || ''
+
   if (isLoading || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -310,7 +330,7 @@ export default function POSPage() {
       {/* Left Panel: Menu */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="bg-white border-b px-4 py-3 flex items-center justify-between">
+        <header className="bg-white border-b px-4 py-3 flex items-center justify-between" style={{ flexShrink: 0 }}>
           <div className="flex items-center gap-3">
             <Coffee className="h-6 w-6 text-amber-700" />
             <h1 className="font-semibold text-lg hidden sm:block">Le Vantage Cafe</h1>
@@ -344,8 +364,8 @@ export default function POSPage() {
             </button>
           </div>
 
-          {/* Search - only in menu mode */}
-          {posMode === 'menu' && (
+          {/* Search - only when viewing items */}
+          {posMode === 'menu' && menuView === 'items' && (
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -356,7 +376,7 @@ export default function POSPage() {
               />
             </div>
           )}
-          {posMode === 'orders' && <div className="w-64" />}
+          {(posMode === 'orders' || (posMode === 'menu' && menuView === 'categories')) && <div className="w-64" />}
 
           <div className="flex items-center gap-2">
             {(profile?.role === 'admin' || profile?.role === 'manager') && (
@@ -371,73 +391,109 @@ export default function POSPage() {
           </div>
         </header>
 
-        {/* Category Tabs - Menu mode only */}
-        {posMode === 'menu' && (
-        <div className="bg-white border-b px-4 py-2 flex gap-2 overflow-x-auto">
-          <button
-            onClick={() => setActiveCategory('all')}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeCategory === 'all'
-                ? 'bg-amber-700 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            All
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                activeCategory === cat.id
-                  ? 'bg-amber-700 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-        )}
-
-        {/* Menu Grid - Menu mode */}
+        {/* Category Cards / Items View - Menu mode */}
         {posMode === 'menu' ? (
-        <ScrollArea className="flex-1 p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {filteredItems.map((item) => (
+          menuView === 'categories' ? (
+          /* ---- Category Cards Grid ---- */
+          <ScrollArea className="flex-1 p-4" style={{ minHeight: 0 }}>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+              {/* All Items card */}
               <button
-                key={item.id}
-                onClick={() => addToCart(item)}
-                className="bg-white rounded-xl p-3 text-left shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-200 transition-all active:scale-95"
+                onClick={() => selectCategory('all')}
+                className="bg-amber-700 text-white rounded-xl p-4 text-left shadow-sm active:scale-95 transition-transform hover:bg-amber-800"
               >
-                <div className="flex items-center gap-1.5 mb-1">
-                  {item.is_veg ? (
-                    <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-green-600">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-600" />
-                    </span>
-                  ) : (
-                    <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-red-600">
-                      <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
-                    </span>
-                  )}
-                  <span className="text-[10px] text-gray-400 uppercase">
-                    {STATIONS.find(s => s.value === item.station)?.label?.split(' ')[0]}
-                  </span>
-                </div>
-                <h3 className="font-medium text-sm leading-tight mb-1 line-clamp-2">
-                  {item.name}
-                </h3>
-                <p className="text-amber-700 font-bold text-sm">₹{item.price}</p>
+                <LayoutGrid className="h-6 w-6 mb-2 opacity-80" />
+                <h3 className="font-semibold text-sm">All Items</h3>
+                <p className="text-xs text-amber-100 mt-1">{menuItems.length} items</p>
               </button>
-            ))}
-          </div>
-          {filteredItems.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
-              <UtensilsCrossed className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No items found</p>
+
+              {categories.map(cat => {
+                const count = categoryItemCounts.get(cat.id) || 0
+                if (count === 0) return null
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => selectCategory(cat.id)}
+                    className="bg-white rounded-xl p-4 text-left shadow-sm border border-gray-100 active:scale-95 transition-transform hover:border-amber-200 hover:shadow-md"
+                  >
+                    <UtensilsCrossed className="h-5 w-5 mb-2 text-amber-700" />
+                    <h3 className="font-semibold text-sm line-clamp-2">{cat.name}</h3>
+                    <p className="text-xs text-gray-400 mt-1">{count} items</p>
+                  </button>
+                )
+              })}
             </div>
-          )}
-        </ScrollArea>
+          </ScrollArea>
+          ) : (
+          /* ---- Items Grid (after category selected) ---- */
+          <>
+            <div className="bg-white border-b px-4 py-2 flex items-center gap-3" style={{ flexShrink: 0 }}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => { setMenuView('categories'); setSearchQuery('') }}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <h2 className="font-semibold text-sm">{activeCategoryName}</h2>
+              <span className="text-xs text-gray-400">({filteredItems.length} items)</span>
+            </div>
+            <ScrollArea className="flex-1 p-4" style={{ minHeight: 0 }}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {filteredItems.map((item) => {
+                  const inCart = cart.find(c => c.menu_item.id === item.id)
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => addToCart(item)}
+                      className={`bg-white rounded-xl p-3 text-left shadow-sm border active:scale-95 transition-all hover:shadow-md ${
+                        inCart ? 'border-amber-300 ring-1 ring-amber-200' : 'border-gray-100 hover:border-amber-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="flex items-center gap-1.5">
+                          {item.is_veg ? (
+                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-green-600">
+                              <span className="h-1.5 w-1.5 rounded-full bg-green-600" />
+                            </span>
+                          ) : (
+                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-red-600">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                            </span>
+                          )}
+                          <span className="text-[10px] text-gray-400 uppercase">
+                            {STATIONS.find(s => s.value === item.station)?.label?.split(' ')[0]}
+                          </span>
+                        </span>
+                        {inCart && (
+                          <span className="text-[10px] bg-amber-700 text-white px-1.5 py-0.5 rounded-full font-semibold">
+                            {inCart.quantity}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-medium text-sm leading-tight mb-1 line-clamp-2">
+                        {item.name}
+                      </h3>
+                      <p className="text-amber-700 font-bold text-sm">₹{item.price}</p>
+                    </button>
+                  )
+                })}
+              </div>
+              {filteredItems.length === 0 && (
+                <div className="text-center py-12 text-gray-400">
+                  <UtensilsCrossed className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No items found</p>
+                  {searchQuery && (
+                    <Button variant="ghost" size="sm" className="mt-2" onClick={() => setSearchQuery('')}>
+                      Clear search
+                    </Button>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+          </>
+          )
         ) : (
         /* Orders Panel - Orders mode */
         <div className="flex-1 overflow-hidden">
@@ -501,7 +557,7 @@ export default function POSPage() {
               onClick={() => setTableDialogOpen(true)}
             >
               {selectedTableObj ? (
-                <span>Table {selectedTableObj.number} ({TABLE_SECTIONS.find(s => s.value === selectedTableObj.section)?.label})</span>
+                <span>{getTableDisplayName(selectedTableObj)}</span>
               ) : (
                 <span className="text-gray-400">Select Table</span>
               )}
@@ -511,7 +567,7 @@ export default function POSPage() {
         </div>
 
         {/* Cart Items */}
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 p-4" style={{ minHeight: 0 }}>
           {cart.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <ShoppingCart className="h-10 w-10 mx-auto mb-2 opacity-50" />
@@ -637,39 +693,33 @@ export default function POSPage() {
             <DialogTitle>Select Table</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            {TABLE_SECTIONS.map((section) => {
-              const sectionTables = tables.filter(
-                (t) => t.section === section.value
-              )
-              if (sectionTables.length === 0) return null
-              return (
-                <div key={section.value}>
-                  <p className="text-sm font-medium text-gray-500 mb-2">{section.label}</p>
-                  <div className="grid grid-cols-5 gap-2">
-                    {sectionTables.map((table) => (
-                      <button
-                        key={table.id}
-                        onClick={() => {
-                          setSelectedTable(table.id)
-                          setTableDialogOpen(false)
-                        }}
-                        disabled={table.status === 'occupied' && table.id !== selectedTable}
-                        className={`p-3 rounded-lg text-center border-2 transition-all ${
-                          table.id === selectedTable
-                            ? 'border-amber-700 bg-amber-50 text-amber-900'
-                            : table.status === 'occupied'
-                            ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
-                            : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50'
-                        }`}
-                      >
-                        <p className="text-lg font-bold">{table.number}</p>
-                        <p className="text-[10px] capitalize">{table.status}</p>
-                      </button>
-                    ))}
-                  </div>
+            {groupTablesByDisplayGroup(tables).map(group => (
+              <div key={group.group}>
+                <p className="text-sm font-medium text-gray-500 mb-2">{group.label}</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {group.tables.map((table) => (
+                    <button
+                      key={table.id}
+                      onClick={() => {
+                        setSelectedTable(table.id)
+                        setTableDialogOpen(false)
+                      }}
+                      disabled={table.status === 'occupied' && table.id !== selectedTable}
+                      className={`p-2 rounded-lg text-center border-2 transition-all ${
+                        table.id === selectedTable
+                          ? 'border-amber-700 bg-amber-50 text-amber-900'
+                          : table.status === 'occupied'
+                          ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
+                          : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50'
+                      }`}
+                    >
+                      <p className="text-sm font-bold">{getTableDisplayName(table)}</p>
+                      <p className="text-[10px] capitalize">{table.status}</p>
+                    </button>
+                  ))}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         </DialogContent>
       </Dialog>

@@ -212,19 +212,20 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   const subtotal = activeItems.reduce((sum, item) => sum + item.total_price, 0)
 
   const serviceCharge = serviceChargeRemoved ? 0 : Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
-  const subtotalWithService = subtotal + serviceCharge
 
   let discountAmount = 0
   if (discountType === 'percent' && discountValue) {
-    discountAmount = Math.round(subtotalWithService * parseFloat(discountValue) / 100 * 100) / 100
+    discountAmount = Math.round(subtotal * parseFloat(discountValue) / 100 * 100) / 100
   } else if (discountType === 'flat' && discountValue) {
     discountAmount = parseFloat(discountValue) || 0
   }
-  discountAmount = Math.min(discountAmount, subtotalWithService)
+  discountAmount = Math.min(discountAmount, subtotal)
 
-  const taxableAmount = Math.max(subtotalWithService - discountAmount, 0)
+  // GST is on food value only (subtotal - discount), NOT including service charge
+  const taxableAmount = Math.max(subtotal - discountAmount, 0)
   const gstAmount = Math.round(taxableAmount * GST_PERCENT / 100 * 100) / 100
-  const total = Math.max(Math.round((taxableAmount + gstAmount) * 100) / 100, 0)
+  // Total = food value + service charge + GST
+  const total = Math.max(Math.round((taxableAmount + serviceCharge + gstAmount) * 100) / 100, 0)
 
   const splitTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
   const splitRemaining = Math.round((total - splitTotal) * 100) / 100
@@ -236,7 +237,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   // Check if discount exceeds cashier threshold
   const effectiveDiscountPercent = discountType === 'percent'
     ? (parseFloat(discountValue) || 0)
-    : subtotalWithService > 0 ? (discountAmount / subtotalWithService) * 100 : 0
+    : subtotal > 0 ? (discountAmount / subtotal) * 100 : 0
   const needsDiscountAuth = userProfile?.role === 'cashier'
     && discountType !== 'none'
     && effectiveDiscountPercent > discountMaxPercent

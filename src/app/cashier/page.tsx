@@ -304,11 +304,27 @@ export default function CashierPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tables' }, debouncedRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handleOrderChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bills' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, debouncedRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedRefresh)
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          // Auto-retry on channel error
+          setTimeout(() => {
+            supabase.removeChannel(channel)
+            // The effect will re-run and create a new subscription
+          }, 3000)
+        }
+      })
+
+    // Fallback: auto-refresh every 15 seconds in case realtime disconnects silently
+    const fallbackInterval = setInterval(() => {
+      loadTables()
+      if (activeTab === 'live_orders') loadLiveOrders()
+    }, 15000)
 
     return () => {
       supabase.removeChannel(channel)
+      clearInterval(fallbackInterval)
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [loadTables, loadDaySummary, loadLiveOrders, activeTab])

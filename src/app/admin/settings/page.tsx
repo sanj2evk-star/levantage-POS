@@ -17,9 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Save, Printer, Lock } from 'lucide-react'
+import { Save, Printer, Lock, PlayCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
+import { testPrinter } from '@/lib/utils/print'
 
 export default function SettingsPage() {
   const { profile } = useAuth(['admin'])
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const [printers, setPrinters] = useState<PrintStation[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [testingPrinter, setTestingPrinter] = useState<string | null>(null)
   const loadData = useCallback(async () => {
     const supabase = createClient()
     const [settingsResult, printersResult] = await Promise.all([
@@ -203,10 +205,35 @@ export default function SettingsPage() {
                   <p className="font-medium">{printer.name}</p>
                   <p className="text-xs text-gray-500">{getStationLabel(printer.station_type)}</p>
                 </div>
-                <Switch
-                  checked={printer.is_active}
-                  onCheckedChange={(v) => updatePrinter(printer, 'is_active', v)}
-                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!printer.is_active || !printer.printer_ip || testingPrinter === printer.id}
+                    onClick={async () => {
+                      setTestingPrinter(printer.id)
+                      try {
+                        const ok = await testPrinter(printer.printer_ip, printer.port)
+                        if (ok) {
+                          toast.success(`Test sent to ${printer.name}`)
+                        } else {
+                          toast.error(`Failed to send test to ${printer.name}`)
+                        }
+                      } catch {
+                        toast.error(`Error testing ${printer.name}`)
+                      } finally {
+                        setTestingPrinter(null)
+                      }
+                    }}
+                  >
+                    <PlayCircle className="h-3.5 w-3.5 mr-1" />
+                    {testingPrinter === printer.id ? 'Sending...' : 'Test'}
+                  </Button>
+                  <Switch
+                    checked={printer.is_active}
+                    onCheckedChange={(v) => updatePrinter(printer, 'is_active', v)}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">

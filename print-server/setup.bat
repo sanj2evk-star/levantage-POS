@@ -64,6 +64,8 @@ echo   - package.json...
 powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/sanj2evk-star/levantage-POS/main/print-server/package.json' -OutFile '%INSTALL_DIR%\package.json'" 2>nul
 echo   - start.bat...
 powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/sanj2evk-star/levantage-POS/main/print-server/start.bat' -OutFile '%INSTALL_DIR%\start.bat'" 2>nul
+echo   - start-hidden.vbs (background launcher)...
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/sanj2evk-star/levantage-POS/main/print-server/start-hidden.vbs' -OutFile '%INSTALL_DIR%\start-hidden.vbs'" 2>nul
 echo [OK] Files downloaded
 echo.
 
@@ -90,16 +92,19 @@ echo.
 echo [OK] Dependencies installed
 echo.
 
-:: Create auto-start shortcut in Startup folder
-echo Setting up auto-start...
+:: Remove old startup shortcut if exists
 set "STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%STARTUP_FOLDER%\LeVantage-PrintProxy.lnk'); $sc.TargetPath = '%INSTALL_DIR%\start.bat'; $sc.WorkingDirectory = '%INSTALL_DIR%'; $sc.WindowStyle = 7; $sc.Description = 'Le Vantage Print Proxy'; $sc.Save()" 2>nul
-echo [OK] Auto-start enabled
+if exist "%STARTUP_FOLDER%\LeVantage-PrintProxy.lnk" del "%STARTUP_FOLDER%\LeVantage-PrintProxy.lnk"
+
+:: Create auto-start with HIDDEN launcher (no window at all)
+echo Setting up auto-start (background mode)...
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%STARTUP_FOLDER%\LeVantage-PrintProxy.lnk'); $sc.TargetPath = 'wscript.exe'; $sc.Arguments = '"""%INSTALL_DIR%\start-hidden.vbs""" '; $sc.WorkingDirectory = '%INSTALL_DIR%'; $sc.Description = 'Le Vantage Print Proxy (Background)'; $sc.Save()" 2>nul
+echo [OK] Auto-start enabled (runs completely hidden)
 echo.
 
-:: Create a desktop shortcut too
+:: Create desktop shortcut - hidden version
 echo Creating desktop shortcut...
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%USERPROFILE%\Desktop\Start Print Proxy.lnk'); $sc.TargetPath = '%INSTALL_DIR%\start.bat'; $sc.WorkingDirectory = '%INSTALL_DIR%'; $sc.Description = 'Start Le Vantage Print Proxy'; $sc.Save()" 2>nul
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%USERPROFILE%\Desktop\Start Print Proxy.lnk'); $sc.TargetPath = 'wscript.exe'; $sc.Arguments = '"""%INSTALL_DIR%\start-hidden.vbs""" '; $sc.WorkingDirectory = '%INSTALL_DIR%'; $sc.Description = 'Start Le Vantage Print Proxy'; $sc.Save()" 2>nul
 echo [OK] Desktop shortcut created
 echo.
 

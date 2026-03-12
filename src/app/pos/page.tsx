@@ -271,6 +271,7 @@ export default function POSPage() {
         currentOrderType as 'dine_in' | 'takeaway',
         printItems,
         orderNotes || undefined,
+        profile?.name || null,
       ).catch(() => {
         toast.error(`KOT print failed for ${station} - check printer`)
       })

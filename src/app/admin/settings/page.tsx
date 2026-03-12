@@ -130,6 +130,16 @@ export default function SettingsPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label>FSSAI License No.</Label>
+              <Input
+                value={settings.fssai_number || ''}
+                onChange={(e) => setSettings({ ...settings, fssai_number: e.target.value })}
+                placeholder="e.g. 13621011002089"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>GST Percentage</Label>
               <Input
                 type="number"

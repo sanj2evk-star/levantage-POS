@@ -23,14 +23,19 @@ const COMMANDS = {
   ALIGN_CENTER: ESC + 'a' + '\x01',
   ALIGN_LEFT: ESC + 'a' + '\x00',
   ALIGN_RIGHT: ESC + 'a' + '\x02',
+  UNDERLINE_ON: ESC + '-' + '\x01',
+  UNDERLINE_OFF: ESC + '-' + '\x00',
   LINE_FEED: '\n',
   CUT: GS + 'V' + '\x41' + '\x03', // Partial cut with 3-line feed
   SEPARATOR: '--------------------------------\n',
+  DOUBLE_SEPARATOR: '================================\n',
   OPEN_DRAWER: ESC + 'p' + '\x00' + '\x19' + '\xFA',
 };
 
 // Format a line with left and right aligned text (for 32-char width)
 function formatLine(left, right, width = 32) {
+  left = String(left);
+  right = String(right);
   const space = width - left.length - right.length;
   if (space <= 0) return left.substring(0, width - right.length) + right;
   return left + ' '.repeat(space) + right;
@@ -43,50 +48,64 @@ function padText(text, width, align = 'left') {
   return str.padEnd(width);
 }
 
-// Build KOT print data (for cafe counter, mocktail counter, juice bar printers)
+// Build KOT print data — Petpooja style
 function buildKOTPrintData(data) {
-  const { kotNumber, orderNumber, tableName, orderType, items, notes, stationName } = data;
+  const { kotNumber, orderNumber, tableName, orderType, items, notes, stationName, waiterName } = data;
 
   let receipt = '';
   receipt += COMMANDS.INIT;
 
-  // Header - station name
+  // Header — station name + KOT (like Petpooja: "COFFEE COUNTER KOT")
   receipt += COMMANDS.ALIGN_CENTER;
-  receipt += COMMANDS.DOUBLE_SIZE;
-  receipt += (stationName || 'KOT').toUpperCase() + '\n';
-  receipt += COMMANDS.NORMAL_SIZE;
-  receipt += COMMANDS.SEPARATOR;
-
-  // KOT number and order info
-  receipt += COMMANDS.ALIGN_LEFT;
   receipt += COMMANDS.BOLD_ON;
-  receipt += formatLine('KOT: ' + kotNumber, orderNumber) + '\n';
+  receipt += COMMANDS.DOUBLE_SIZE;
+  receipt += (stationName || 'KOT').toUpperCase() + ' KOT\n';
+  receipt += COMMANDS.NORMAL_SIZE;
   receipt += COMMANDS.BOLD_OFF;
 
-  // Table or takeaway
+  // Date/Time
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  receipt += dateStr + ' ' + timeStr + '\n';
+  receipt += COMMANDS.SEPARATOR;
+
+  // KOT number
+  receipt += COMMANDS.ALIGN_LEFT;
+  receipt += COMMANDS.BOLD_ON;
+  receipt += 'KOT: ' + kotNumber + '\n';
+  receipt += COMMANDS.BOLD_OFF;
+
+  // Order type — Dine In / Takeaway
   if (orderType === 'takeaway') {
     receipt += COMMANDS.DOUBLE_HEIGHT;
     receipt += 'TAKEAWAY\n';
     receipt += COMMANDS.NORMAL_SIZE;
-  } else if (tableName) {
+  } else {
+    receipt += 'Dine In\n';
+  }
+
+  // Table name — like Petpooja: "Table No C2"
+  if (tableName) {
     receipt += COMMANDS.DOUBLE_HEIGHT;
-    receipt += 'Table: ' + tableName + '\n';
+    receipt += 'Table No ' + tableName + '\n';
     receipt += COMMANDS.NORMAL_SIZE;
   }
 
-  // Date/Time
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' });
-  receipt += formatLine(dateStr, timeStr) + '\n';
+  // Captain (waiter name) — like Petpooja: "Captain: GIRIDHAR"
+  if (waiterName) {
+    receipt += 'Captain: ' + waiterName.toUpperCase() + '\n';
+  }
+
   receipt += COMMANDS.SEPARATOR;
 
-  // Items
+  // Items header
   receipt += COMMANDS.BOLD_ON;
   receipt += formatLine('Item', 'Qty') + '\n';
   receipt += COMMANDS.BOLD_OFF;
   receipt += COMMANDS.SEPARATOR;
 
+  // Items — large text
   for (const item of items) {
     receipt += COMMANDS.DOUBLE_HEIGHT;
     receipt += formatLine(
@@ -99,7 +118,7 @@ function buildKOTPrintData(data) {
       receipt += '  > ' + item.variant + '\n';
     }
     if (item.notes) {
-      receipt += '  ** ' + item.notes + ' **\n';
+      receipt += '  (Note) ' + item.notes + '\n';
     }
   }
 
@@ -119,11 +138,12 @@ function buildKOTPrintData(data) {
   return receipt;
 }
 
-// Build bill/receipt print data (for cashier printer)
+// Build bill/receipt print data — Petpooja style
 function buildBillPrintData(data) {
   const {
-    cafeName, cafeAddress, gstNumber,
+    cafeName, cafeAddress, gstNumber, fssaiNumber,
     billNumber, orderNumber, tableName, orderType,
+    cashierName, waiterName,
     items, subtotal, gstPercent, gstAmount,
     serviceCharge, discountAmount, discountType,
     total, paymentMode, payments,
@@ -132,70 +152,126 @@ function buildBillPrintData(data) {
   let receipt = '';
   receipt += COMMANDS.INIT;
 
-  // Header
+  // Duplicate label for reprints (at top, like Petpooja)
+  if (data.isReprint) {
+    receipt += COMMANDS.ALIGN_CENTER;
+    receipt += COMMANDS.BOLD_ON;
+    receipt += 'Duplicate\n';
+    receipt += COMMANDS.BOLD_OFF;
+  }
+
+  // Header — Restaurant name (large)
   receipt += COMMANDS.ALIGN_CENTER;
   receipt += COMMANDS.DOUBLE_SIZE;
-  receipt += (cafeName || 'Levantage Cafe') + '\n';
+  receipt += (cafeName || 'Le Vantage Cafe Bar') + '\n';
   receipt += COMMANDS.NORMAL_SIZE;
-  if (cafeAddress) receipt += cafeAddress + '\n';
-  if (gstNumber) receipt += 'GSTIN: ' + gstNumber + '\n';
+
+  // Address
+  if (cafeAddress) {
+    receipt += cafeAddress + '\n';
+  }
+
+  // GSTIN
+  if (gstNumber) {
+    receipt += 'GSTIN: ' + gstNumber + '\n';
+  }
+
   receipt += COMMANDS.SEPARATOR;
 
-  // Bill info
+  // Date, time, table info — like Petpooja layout
   receipt += COMMANDS.ALIGN_LEFT;
-  if (billNumber === 'PREVIEW') {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  const isPreview = paymentMode === 'preview';
+
+  if (isPreview) {
     receipt += formatLine('Order: ' + orderNumber, '** PREVIEW **') + '\n';
   } else {
-    receipt += formatLine('Bill: ' + billNumber, orderNumber) + '\n';
-  }
+    // Extract short bill number from full format (e.g., "BILL-20260312-003" -> "3")
+    let shortBillNo = billNumber;
+    if (billNumber && billNumber.includes('-')) {
+      const parts = billNumber.split('-');
+      const lastPart = parts[parts.length - 1];
+      shortBillNo = String(parseInt(lastPart, 10) || lastPart);
+    }
 
-  if (orderType === 'takeaway') {
-    receipt += 'Type: TAKEAWAY\n';
-  } else if (tableName) {
-    receipt += 'Table: ' + tableName + '\n';
-  }
+    receipt += formatLine('Date: ' + dateStr, timeStr) + '\n';
 
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  receipt += formatLine(dateStr, timeStr) + '\n';
-  receipt += COMMANDS.SEPARATOR;
+    // Dine In / Takeaway with table
+    if (orderType === 'takeaway') {
+      receipt += 'Type: TAKEAWAY\n';
+    } else if (tableName) {
+      receipt += 'Dine In: ' + tableName + '\n';
+    }
 
-  // Items header
-  receipt += COMMANDS.BOLD_ON;
-  receipt += formatLine(padText('Item', 16), padText('Qty', 4) + padText('Amt', 8, 'right')) + '\n';
-  receipt += COMMANDS.BOLD_OFF;
-  receipt += COMMANDS.SEPARATOR;
+    // Cashier + Bill No — like Petpooja: "Cashier: CASHIER  Bill No.: 30"
+    const cashierLabel = cashierName ? 'Cashier: ' + cashierName.toUpperCase() : '';
+    const billLabel = 'Bill No.: ' + shortBillNo;
+    if (cashierLabel) {
+      receipt += formatLine(cashierLabel, billLabel) + '\n';
+    } else {
+      receipt += 'Bill No.: ' + shortBillNo + '\n';
+    }
 
-  // Items
-  for (const item of items) {
-    const amt = (item.unitPrice * item.quantity).toFixed(0);
-    receipt += formatLine(
-      padText(item.name, 20),
-      padText(item.quantity.toString(), 4) + padText(amt, 8, 'right')
-    ) + '\n';
-    if (item.variant) {
-      receipt += '  ' + item.variant + '\n';
+    // Waiter — like Petpooja: "Assign to MAHESH"
+    if (waiterName) {
+      receipt += 'Assign to ' + waiterName.toUpperCase() + '\n';
     }
   }
 
   receipt += COMMANDS.SEPARATOR;
 
-  // Totals
-  receipt += formatLine('Subtotal', subtotal.toFixed(2)) + '\n';
+  // Items header — 4 columns like Petpooja: Item | Qty | Price | Amount
+  receipt += COMMANDS.BOLD_ON;
+  // Item(16) Qty(3) Price(6) Amount(7) = 32
+  receipt += padText('Item', 14) + padText('Qty', 4, 'right') + padText('Price', 7, 'right') + padText('Amount', 7, 'right') + '\n';
+  receipt += COMMANDS.BOLD_OFF;
+  receipt += COMMANDS.SEPARATOR;
 
-  if (gstAmount > 0) {
-    receipt += formatLine('GST (' + gstPercent + '%)', gstAmount.toFixed(2)) + '\n';
+  // Items — 4 columns
+  for (const item of items) {
+    const amt = (item.unitPrice * item.quantity).toFixed(0);
+    const price = item.unitPrice.toFixed(0);
+    const name = item.name.length > 14 ? item.name : item.name;
+
+    if (item.name.length > 14) {
+      // Long name: print name on first line, numbers on second
+      receipt += item.name + '\n';
+      receipt += padText('', 14) + padText(item.quantity.toString(), 4, 'right') + padText(price, 7, 'right') + padText(amt, 7, 'right') + '\n';
+    } else {
+      receipt += padText(name, 14) + padText(item.quantity.toString(), 4, 'right') + padText(price, 7, 'right') + padText(amt, 7, 'right') + '\n';
+    }
+
+    if (item.variant) {
+      receipt += '  ' + item.variant + '\n';
+    }
   }
 
+  // Total quantity
+  const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
+  receipt += COMMANDS.SEPARATOR;
+  receipt += formatLine('Total Qty: ' + totalQty, 'Sub') + '\n';
+  receipt += formatLine('', 'Total  ' + subtotal.toFixed(2)) + '\n';
+
+  // Service Charge (SC)
   if (serviceCharge > 0) {
-    receipt += formatLine('Service Charge', serviceCharge.toFixed(2)) + '\n';
+    receipt += formatLine('SC', serviceCharge.toFixed(2)) + '\n';
   }
-
   if (data.serviceChargeRemoved) {
-    receipt += formatLine('Service Charge', 'WAIVED') + '\n';
+    receipt += formatLine('SC', 'WAIVED') + '\n';
   }
 
+  // Split GST — SGST 2.5% + CGST 2.5% like Petpooja (instead of combined 5%)
+  if (gstAmount > 0) {
+    const halfGst = gstPercent / 2;
+    const halfAmount = (gstAmount / 2).toFixed(2);
+    receipt += formatLine('SGST ' + halfGst.toFixed(1) + '%', halfAmount) + '\n';
+    receipt += formatLine('CGST ' + halfGst.toFixed(1) + '%', halfAmount) + '\n';
+  }
+
+  // Discount
   if (discountAmount > 0) {
     const discLabel = discountType === 'percent' ? 'Discount (%)' : 'Discount';
     receipt += formatLine(discLabel, '-' + discountAmount.toFixed(2)) + '\n';
@@ -204,16 +280,24 @@ function buildBillPrintData(data) {
     }
   }
 
+  // Round off — round total to nearest rupee
+  const roundedTotal = Math.round(total);
+  const roundOff = roundedTotal - total;
+  if (Math.abs(roundOff) >= 0.01) {
+    const roundOffStr = roundOff >= 0 ? '+' + roundOff.toFixed(2) : roundOff.toFixed(2);
+    receipt += formatLine('Round off', roundOffStr) + '\n';
+  }
+
+  // Grand Total — large, bold, like Petpooja
   receipt += COMMANDS.SEPARATOR;
   receipt += COMMANDS.BOLD_ON;
-  receipt += COMMANDS.DOUBLE_HEIGHT;
-  receipt += formatLine('TOTAL', 'Rs. ' + total.toFixed(2)) + '\n';
+  receipt += COMMANDS.DOUBLE_SIZE;
+  receipt += formatLine('Grand Total', '\u20B9' + roundedTotal.toFixed(0)) + '\n';
   receipt += COMMANDS.NORMAL_SIZE;
   receipt += COMMANDS.BOLD_OFF;
   receipt += COMMANDS.SEPARATOR;
 
   // Payment info
-  const isPreview = paymentMode === 'preview';
   if (isPreview) {
     receipt += '\n';
     receipt += COMMANDS.ALIGN_CENTER;
@@ -222,7 +306,7 @@ function buildBillPrintData(data) {
     receipt += COMMANDS.BOLD_OFF;
     receipt += COMMANDS.ALIGN_LEFT;
   } else {
-    if (paymentMode) {
+    if (paymentMode && paymentMode !== 'split') {
       receipt += formatLine('Payment', paymentMode.toUpperCase()) + '\n';
     }
     if (payments && payments.length > 0) {
@@ -232,22 +316,21 @@ function buildBillPrintData(data) {
     }
   }
 
-  if (data.isReprint) {
-    receipt += '\n';
-    receipt += COMMANDS.ALIGN_CENTER;
-    receipt += COMMANDS.BOLD_ON;
-    receipt += '*** DUPLICATE ***\n';
-    receipt += COMMANDS.BOLD_OFF;
-    receipt += COMMANDS.ALIGN_LEFT;
-  }
-
+  // Footer
   receipt += '\n';
   receipt += COMMANDS.ALIGN_CENTER;
+
+  // FSSAI License — like Petpooja
+  if (fssaiNumber) {
+    receipt += 'FSSAI Lic No. ' + fssaiNumber + '\n';
+  }
+
   if (isPreview) {
     receipt += 'Please verify the bill.\n';
   } else {
-    receipt += 'Thank you! Visit again.\n';
+    receipt += 'Thank You! Please Visit Again!\n';
   }
+
   receipt += '\n\n';
   receipt += COMMANDS.CUT;
 
@@ -410,7 +493,7 @@ async function cleanupOldJobs() {
 // Startup
 async function main() {
   console.log('========================================');
-  console.log('  Le Vantage Cafe - Print Proxy v2.0');
+  console.log('  Le Vantage Cafe - Print Proxy v2.1');
   console.log('========================================');
   console.log(`Supabase: ${SUPABASE_URL}`);
   console.log('');

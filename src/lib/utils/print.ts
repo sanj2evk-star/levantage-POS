@@ -9,6 +9,7 @@ interface KOTPayload {
   tableName: string | null
   orderType: 'dine_in' | 'takeaway'
   stationName: string
+  waiterName?: string | null
   items: { name: string; quantity: number; variant?: string; notes?: string }[]
   notes?: string
 }
@@ -31,9 +32,12 @@ interface BillPayload {
   total: number
   paymentMode: string | null
   payments?: { mode: string; amount: number }[]
+  cashierName?: string | null
+  waiterName?: string | null
   cafeName?: string
   cafeAddress?: string
   gstNumber?: string
+  fssaiNumber?: string
 }
 
 // Get printer configuration for a station from the database
@@ -82,7 +86,8 @@ export async function printKOT(
   tableSection: string | null,
   orderType: 'dine_in' | 'takeaway',
   items: { name: string; quantity: number; variant?: string; notes?: string }[],
-  orderNotes?: string
+  orderNotes?: string,
+  waiterName?: string | null
 ): Promise<boolean> {
   try {
     const printer = await getPrinterForStation(station)
@@ -102,6 +107,7 @@ export async function printKOT(
       tableName,
       orderType,
       stationName: stationLabel,
+      waiterName: waiterName || null,
       items,
       notes: orderNotes,
     }
@@ -114,7 +120,7 @@ export async function printKOT(
 }
 
 // Print bill/receipt on cashier printer
-export async function printBill(billData: Omit<BillPayload, 'cafeName' | 'cafeAddress' | 'gstNumber'>): Promise<boolean> {
+export async function printBill(billData: Omit<BillPayload, 'cafeName' | 'cafeAddress' | 'gstNumber' | 'fssaiNumber'>): Promise<boolean> {
   try {
     const printer = await getPrinterForStation('billing' as StationType)
     if (!printer) {
@@ -127,15 +133,16 @@ export async function printBill(billData: Omit<BillPayload, 'cafeName' | 'cafeAd
     const { data: settings } = await supabase
       .from('settings')
       .select('key, value')
-      .in('key', ['cafe_name', 'cafe_address', 'gst_number'])
+      .in('key', ['cafe_name', 'cafe_address', 'gst_number', 'fssai_number'])
 
     const settingsMap = new Map(settings?.map(s => [s.key, s.value]) || [])
 
     const payload: BillPayload = {
       ...billData,
-      cafeName: settingsMap.get('cafe_name') || 'Le Vantage Cafe',
+      cafeName: settingsMap.get('cafe_name') || 'Le Vantage Cafe Bar',
       cafeAddress: settingsMap.get('cafe_address') || '',
       gstNumber: settingsMap.get('gst_number') || '',
+      fssaiNumber: settingsMap.get('fssai_number') || '',
     }
 
     return await insertPrintJob('bill', printer.ip, printer.port, payload as unknown as Record<string, unknown>)
@@ -170,9 +177,10 @@ export async function reprintKOT(
   tableSection: string | null,
   orderType: 'dine_in' | 'takeaway',
   items: { name: string; quantity: number; variant?: string; notes?: string }[],
-  orderNotes?: string
+  orderNotes?: string,
+  waiterName?: string | null
 ): Promise<boolean> {
-  return printKOT(station, `${kotNumber} (REPRINT)`, orderNumber, tableNumber, tableSection, orderType, items, orderNotes)
+  return printKOT(station, `${kotNumber} (REPRINT)`, orderNumber, tableNumber, tableSection, orderType, items, orderNotes, waiterName)
 }
 
 // Test printer connection

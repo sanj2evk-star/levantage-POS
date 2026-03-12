@@ -362,7 +362,8 @@ export default function KitchenPage() {
                               quantity: i.quantity,
                               notes: i.notes || undefined,
                             })),
-                            kot.order?.notes || undefined
+                            kot.order?.notes || undefined,
+                            null,
                           )
                           if (success) {
                             toast.success('KOT reprint sent')

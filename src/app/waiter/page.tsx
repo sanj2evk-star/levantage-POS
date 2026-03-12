@@ -340,6 +340,8 @@ export default function WaiterPage() {
         tableSec,
         currentOrderType as 'dine_in' | 'takeaway',
         printItems,
+        undefined,
+        profile?.name || null,
       ).catch(() => {
         toast.error(`KOT print failed for ${station}`)
       })

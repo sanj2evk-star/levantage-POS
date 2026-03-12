@@ -86,7 +86,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   const [discountPin, setDiscountPin] = useState('')
   const [discountPinVerified, setDiscountPinVerified] = useState(false)
   const [discountPinVerifying, setDiscountPinVerifying] = useState(false)
-  const [userProfile, setUserProfile] = useState<{ role: string } | null>(null)
+  const [userProfile, setUserProfile] = useState<{ role: string; name: string } | null>(null)
 
   // NC (No Charge) state
   const [ncDialogOpen, setNcDialogOpen] = useState(false)
@@ -145,7 +145,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, name')
           .eq('id', user.id)
           .single()
         if (profile) setUserProfile(profile)
@@ -203,6 +203,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   }, [order])
 
   if (!order) return null
+
+  // Lookup waiter name from waiters prop
+  const waiterName = waiters?.find(w => w.id === order.waiter_id)?.name || null
+  const cashierName = userProfile?.name || null
 
   const activeItems = localItems.filter(i => !i.is_cancelled)
   const subtotal = activeItems.reduce((sum, item) => sum + item.total_price, 0)
@@ -305,6 +309,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         discountReason: discountReason || undefined,
         total,
         paymentMode: 'preview',
+        cashierName,
+        waiterName,
       })
       toast.success('Bill printed — show to customer')
     } catch {
@@ -462,6 +468,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         payments: paymentMode === 'split'
           ? splitPayments.map(p => ({ mode: p.mode, amount: parseFloat(p.amount) || 0 }))
           : undefined,
+        cashierName,
+        waiterName,
       }).catch(() => {
         toast.error('Bill print failed - check printer', { duration: 5000 })
       })
@@ -589,6 +597,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         discountReason: discountReason || undefined,
         total,
         paymentMode: partialAmt > 0 ? selectedMode : null,
+        cashierName,
+        waiterName,
       }).catch(() => {
         toast.error('Bill print failed - check printer', { duration: 5000 })
       })
@@ -921,6 +931,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         isReprint: true,
         total: Number(existingBill.total),
         paymentMode: existingBill.payment_mode,
+        cashierName,
+        waiterName,
       }),
       {
         loading: 'Sending to printer...',

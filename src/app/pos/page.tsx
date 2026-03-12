@@ -701,21 +701,51 @@ export default function POSPage() {
                   {group.tables.map((table) => (
                     <button
                       key={table.id}
-                      onClick={() => {
-                        setSelectedTable(table.id)
-                        setTableDialogOpen(false)
+                      onClick={async () => {
+                        if (table.status === 'occupied' && table.current_order_id) {
+                          // Occupied table — load existing order and switch to "add items" mode
+                          const supabase = createClient()
+                          const { data: orderData } = await supabase
+                            .from('orders')
+                            .select(`
+                              id, order_number, status, order_type, created_at, table_id, notes,
+                              table:tables!table_id(number, section),
+                              items:order_items(
+                                id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
+                                menu_item:menu_items(name, is_veg)
+                              )
+                            `)
+                            .eq('id', table.current_order_id)
+                            .single()
+
+                          if (orderData) {
+                            setAddingToOrder(orderData)
+                            setSelectedTable(table.id)
+                            setTableDialogOpen(false)
+                            setPosMode('menu')
+                            toast.info(`Adding items to ${orderData.order_number} (${getTableDisplayName(table)})`)
+                          } else {
+                            toast.error('Could not load order for this table')
+                          }
+                        } else {
+                          // Available table — new order
+                          setSelectedTable(table.id)
+                          setAddingToOrder(null)
+                          setTableDialogOpen(false)
+                        }
                       }}
-                      disabled={table.status === 'occupied' && table.id !== selectedTable}
                       className={`p-2 rounded-lg text-center border-2 transition-all ${
                         table.id === selectedTable
                           ? 'border-amber-700 bg-amber-50 text-amber-900'
                           : table.status === 'occupied'
-                          ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
+                          ? 'border-green-200 bg-green-50 text-green-700 hover:border-green-400 cursor-pointer'
                           : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50'
                       }`}
                     >
                       <p className="text-sm font-bold">{getTableDisplayName(table)}</p>
-                      <p className="text-[10px] capitalize">{table.status}</p>
+                      <p className="text-[10px] capitalize">
+                        {table.status === 'occupied' ? 'running' : table.status}
+                      </p>
                     </button>
                   ))}
                 </div>

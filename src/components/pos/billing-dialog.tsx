@@ -1131,272 +1131,253 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl w-[95vw] h-[85vh] !grid-rows-[auto_1fr] overflow-hidden">
-          <DialogHeader>
-            <div className="flex items-center justify-between pr-8">
-              <DialogTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                {tableName} — {order.order_number}
-                <Badge variant="outline" className="text-xs ml-1">
-                  {order.order_type === 'takeaway' ? 'Takeaway' : 'Dine In'}
-                </Badge>
-              </DialogTitle>
-              {/* Action buttons in header */}
+        <DialogContent className="max-w-md w-[95vw] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden">
+          {/* ── HEADER ── */}
+          <div className="px-4 pt-4 pb-3 border-b bg-white shrink-0">
+            <div className="flex items-center justify-between mb-2 pr-8">
+              <div>
+                <h2 className="text-lg font-bold">{tableName}</h2>
+                <p className="text-xs text-gray-400">{order.order_number} · {order.order_type === 'takeaway' ? 'Takeaway' : 'Dine In'}</p>
+              </div>
+              {/* Quick actions */}
               {order.status !== 'completed' && (
-                <div className="flex gap-1.5">
+                <div className="flex gap-1">
                   {onAddItems && (
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { onClose(); onAddItems(order) }}>
-                      <Plus className="h-3 w-3 mr-1" />Add
-                    </Button>
+                    <button onClick={() => { onClose(); onAddItems(order) }}
+                      className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-amber-700 transition-colors"
+                      title="Add Items"><Plus className="h-4 w-4" /></button>
                   )}
                   {tables && tables.length > 0 && order.order_type === 'dine_in' && (
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setTransferDialogOpen(true)}>
-                      <ArrowRightLeft className="h-3 w-3 mr-1" />Transfer
-                    </Button>
+                    <button onClick={() => setTransferDialogOpen(true)}
+                      className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-amber-700 transition-colors"
+                      title="Transfer Table"><ArrowRightLeft className="h-4 w-4" /></button>
                   )}
                   {waiters && waiters.length > 0 && (
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setReassignDialogOpen(true)}>
-                      <UserRound className="h-3 w-3 mr-1" />Reassign
-                    </Button>
+                    <button onClick={() => setReassignDialogOpen(true)}
+                      className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-amber-700 transition-colors"
+                      title="Reassign Waiter"><UserRound className="h-4 w-4" /></button>
                   )}
                 </div>
               )}
             </div>
-          </DialogHeader>
+          </div>
 
-          <div className="flex gap-4 overflow-hidden min-h-0">
-            {/* LEFT COLUMN: Items + Charges */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              {/* Items List (scrollable) */}
-              <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-3 space-y-1.5">
-                {activeItems.map(item => (
-                  <div key={item.id} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-1.5 min-w-0">
-                      <span className={`h-2 w-2 rounded-full shrink-0 ${item.menu_item?.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
-                      <span className="truncate">{item.quantity}x {item.menu_item?.name}</span>
-                    </span>
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      <span className="font-medium">₹{item.total_price.toFixed(2)}</span>
-                      {order.status !== 'completed' && (
-                        <Button variant="ghost" size="icon" className="h-5 w-5 text-red-400 hover:text-red-600"
-                          onClick={() => openCancelDialog(item.id, item.menu_item?.name || 'Item')}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
+          {/* ── SCROLLABLE BODY ── */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {/* Items */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50/50 divide-y divide-gray-100">
+              {activeItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${item.menu_item?.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-sm truncate">{item.quantity}× {item.menu_item?.name}</span>
                   </div>
-                ))}
-                {localItems.filter(i => i.is_cancelled).length > 0 && (
-                  <div className="pt-1.5 border-t border-gray-200">
-                    {localItems.filter(i => i.is_cancelled).map(item => (
-                      <div key={item.id} className="flex justify-between text-xs text-gray-400 line-through">
-                        <span>{item.quantity}x {item.menu_item?.name}</span>
-                        <span>₹{item.total_price.toFixed(2)}</span>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <span className="text-sm font-medium tabular-nums">₹{item.total_price.toFixed(0)}</span>
+                    {order.status !== 'completed' && (
+                      <button onClick={() => openCancelDialog(item.id, item.menu_item?.name || 'Item')}
+                        className="h-5 w-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
-                )}
+                </div>
+              ))}
+              {localItems.filter(i => i.is_cancelled).map(item => (
+                <div key={item.id} className="flex justify-between px-3 py-1.5 text-xs text-gray-400 line-through">
+                  <span>{item.quantity}× {item.menu_item?.name}</span>
+                  <span>₹{item.total_price.toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Charges */}
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between text-gray-500">
+                <span>Subtotal</span><span className="tabular-nums">₹{subtotal.toFixed(2)}</span>
               </div>
-
-              {/* Charges Summary (fixed at bottom of left column) */}
-              <div className="pt-3 space-y-1.5 shrink-0">
-                <div className="flex justify-between text-sm">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+              <div className="flex justify-between text-gray-500">
+                <span className="flex items-center gap-1.5">
+                  SC ({SERVICE_CHARGE_PERCENT}%)
+                  <button className="text-[10px] text-red-400 hover:text-red-600 underline" onClick={() => setServiceChargeRemoved(!serviceChargeRemoved)}>
+                    {serviceChargeRemoved ? 'add' : 'remove'}
+                  </button>
+                </span>
+                <span className={`tabular-nums ${serviceChargeRemoved ? 'line-through text-gray-300' : ''}`}>
+                  ₹{(Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100).toFixed(2)}
+                </span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount</span><span className="tabular-nums">-₹{discountAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <span>SC ({SERVICE_CHARGE_PERCENT}%)</span>
-                    <button className="text-xs text-red-500 hover:underline" onClick={() => setServiceChargeRemoved(!serviceChargeRemoved)}>
-                      {serviceChargeRemoved ? 'add' : 'remove'}
-                    </button>
-                  </div>
-                  <span className={serviceChargeRemoved ? 'line-through text-gray-400' : ''}>
-                    ₹{(Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100).toFixed(2)}
-                  </span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Discount</span>
-                    <span>-₹{discountAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span>GST ({GST_PERCENT}%)</span>
-                  <span>₹{gstAmount.toFixed(2)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-bold text-xl">
-                  <span>Total</span>
-                  <span className="text-amber-700">₹{total.toFixed(2)}</span>
-                </div>
+              )}
+              <div className="flex justify-between text-gray-500">
+                <span>GST ({GST_PERCENT}%)</span><span className="tabular-nums">₹{gstAmount.toFixed(2)}</span>
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Discount + Payment + Actions */}
-            <div className="w-72 flex flex-col shrink-0 overflow-y-auto space-y-3">
-              {/* Discount */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-gray-500 uppercase">Discount</Label>
+            {/* Total */}
+            <div className="flex justify-between items-center bg-amber-50 rounded-xl px-4 py-3">
+              <span className="font-bold text-lg">Total</span>
+              <span className="font-bold text-2xl text-amber-700 tabular-nums">₹{total.toFixed(2)}</span>
+            </div>
+
+            {/* Discount Toggle */}
+            <details className="group">
+              <summary className="flex items-center justify-between cursor-pointer text-xs text-gray-400 hover:text-gray-600 py-1">
+                <span className="flex items-center gap-1"><Percent className="h-3 w-3" /> Discount</span>
+                <span className="text-[10px] group-open:hidden">tap to expand</span>
+              </summary>
+              <div className="pt-2 space-y-2">
                 <div className="flex gap-1.5">
-                  <Button variant={discountType === 'none' ? 'default' : 'outline'} size="sm" className="h-7 text-xs"
+                  <Button variant={discountType === 'none' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
                     onClick={() => { setDiscountType('none'); setDiscountValue('') }}>None</Button>
-                  <Button variant={discountType === 'percent' ? 'default' : 'outline'} size="sm" className="h-7 text-xs"
-                    onClick={() => setDiscountType('percent')}>
-                    <Percent className="h-3 w-3 mr-0.5" />%
-                  </Button>
-                  <Button variant={discountType === 'flat' ? 'default' : 'outline'} size="sm" className="h-7 text-xs"
-                    onClick={() => setDiscountType('flat')}>
-                    <Minus className="h-3 w-3 mr-0.5" />Flat
-                  </Button>
+                  <Button variant={discountType === 'percent' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
+                    onClick={() => setDiscountType('percent')}>% Percent</Button>
+                  <Button variant={discountType === 'flat' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
+                    onClick={() => setDiscountType('flat')}>₹ Flat</Button>
                 </div>
                 {discountType !== 'none' && (
-                  <div className="space-y-1.5">
-                    <Input type="number" placeholder={discountType === 'percent' ? 'Enter %' : 'Enter amount'}
+                  <div className="flex gap-2">
+                    <Input type="number" placeholder={discountType === 'percent' ? '%' : '₹ amount'}
                       value={discountValue} onChange={e => { setDiscountValue(e.target.value); setDiscountPinVerified(false) }}
-                      className="h-8 text-sm" />
-                    <Input placeholder="Reason (optional)" value={discountReason}
-                      onChange={e => setDiscountReason(e.target.value)} className="h-8 text-sm" />
+                      className="h-8 text-sm flex-1" />
+                    <Input placeholder="Reason" value={discountReason}
+                      onChange={e => setDiscountReason(e.target.value)} className="h-8 text-sm flex-1" />
                   </div>
                 )}
                 {needsDiscountAuth && (
-                  <div className="flex items-center gap-1.5 text-amber-600 text-xs">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span>PIN required ({effectiveDiscountPercent.toFixed(0)}% &gt; {discountMaxPercent}%)</span>
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />PIN required ({effectiveDiscountPercent.toFixed(0)}% &gt; {discountMaxPercent}%)
+                  </p>
+                )}
+              </div>
+            </details>
+
+            {/* Payment Mode */}
+            {!payLaterMode && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Payment</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { mode: 'cash' as const, icon: Banknote, label: 'Cash' },
+                    { mode: 'upi' as const, icon: Smartphone, label: 'UPI' },
+                    { mode: 'card' as const, icon: CreditCard, label: 'Card' },
+                    { mode: 'split' as const, icon: Split, label: 'Split' },
+                    { mode: 'nc' as const, icon: Gift, label: 'NC' },
+                  ].map(pm => (
+                    <button key={pm.mode}
+                      onClick={() => {
+                        if (pm.mode === 'nc') { setNcDialogOpen(true); setNcReason(''); setNcPin(''); return }
+                        if (pm.mode === 'split') {
+                          setPaymentMode('split'); setReferenceNumber('')
+                          if (splitPayments.length === 0) setSplitPayments([
+                            { mode: 'cash', amount: '', reference_number: '' },
+                            { mode: 'upi', amount: '', reference_number: '' },
+                          ])
+                          return
+                        }
+                        setPaymentMode(pm.mode); setSplitPayments([]); setReferenceNumber('')
+                      }}
+                      className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 transition-all text-xs font-medium ${
+                        paymentMode === pm.mode
+                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-sm'
+                          : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <pm.icon className="h-5 w-5" />
+                      {pm.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* UPI/Card ref */}
+                {(paymentMode === 'upi' || paymentMode === 'card') && (
+                  <Input placeholder={`${paymentMode === 'upi' ? 'UPI' : 'Card'} reference${requirePaymentRef ? ' *' : ''}`}
+                    value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-9" />
+                )}
+
+                {/* Split details */}
+                {paymentMode === 'split' && (
+                  <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium">Split Payments</span>
+                      <Button variant="outline" size="sm" className="h-6 text-xs" onClick={addSplitPayment}>+ Add</Button>
+                    </div>
+                    {splitPayments.map((payment, index) => (
+                      <div key={index} className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <select value={payment.mode} onChange={e => updateSplitPayment(index, 'mode', e.target.value)}
+                            className="h-8 rounded-lg border border-gray-200 px-2 text-xs bg-white">
+                            <option value="cash">Cash</option><option value="upi">UPI</option>
+                            <option value="card">Card</option><option value="nc">NC</option>
+                          </select>
+                          <Input type="number" placeholder="Amount" value={payment.amount}
+                            onChange={e => updateSplitPayment(index, 'amount', e.target.value)} className="flex-1 h-8 text-xs" />
+                          <button onClick={() => removeSplitPayment(index)}
+                            className="h-6 w-6 flex items-center justify-center rounded text-red-400 hover:bg-red-50">
+                            <X className="h-3 w-3" /></button>
+                        </div>
+                        {(payment.mode === 'upi' || payment.mode === 'card') && (
+                          <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`} value={payment.reference_number}
+                            onChange={e => updateSplitPayment(index, 'reference_number', e.target.value)} className="h-7 text-xs" />
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-xs pt-2 border-t border-gray-200">
+                      <span>Remaining</span>
+                      <span className={`font-semibold ${splitRemaining > 0.5 ? 'text-red-500' : 'text-green-500'}`}>
+                        ₹{splitRemaining.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
+            )}
 
-              <Separator />
-
-              {/* Payment Mode */}
-              {!payLaterMode && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-gray-500 uppercase">Payment</Label>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    <Button variant={paymentMode === 'cash' ? 'default' : 'outline'} className="flex-col h-12 gap-0.5 px-1"
-                      onClick={() => { setPaymentMode('cash'); setSplitPayments([]); setReferenceNumber('') }}>
-                      <Banknote className="h-4 w-4" /><span className="text-[10px]">Cash</span>
-                    </Button>
-                    <Button variant={paymentMode === 'upi' ? 'default' : 'outline'} className="flex-col h-12 gap-0.5 px-1"
-                      onClick={() => { setPaymentMode('upi'); setSplitPayments([]); setReferenceNumber('') }}>
-                      <Smartphone className="h-4 w-4" /><span className="text-[10px]">UPI</span>
-                    </Button>
-                    <Button variant={paymentMode === 'card' ? 'default' : 'outline'} className="flex-col h-12 gap-0.5 px-1"
-                      onClick={() => { setPaymentMode('card'); setSplitPayments([]); setReferenceNumber('') }}>
-                      <CreditCard className="h-4 w-4" /><span className="text-[10px]">Card</span>
-                    </Button>
-                    <Button variant={paymentMode === 'split' ? 'default' : 'outline'} className="flex-col h-12 gap-0.5 px-1"
-                      onClick={() => {
-                        setPaymentMode('split'); setReferenceNumber('')
-                        if (splitPayments.length === 0) setSplitPayments([
-                          { mode: 'cash', amount: '', reference_number: '' },
-                          { mode: 'upi', amount: '', reference_number: '' },
-                        ])
-                      }}>
-                      <Split className="h-4 w-4" /><span className="text-[10px]">Split</span>
-                    </Button>
-                    <Button variant={paymentMode === 'nc' ? 'default' : 'outline'} className="flex-col h-12 gap-0.5 px-1"
-                      onClick={() => { setNcDialogOpen(true); setNcReason(''); setNcPin('') }}>
-                      <Gift className="h-4 w-4" /><span className="text-[10px]">NC</span>
-                    </Button>
-                  </div>
-
-                  {/* Reference Number */}
-                  {(paymentMode === 'upi' || paymentMode === 'card') && (
-                    <Input placeholder={`${paymentMode === 'upi' ? 'UPI' : 'Card'} ref / txn ID${requirePaymentRef ? ' *' : ''}`}
-                      value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-8 text-sm" />
-                  )}
-
-                  {/* Split Details */}
-                  {paymentMode === 'split' && (
-                    <div className="space-y-1.5 bg-gray-50 rounded-lg p-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-medium">Split Payments</span>
-                        <Button variant="outline" size="sm" className="h-6 text-xs" onClick={addSplitPayment}>+ Add</Button>
-                      </div>
-                      {splitPayments.map((payment, index) => (
-                        <div key={index} className="space-y-1">
-                          <div className="flex items-center gap-1.5">
-                            <select value={payment.mode} onChange={e => updateSplitPayment(index, 'mode', e.target.value)}
-                              className="h-7 rounded-md border border-gray-200 px-1.5 text-xs">
-                              <option value="cash">Cash</option>
-                              <option value="upi">UPI</option>
-                              <option value="card">Card</option>
-                              <option value="nc">NC</option>
-                            </select>
-                            <Input type="number" placeholder="Amt" value={payment.amount}
-                              onChange={e => updateSplitPayment(index, 'amount', e.target.value)} className="flex-1 h-7 text-xs" />
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400"
-                              onClick={() => removeSplitPayment(index)}><X className="h-3 w-3" /></Button>
-                          </div>
-                          {(payment.mode === 'upi' || payment.mode === 'card') && (
-                            <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`} value={payment.reference_number}
-                              onChange={e => updateSplitPayment(index, 'reference_number', e.target.value)} className="h-7 text-xs" />
-                          )}
-                        </div>
+            {/* Pay Later */}
+            {payLaterMode && (
+              <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 space-y-2">
+                <p className="text-xs font-medium text-amber-700 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Pay Later</p>
+                <Input type="number" placeholder="Amount paying now (0 = fully outstanding)"
+                  value={partialAmount} onChange={e => setPartialAmount(e.target.value)} className="h-9" />
+                {(parseFloat(partialAmount) || 0) > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {PAYMENT_MODES.map(pm => (
+                        <Button key={pm.value} variant={paymentMode === pm.value ? 'default' : 'outline'}
+                          size="sm" className="h-8 text-xs" onClick={() => setPaymentMode(pm.value as PaymentMode)}>{pm.label}</Button>
                       ))}
-                      <div className="flex justify-between text-xs pt-1.5 border-t">
-                        <span>Remaining</span>
-                        <span className={splitRemaining > 0.5 ? 'text-red-500 font-medium' : 'text-green-500 font-medium'}>
-                          ₹{splitRemaining.toFixed(2)}
-                        </span>
-                      </div>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Pay Later Mode */}
-              {payLaterMode && (
-                <div className="space-y-2 bg-amber-50 rounded-lg p-2.5 border border-amber-200">
-                  <div className="flex items-center gap-1.5 text-amber-700 font-medium text-xs">
-                    <Clock className="h-3.5 w-3.5" />Pay Later
+                    {(paymentMode === 'upi' || paymentMode === 'card') && (
+                      <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`}
+                        value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-8 text-sm" />
+                    )}
                   </div>
-                  <Input type="number" placeholder="Amount now (0 = fully outstanding)"
-                    value={partialAmount} onChange={e => setPartialAmount(e.target.value)} className="h-8 text-sm" />
-                  {(parseFloat(partialAmount) || 0) > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {PAYMENT_MODES.map(pm => (
-                          <Button key={pm.value} variant={paymentMode === pm.value ? 'default' : 'outline'}
-                            size="sm" className="h-7 text-xs" onClick={() => setPaymentMode(pm.value as PaymentMode)}>
-                            {pm.label}
-                          </Button>
-                        ))}
-                      </div>
-                      {(paymentMode === 'upi' || paymentMode === 'card') && (
-                        <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`}
-                          value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-8 text-sm" />
-                      )}
-                    </div>
-                  )}
-                  <p className="text-xs text-amber-600">Outstanding: ₹{(total - (parseFloat(partialAmount) || 0)).toFixed(2)}</p>
-                </div>
-              )}
-
-              {/* Spacer to push actions to bottom */}
-              <div className="flex-1" />
-
-              {/* Action Buttons */}
-              <div className="space-y-2 shrink-0">
-                <div className="flex gap-1.5">
-                  <Button variant="outline" size="sm" className="h-9 flex-1 text-xs"
-                    onClick={() => { setPayLaterMode(!payLaterMode); if (!payLaterMode) { setPaymentMode(''); setPartialAmount('') } }}>
-                    <Clock className="h-3.5 w-3.5 mr-1" />{payLaterMode ? 'Full Pay' : 'Pay Later'}
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-9 flex-1 text-xs" onClick={printPreviewBill} disabled={printing}>
-                    <Printer className="h-3.5 w-3.5 mr-1" />{printing ? 'Printing...' : 'Print Bill'}
-                  </Button>
-                </div>
-                <Button className="w-full h-11 text-sm bg-green-600 hover:bg-green-700"
-                  onClick={settleBill} disabled={settling || (!payLaterMode && !paymentMode)}>
-                  {settling ? 'Settling...' : payLaterMode
-                    ? `Create Bill — ₹${total.toFixed(2)}`
-                    : `Settle Bill — ₹${total.toFixed(2)}`}
-                </Button>
+                )}
+                <p className="text-xs text-amber-600">Outstanding: ₹{(total - (parseFloat(partialAmount) || 0)).toFixed(2)}</p>
               </div>
+            )}
+          </div>
+
+          {/* ── STICKY FOOTER ── */}
+          <div className="px-4 py-3 border-t bg-white shrink-0 space-y-2">
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="h-9 flex-1"
+                onClick={() => { setPayLaterMode(!payLaterMode); if (!payLaterMode) { setPaymentMode(''); setPartialAmount('') } }}>
+                <Clock className="h-3.5 w-3.5 mr-1" />{payLaterMode ? 'Full Pay' : 'Pay Later'}
+              </Button>
+              <Button variant="outline" size="sm" className="h-9 flex-1" onClick={printPreviewBill} disabled={printing}>
+                <Printer className="h-3.5 w-3.5 mr-1" />{printing ? '...' : 'Print'}
+              </Button>
             </div>
+            <Button className="w-full h-12 text-base font-semibold bg-green-600 hover:bg-green-700 rounded-xl shadow-lg shadow-green-600/20"
+              onClick={settleBill} disabled={settling || (!payLaterMode && !paymentMode)}>
+              {settling ? 'Settling...' : payLaterMode
+                ? `Create Bill — ₹${total.toFixed(2)}`
+                : `Settle — ₹${total.toFixed(2)}`}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

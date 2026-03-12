@@ -107,26 +107,39 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE — Delete a staff user
 export async function DELETE(request: NextRequest) {
-  if (!(await verifyAdmin())) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    if (!(await verifyAdmin())) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { userId } = await request.json()
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+    }
+
+    const admin = createAdminClient()
+
+    // Nullify references in orders first
+    await admin.from('orders').update({ waiter_id: null }).eq('waiter_id', userId)
+
+    // Delete profile
+    const { error: profileError } = await admin.from('profiles').delete().eq('id', userId)
+    if (profileError) {
+      console.error('Profile delete error:', profileError)
+      // Continue anyway — auth user delete is more important
+    }
+
+    // Delete auth user
+    const { error } = await admin.auth.admin.deleteUser(userId)
+    if (error) {
+      console.error('Auth delete error:', error)
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('Delete user error:', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
-
-  const { userId } = await request.json()
-
-  if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 })
-  }
-
-  const admin = createAdminClient()
-
-  // Delete profile first (cascade might handle this, but be explicit)
-  await admin.from('profiles').delete().eq('id', userId)
-
-  // Delete auth user
-  const { error } = await admin.auth.admin.deleteUser(userId)
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
-  return NextResponse.json({ success: true })
 }

@@ -194,9 +194,9 @@ export default function KitchenPage() {
           <h1 className="font-bold text-lg">Kitchen Display</h1>
           <span
             className={`h-2 w-2 rounded-full ${
-              printStatus === null ? 'bg-gray-500' : printStatus ? 'bg-green-500' : 'bg-red-500'
+              printStatus ? 'bg-green-500' : 'bg-red-500'
             }`}
-            title={printStatus === null ? 'Checking printer...' : printStatus ? 'Print server connected' : 'Print server offline'}
+            title={printStatus ? 'Print proxy connected' : 'Print proxy offline'}
           />
         </div>
         <div className="flex items-center gap-2">

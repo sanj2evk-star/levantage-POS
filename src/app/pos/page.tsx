@@ -336,9 +336,9 @@ export default function POSPage() {
             <h1 className="font-semibold text-lg hidden sm:block">Le Vantage Cafe</h1>
             <span
               className={`h-2 w-2 rounded-full ${
-                printStatus === null ? 'bg-gray-300' : printStatus ? 'bg-green-500' : 'bg-red-500'
+                printStatus ? 'bg-green-500' : 'bg-red-500'
               }`}
-              title={printStatus === null ? 'Checking printer...' : printStatus ? 'Print server connected' : 'Print server offline'}
+              title={printStatus ? 'Print proxy connected' : 'Print proxy offline'}
             />
           </div>
 

@@ -3,11 +3,7 @@ import { STATIONS } from '@/lib/constants'
 import { getTableDisplayName } from '@/lib/utils/table-display'
 import { StationType } from '@/types/database'
 
-const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'http://localhost:9100'
-
-interface KOTPrintRequest {
-  printerIp: string
-  printerPort?: number
+interface KOTPayload {
   kotNumber: string
   orderNumber: string
   tableName: string | null
@@ -17,12 +13,7 @@ interface KOTPrintRequest {
   notes?: string
 }
 
-interface BillPrintRequest {
-  printerIp: string
-  printerPort?: number
-  cafeName?: string
-  cafeAddress?: string
-  gstNumber?: string
+interface BillPayload {
   billNumber: string
   orderNumber: string
   tableName: string | null
@@ -40,6 +31,9 @@ interface BillPrintRequest {
   total: number
   paymentMode: string | null
   payments?: { mode: string; amount: number }[]
+  cafeName?: string
+  cafeAddress?: string
+  gstNumber?: string
 }
 
 // Get printer configuration for a station from the database
@@ -54,6 +48,29 @@ async function getPrinterForStation(station: StationType): Promise<{ ip: string;
 
   if (!data) return null
   return { ip: data.printer_ip, port: data.port }
+}
+
+// Insert a print job into Supabase for the print proxy to pick up
+async function insertPrintJob(
+  type: 'kot' | 'bill' | 'open_drawer' | 'test',
+  printerIp: string,
+  printerPort: number,
+  payload: Record<string, unknown>
+): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from('print_jobs').insert({
+    type,
+    printer_ip: printerIp,
+    printer_port: printerPort,
+    payload,
+  })
+
+  if (error) {
+    console.error(`Failed to insert print job (${type}):`, error.message)
+    return false
+  }
+
+  return true
 }
 
 // Send KOT to the appropriate station printer
@@ -79,9 +96,7 @@ export async function printKOT(
       ? getTableDisplayName({ number: tableNumber, section: tableSection })
       : null
 
-    const payload: KOTPrintRequest = {
-      printerIp: printer.ip,
-      printerPort: printer.port,
+    const payload: KOTPayload = {
       kotNumber,
       orderNumber,
       tableName,
@@ -91,19 +106,7 @@ export async function printKOT(
       notes: orderNotes,
     }
 
-    const response = await fetch(`${PRINT_SERVER_URL}/print/kot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    if (!response.ok) {
-      const err = await response.json()
-      console.error(`KOT print failed for ${station}:`, err.error)
-      return false
-    }
-
-    return true
+    return await insertPrintJob('kot', printer.ip, printer.port, payload as unknown as Record<string, unknown>)
   } catch (err) {
     console.error(`KOT print error for ${station}:`, err)
     return false
@@ -111,7 +114,7 @@ export async function printKOT(
 }
 
 // Print bill/receipt on cashier printer
-export async function printBill(billData: Omit<BillPrintRequest, 'printerIp' | 'printerPort'>): Promise<boolean> {
+export async function printBill(billData: Omit<BillPayload, 'cafeName' | 'cafeAddress' | 'gstNumber'>): Promise<boolean> {
   try {
     const printer = await getPrinterForStation('billing' as StationType)
     if (!printer) {
@@ -128,28 +131,14 @@ export async function printBill(billData: Omit<BillPrintRequest, 'printerIp' | '
 
     const settingsMap = new Map(settings?.map(s => [s.key, s.value]) || [])
 
-    const payload: BillPrintRequest = {
+    const payload: BillPayload = {
       ...billData,
-      printerIp: printer.ip,
-      printerPort: printer.port,
       cafeName: settingsMap.get('cafe_name') || 'Le Vantage Cafe',
       cafeAddress: settingsMap.get('cafe_address') || '',
       gstNumber: settingsMap.get('gst_number') || '',
     }
 
-    const response = await fetch(`${PRINT_SERVER_URL}/print/bill`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    if (!response.ok) {
-      const err = await response.json()
-      console.error('Bill print failed:', err.error)
-      return false
-    }
-
-    return true
+    return await insertPrintJob('bill', printer.ip, printer.port, payload as unknown as Record<string, unknown>)
   } catch (err) {
     console.error('Bill print error:', err)
     return false
@@ -165,13 +154,7 @@ export async function openCashDrawer(): Promise<boolean> {
       return false
     }
 
-    const response = await fetch(`${PRINT_SERVER_URL}/print/open-drawer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ printerIp: printer.ip, printerPort: printer.port }),
-    })
-
-    return response.ok
+    return await insertPrintJob('open_drawer', printer.ip, printer.port, {})
   } catch (err) {
     console.error('Cash drawer error:', err)
     return false
@@ -195,25 +178,26 @@ export async function reprintKOT(
 // Test printer connection
 export async function testPrinter(printerIp: string, printerPort: number = 9100): Promise<boolean> {
   try {
-    const response = await fetch(`${PRINT_SERVER_URL}/print/test`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ printerIp, printerPort }),
-    })
-
-    return response.ok
+    return await insertPrintJob('test', printerIp, printerPort, {})
   } catch {
     return false
   }
 }
 
-// Check if print server is running
+// Check if print proxy is alive by looking for stale pending jobs
 export async function checkPrintServer(): Promise<boolean> {
   try {
-    const response = await fetch(`${PRINT_SERVER_URL}/health`, {
-      signal: AbortSignal.timeout(2000),
-    })
-    return response.ok
+    const supabase = createClient()
+    // Check if there are stale pending jobs (proxy not picking them up)
+    const thirtySecsAgo = new Date(Date.now() - 30 * 1000).toISOString()
+    const { data: staleJobs } = await supabase
+      .from('print_jobs')
+      .select('id')
+      .eq('status', 'pending')
+      .lt('created_at', thirtySecsAgo)
+      .limit(1)
+    // If there are stale pending jobs, proxy is likely down
+    return !staleJobs || staleJobs.length === 0
   } catch {
     return false
   }

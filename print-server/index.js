@@ -1,12 +1,13 @@
-const express = require('express');
-const cors = require('cors');
+require('dotenv').config();
+
+const { createClient } = require('@supabase/supabase-js');
 const net = require('net');
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+// Configuration - read from environment or .env file
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ivhmvhnrxiodpneflszu.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 
-const PORT = 9100;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ESC/POS command constants
 const ESC = '\x1B';
@@ -235,6 +236,25 @@ function buildBillPrintData(data) {
   return receipt;
 }
 
+// Build test print data
+function buildTestPrintData(printerIp) {
+  let receipt = '';
+  receipt += COMMANDS.INIT;
+  receipt += COMMANDS.ALIGN_CENTER;
+  receipt += COMMANDS.DOUBLE_SIZE;
+  receipt += 'PRINTER TEST\n';
+  receipt += COMMANDS.NORMAL_SIZE;
+  receipt += COMMANDS.SEPARATOR;
+  receipt += 'Levantage Cafe\n';
+  receipt += 'Printer: ' + printerIp + '\n';
+  receipt += 'Time: ' + new Date().toLocaleString('en-IN') + '\n';
+  receipt += COMMANDS.SEPARATOR;
+  receipt += 'Printer is working!\n';
+  receipt += '\n\n';
+  receipt += COMMANDS.CUT;
+  return receipt;
+}
+
 // Send data to printer via TCP
 function sendToPrinter(printerIp, printerPort, data) {
   return new Promise((resolve, reject) => {
@@ -264,105 +284,133 @@ function sendToPrinter(printerIp, printerPort, data) {
   });
 }
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Process a single print job
+async function processJob(job) {
+  console.log(`[PRINT] Processing job ${job.id} - type: ${job.type}, printer: ${job.printer_ip}:${job.printer_port}`);
 
-// Print KOT
-app.post('/print/kot', async (req, res) => {
+  // Mark as printing
+  await supabase.from('print_jobs').update({ status: 'printing' }).eq('id', job.id);
+
   try {
-    const { printerIp, printerPort = 9100, ...kotData } = req.body;
-
-    if (!printerIp) {
-      return res.status(400).json({ error: 'printerIp is required' });
+    let printData;
+    switch (job.type) {
+      case 'kot':
+        printData = buildKOTPrintData(job.payload);
+        break;
+      case 'bill':
+        printData = buildBillPrintData(job.payload);
+        break;
+      case 'open_drawer':
+        printData = COMMANDS.OPEN_DRAWER;
+        break;
+      case 'test':
+        printData = buildTestPrintData(job.printer_ip);
+        break;
+      default:
+        throw new Error(`Unknown job type: ${job.type}`);
     }
 
-    const printData = buildKOTPrintData(kotData);
-    await sendToPrinter(printerIp, printerPort, printData);
+    await sendToPrinter(job.printer_ip, job.printer_port || 9100, printData);
 
-    res.json({ success: true, message: `KOT sent to ${printerIp}:${printerPort}` });
+    await supabase.from('print_jobs').update({
+      status: 'printed',
+      printed_at: new Date().toISOString()
+    }).eq('id', job.id);
+
+    console.log(`[PRINT] Job ${job.id} printed successfully`);
   } catch (err) {
-    console.error('KOT print error:', err.message);
-    res.status(500).json({ error: err.message });
+    await supabase.from('print_jobs').update({
+      status: 'failed',
+      error: err.message
+    }).eq('id', job.id);
+
+    console.error(`[PRINT] Job ${job.id} failed:`, err.message);
   }
-});
+}
 
-// Print Bill/Receipt
-app.post('/print/bill', async (req, res) => {
-  try {
-    const { printerIp, printerPort = 9100, ...billData } = req.body;
+// Process any pending jobs (on startup or reconnect)
+async function processPendingJobs() {
+  const { data: jobs, error } = await supabase
+    .from('print_jobs')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
 
-    if (!printerIp) {
-      return res.status(400).json({ error: 'printerIp is required' });
+  if (error) {
+    console.error('[STARTUP] Error fetching pending jobs:', error.message);
+    return;
+  }
+
+  if (jobs && jobs.length > 0) {
+    console.log(`[STARTUP] Found ${jobs.length} pending job(s)`);
+    for (const job of jobs) {
+      await processJob(job);
     }
-
-    const printData = buildBillPrintData(billData);
-    await sendToPrinter(printerIp, printerPort, printData);
-
-    res.json({ success: true, message: `Bill sent to ${printerIp}:${printerPort}` });
-  } catch (err) {
-    console.error('Bill print error:', err.message);
-    res.status(500).json({ error: err.message });
+  } else {
+    console.log('[STARTUP] No pending jobs');
   }
-});
+}
 
-// Open cash drawer (connected to cashier printer)
-app.post('/print/open-drawer', async (req, res) => {
-  try {
-    const { printerIp, printerPort = 9100 } = req.body;
+// Subscribe to realtime INSERT events on print_jobs
+function startListening() {
+  console.log('[PROXY] Subscribing to print_jobs realtime...');
 
-    if (!printerIp) {
-      return res.status(400).json({ error: 'printerIp is required' });
-    }
+  supabase
+    .channel('print-jobs')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'print_jobs',
+      filter: 'status=eq.pending'
+    }, (payload) => {
+      processJob(payload.new);
+    })
+    .subscribe((status) => {
+      console.log(`[PROXY] Realtime status: ${status}`);
+      if (status === 'SUBSCRIBED') {
+        console.log('[PROXY] Listening for print jobs...');
+        // Process any pending jobs that arrived while we were connecting
+        processPendingJobs();
+      }
+    });
+}
 
-    await sendToPrinter(printerIp, printerPort, COMMANDS.OPEN_DRAWER);
+// Cleanup old printed/failed jobs (older than 24 hours)
+async function cleanupOldJobs() {
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase
+    .from('print_jobs')
+    .delete()
+    .in('status', ['printed', 'failed'])
+    .lt('created_at', oneDayAgo);
 
-    res.json({ success: true, message: 'Cash drawer opened' });
-  } catch (err) {
-    console.error('Cash drawer error:', err.message);
-    res.status(500).json({ error: err.message });
+  if (error) {
+    console.error('[CLEANUP] Error cleaning old jobs:', error.message);
   }
-});
+}
 
-// Test printer connection
-app.post('/print/test', async (req, res) => {
-  try {
-    const { printerIp, printerPort = 9100 } = req.body;
+// Startup
+async function main() {
+  console.log('========================================');
+  console.log('  Le Vantage Cafe - Print Proxy v2.0');
+  console.log('========================================');
+  console.log(`Supabase: ${SUPABASE_URL}`);
+  console.log('');
 
-    if (!printerIp) {
-      return res.status(400).json({ error: 'printerIp is required' });
-    }
-
-    const testData = COMMANDS.INIT +
-      COMMANDS.ALIGN_CENTER +
-      COMMANDS.DOUBLE_SIZE +
-      'PRINTER TEST\n' +
-      COMMANDS.NORMAL_SIZE +
-      COMMANDS.SEPARATOR +
-      'Levantage Cafe\n' +
-      'Printer: ' + printerIp + '\n' +
-      'Time: ' + new Date().toLocaleString('en-IN') + '\n' +
-      COMMANDS.SEPARATOR +
-      'Printer is working!\n' +
-      '\n\n' +
-      COMMANDS.CUT;
-
-    await sendToPrinter(printerIp, printerPort, testData);
-
-    res.json({ success: true, message: `Test page sent to ${printerIp}:${printerPort}` });
-  } catch (err) {
-    console.error('Test print error:', err.message);
-    res.status(500).json({ error: err.message, connected: false });
+  if (!SUPABASE_KEY) {
+    console.error('ERROR: SUPABASE_KEY environment variable is required!');
+    console.error('Set it in .env file or as environment variable');
+    process.exit(1);
   }
-});
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Levantage Print Server running on http://0.0.0.0:${PORT}`);
-  console.log('Endpoints:');
-  console.log('  GET  /health          - Health check');
-  console.log('  POST /print/kot       - Print KOT to station printer');
-  console.log('  POST /print/bill      - Print bill/receipt');
-  console.log('  POST /print/open-drawer - Open cash drawer');
-  console.log('  POST /print/test      - Test printer connection');
-});
+  // Process any pending jobs first
+  await processPendingJobs();
+
+  // Start realtime subscription
+  startListening();
+
+  // Periodic cleanup of old jobs (every hour)
+  setInterval(cleanupOldJobs, 60 * 60 * 1000);
+}
+
+main().catch(console.error);

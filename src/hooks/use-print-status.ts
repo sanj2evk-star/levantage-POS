@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { checkPrintServer } from '@/lib/utils/print'
 
 export function usePrintStatus(intervalMs = 30000) {
-  const [isConnected, setIsConnected] = useState<boolean | null>(null)
+  const [isConnected, setIsConnected] = useState<boolean>(true) // optimistic default
 
   useEffect(() => {
     let mounted = true

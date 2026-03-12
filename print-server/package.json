@@ -1,14 +1,14 @@
 {
-  "name": "levantage-print-server",
-  "version": "1.0.0",
-  "description": "Local print proxy for Levantage Cafe KOT and bill printing",
+  "name": "levantage-print-proxy",
+  "version": "2.0.0",
+  "description": "Print proxy - listens to Supabase print_jobs and sends to thermal printers on LAN",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.5"
   }
 }

@@ -134,6 +134,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   // Existing bill payments
   const [existingPayments, setExistingPayments] = useState<Payment[]>([])
 
+  // Print preview state (must be before any early return)
+  const [printing, setPrinting] = useState(false)
+
   // Fetch user role and settings on mount
   useEffect(() => {
     async function fetchConfig() {
@@ -277,8 +280,6 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     setDiscountPin('')
     toast.success('Discount authorized')
   }
-
-  const [printing, setPrinting] = useState(false)
 
   async function printPreviewBill() {
     if (!order) return

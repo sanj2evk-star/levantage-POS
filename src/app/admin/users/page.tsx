@@ -6,7 +6,7 @@ import { Profile, UserRole } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Trash2, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 
 const ROLES = [
@@ -46,6 +46,7 @@ const ROLES = [
 export default function UserManagement() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   // New user dialog
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -66,7 +67,12 @@ export default function UserManagement() {
     role: 'waiter' as UserRole,
     phone: '',
     pin: '',
+    password: '',
   })
+
+  // Delete confirm dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingProfile, setDeletingProfile] = useState<Profile | null>(null)
 
   const loadProfiles = useCallback(async () => {
     const supabase = createClient()
@@ -93,39 +99,36 @@ export default function UserManagement() {
       return
     }
 
-    const supabase = createClient()
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: { name: form.name },
-      },
-    })
-
-    if (authError) {
-      toast.error(authError.message)
-      return
-    }
-
-    if (authData.user) {
-      // Update profile with role and details
-      await supabase
-        .from('profiles')
-        .update({
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
           name: form.name,
           role: form.role,
-          phone: form.phone || null,
-          pin: form.pin || null,
-        })
-        .eq('id', authData.user.id)
-    }
+          phone: form.phone,
+          pin: form.pin,
+        }),
+      })
 
-    toast.success(`Staff member "${form.name}" created`)
-    setDialogOpen(false)
-    setForm({ email: '', password: '', name: '', role: 'waiter', phone: '', pin: '' })
-    loadProfiles()
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to create user')
+        return
+      }
+
+      toast.success(`Staff member "${form.name}" created`)
+      setDialogOpen(false)
+      setForm({ email: '', password: '', name: '', role: 'waiter', phone: '', pin: '' })
+      loadProfiles()
+    } catch {
+      toast.error('Failed to create user')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function openEdit(profile: Profile) {
@@ -135,31 +138,76 @@ export default function UserManagement() {
       role: profile.role,
       phone: profile.phone || '',
       pin: profile.pin || '',
+      password: '',
     })
     setEditDialogOpen(true)
   }
 
   async function updateProfile() {
     if (!editingProfile) return
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        name: editForm.name,
-        role: editForm.role,
-        phone: editForm.phone || null,
-        pin: editForm.pin || null,
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: editingProfile.id,
+          name: editForm.name,
+          role: editForm.role,
+          phone: editForm.phone,
+          pin: editForm.pin,
+          password: editForm.password || undefined,
+        }),
       })
-      .eq('id', editingProfile.id)
 
-    if (error) {
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update profile')
+        return
+      }
+
+      toast.success(editForm.password ? 'Profile & password updated' : 'Profile updated')
+      setEditDialogOpen(false)
+      loadProfiles()
+    } catch {
       toast.error('Failed to update profile')
-      return
+    } finally {
+      setSaving(false)
     }
+  }
 
-    toast.success('Profile updated')
-    setEditDialogOpen(false)
-    loadProfiles()
+  function confirmDelete(profile: Profile) {
+    setDeletingProfile(profile)
+    setDeleteDialogOpen(true)
+  }
+
+  async function deleteUser() {
+    if (!deletingProfile) return
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: deletingProfile.id }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to delete user')
+        return
+      }
+
+      toast.success(`"${deletingProfile.name}" deleted`)
+      setDeleteDialogOpen(false)
+      setDeletingProfile(null)
+      loadProfiles()
+    } catch {
+      toast.error('Failed to delete user')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function toggleActive(profile: Profile) {
@@ -210,7 +258,7 @@ export default function UserManagement() {
                 <TableHead>Phone</TableHead>
                 <TableHead>PIN</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-20">Actions</TableHead>
+                <TableHead className="w-28">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -238,13 +286,25 @@ export default function UserManagement() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(profile)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(profile)}
+                          title="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => confirmDelete(profile)}
+                          title="Delete"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -335,7 +395,9 @@ export default function UserManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={createUser}>Create Staff</Button>
+            <Button onClick={createUser} disabled={saving}>
+              {saving ? 'Creating...' : 'Create Staff'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -345,6 +407,9 @@ export default function UserManagement() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Staff Member</DialogTitle>
+            <DialogDescription>
+              Update profile details. Leave password blank to keep unchanged.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -389,10 +454,43 @@ export default function UserManagement() {
                 />
               </div>
             </div>
+            <div className="space-y-2 border-t pt-4">
+              <Label className="flex items-center gap-2">
+                <KeyRound className="h-4 w-4" />
+                Change Password
+              </Label>
+              <Input
+                type="password"
+                placeholder="Leave blank to keep current password"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">Min 6 characters. Only fill if you want to change it.</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={updateProfile}>Update</Button>
+            <Button onClick={updateProfile} disabled={saving}>
+              {saving ? 'Updating...' : 'Update'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Staff Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deletingProfile?.name}</strong>? This will remove their account and they won&apos;t be able to log in anymore.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={deleteUser} disabled={saving}>
+              {saving ? 'Deleting...' : 'Delete'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

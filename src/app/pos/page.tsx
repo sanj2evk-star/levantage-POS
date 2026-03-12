@@ -380,6 +380,11 @@ export default function POSPage() {
           {(posMode === 'orders' || (posMode === 'menu' && menuView === 'categories')) && <div className="w-64" />}
 
           <div className="flex items-center gap-2">
+            <a href="/cashier">
+              <Button variant="outline" size="sm" className="text-amber-700 border-amber-200 hover:bg-amber-50">
+                Cashier
+              </Button>
+            </a>
             {(profile?.role === 'admin' || profile?.role === 'manager') && (
               <a href="/admin">
                 <Button variant="ghost" size="sm">Admin</Button>

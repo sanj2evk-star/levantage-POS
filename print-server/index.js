@@ -70,8 +70,7 @@ function buildKOTPrintData(data) {
   receipt += dateStr + ' ' + timeStr + '\n';
   receipt += COMMANDS.SEPARATOR;
 
-  // KOT number
-  receipt += COMMANDS.ALIGN_LEFT;
+  // KOT number (stay center aligned)
   receipt += COMMANDS.BOLD_ON;
   receipt += 'KOT: ' + kotNumber + '\n';
   receipt += COMMANDS.BOLD_OFF;
@@ -178,8 +177,7 @@ function buildBillPrintData(data) {
 
   receipt += COMMANDS.SEPARATOR;
 
-  // Date, time, table info — like Petpooja layout
-  receipt += COMMANDS.ALIGN_LEFT;
+  // Date, time, table info — center aligned
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' });
   const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -304,7 +302,6 @@ function buildBillPrintData(data) {
     receipt += COMMANDS.BOLD_ON;
     receipt += '*** NOT SETTLED ***\n';
     receipt += COMMANDS.BOLD_OFF;
-    receipt += COMMANDS.ALIGN_LEFT;
   } else {
     if (paymentMode && paymentMode !== 'split') {
       receipt += formatLine('Payment', paymentMode.toUpperCase()) + '\n';

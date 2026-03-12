@@ -278,6 +278,41 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     toast.success('Discount authorized')
   }
 
+  const [printing, setPrinting] = useState(false)
+
+  async function printPreviewBill() {
+    if (!order) return
+    setPrinting(true)
+    try {
+      await printBill({
+        billNumber: 'PREVIEW',
+        orderNumber: order.order_number,
+        tableName: order.table ? getTableDisplayName(order.table) : null,
+        orderType: order.order_type as 'dine_in' | 'takeaway',
+        items: activeItems.map(i => ({
+          name: i.menu_item?.name || 'Unknown',
+          quantity: i.quantity,
+          unitPrice: i.unit_price,
+        })),
+        subtotal,
+        gstPercent: GST_PERCENT,
+        gstAmount,
+        serviceCharge,
+        serviceChargeRemoved,
+        discountAmount,
+        discountType,
+        discountReason: discountReason || undefined,
+        total,
+        paymentMode: 'preview',
+      })
+      toast.success('Bill printed — show to customer')
+    } catch {
+      toast.error('Bill print failed — check printer')
+    } finally {
+      setPrinting(false)
+    }
+  }
+
   async function settleBill() {
     if (!order) return
 
@@ -1491,6 +1526,15 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
               >
                 <Clock className="h-4 w-4 mr-1" />
                 {payLaterMode ? 'Full Pay' : 'Pay Later'}
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12"
+                onClick={printPreviewBill}
+                disabled={printing}
+              >
+                <Printer className="h-4 w-4 mr-1" />
+                {printing ? 'Printing...' : 'Print Bill'}
               </Button>
               <Button
                 className="flex-1 h-12 text-base bg-green-600 hover:bg-green-700"

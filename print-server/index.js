@@ -143,7 +143,11 @@ function buildBillPrintData(data) {
 
   // Bill info
   receipt += COMMANDS.ALIGN_LEFT;
-  receipt += formatLine('Bill: ' + billNumber, orderNumber) + '\n';
+  if (billNumber === 'PREVIEW') {
+    receipt += formatLine('Order: ' + orderNumber, '** PREVIEW **') + '\n';
+  } else {
+    receipt += formatLine('Bill: ' + billNumber, orderNumber) + '\n';
+  }
 
   if (orderType === 'takeaway') {
     receipt += 'Type: TAKEAWAY\n';
@@ -209,12 +213,22 @@ function buildBillPrintData(data) {
   receipt += COMMANDS.SEPARATOR;
 
   // Payment info
-  if (paymentMode) {
-    receipt += formatLine('Payment', paymentMode.toUpperCase()) + '\n';
-  }
-  if (payments && payments.length > 0) {
-    for (const p of payments) {
-      receipt += formatLine('  ' + p.mode.toUpperCase(), p.amount.toFixed(2)) + '\n';
+  const isPreview = paymentMode === 'preview';
+  if (isPreview) {
+    receipt += '\n';
+    receipt += COMMANDS.ALIGN_CENTER;
+    receipt += COMMANDS.BOLD_ON;
+    receipt += '*** NOT SETTLED ***\n';
+    receipt += COMMANDS.BOLD_OFF;
+    receipt += COMMANDS.ALIGN_LEFT;
+  } else {
+    if (paymentMode) {
+      receipt += formatLine('Payment', paymentMode.toUpperCase()) + '\n';
+    }
+    if (payments && payments.length > 0) {
+      for (const p of payments) {
+        receipt += formatLine('  ' + p.mode.toUpperCase(), p.amount.toFixed(2)) + '\n';
+      }
     }
   }
 
@@ -229,7 +243,11 @@ function buildBillPrintData(data) {
 
   receipt += '\n';
   receipt += COMMANDS.ALIGN_CENTER;
-  receipt += 'Thank you! Visit again.\n';
+  if (isPreview) {
+    receipt += 'Please verify the bill.\n';
+  } else {
+    receipt += 'Thank you! Visit again.\n';
+  }
   receipt += '\n\n';
   receipt += COMMANDS.CUT;
 

@@ -17,6 +17,29 @@ async function verifyAdmin() {
   return profile?.role === 'admin'
 }
 
+// GET — List all users with their emails from auth
+export async function GET() {
+  if (!(await verifyAdmin())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const admin = createAdminClient()
+
+  // Get auth users to map id → email
+  const { data: authData, error } = await admin.auth.admin.listUsers()
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+
+  // Return map of userId → email
+  const emailMap: Record<string, string> = {}
+  for (const user of authData.users) {
+    emailMap[user.id] = user.email || ''
+  }
+
+  return NextResponse.json({ emailMap })
+}
+
 // POST — Create a new staff user (no email confirmation)
 export async function POST(request: NextRequest) {
   if (!(await verifyAdmin())) {

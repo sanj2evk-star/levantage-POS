@@ -45,6 +45,7 @@ const ROLES = [
 
 export default function UserManagement() {
   const [profiles, setProfiles] = useState<Profile[]>([])
+  const [emailMap, setEmailMap] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -82,6 +83,16 @@ export default function UserManagement() {
       .order('created_at', { ascending: false })
 
     if (data) setProfiles(data as Profile[])
+
+    // Fetch emails from admin API
+    try {
+      const res = await fetch('/api/admin/users')
+      if (res.ok) {
+        const { emailMap: emails } = await res.json()
+        if (emails) setEmailMap(emails)
+      }
+    } catch { /* ignore */ }
+
     setLoading(false)
   }, [])
 
@@ -412,6 +423,16 @@ export default function UserManagement() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {editingProfile && emailMap[editingProfile.id] && (
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  value={emailMap[editingProfile.id]}
+                  disabled
+                  className="bg-muted text-muted-foreground"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Full Name</Label>
               <Input

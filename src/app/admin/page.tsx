@@ -435,6 +435,34 @@ export default function AdminDashboard() {
       ) : data ? (
         <div className="space-y-4">
 
+          {/* ── Hero Card: Total Sales ── */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 p-5 text-white shadow-lg">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-8" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-amber-200 text-sm font-medium">Total Sales</p>
+                  <p className="text-3xl font-bold mt-1 tracking-tight">{fmt(data.totalSales)}</p>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
+                  <IndianRupee className="h-6 w-6" />
+                </div>
+              </div>
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/15">
+                <div>
+                  <p className="text-[11px] text-amber-200/80 uppercase tracking-wider">Tables Settled</p>
+                  <p className="text-lg font-semibold">{data.tablesServed}</p>
+                </div>
+                <div className="w-px h-8 bg-white/15" />
+                <div>
+                  <p className="text-[11px] text-amber-200/80 uppercase tracking-wider">Avg/Table</p>
+                  <p className="text-lg font-semibold">{data.tablesServed > 0 ? fmt(Math.round(data.totalSales / data.tablesServed)) : '₹0'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* ── Live Status: Running Orders & Tables ── */}
           <div className="grid grid-cols-2 gap-3">
             {/* Est. Running Sales */}
@@ -464,34 +492,6 @@ export default function AdminDashboard() {
                 </div>
                 <p className="text-3xl font-bold tracking-tight">{data.runningTables}</p>
                 <p className="text-[11px] text-emerald-200/70 mt-1">Tables occupied</p>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Hero Card: Total Sales ── */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 p-5 text-white shadow-lg">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-8" />
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-amber-200 text-sm font-medium">Total Sales</p>
-                  <p className="text-3xl font-bold mt-1 tracking-tight">{fmt(data.totalSales)}</p>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
-                  <IndianRupee className="h-6 w-6" />
-                </div>
-              </div>
-              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/15">
-                <div>
-                  <p className="text-[11px] text-amber-200/80 uppercase tracking-wider">Tables Settled</p>
-                  <p className="text-lg font-semibold">{data.tablesServed}</p>
-                </div>
-                <div className="w-px h-8 bg-white/15" />
-                <div>
-                  <p className="text-[11px] text-amber-200/80 uppercase tracking-wider">Avg/Table</p>
-                  <p className="text-lg font-semibold">{data.tablesServed > 0 ? fmt(Math.round(data.totalSales / data.tablesServed)) : '₹0'}</p>
-                </div>
               </div>
             </div>
           </div>

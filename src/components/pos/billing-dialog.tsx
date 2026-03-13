@@ -138,9 +138,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
   // Collect balance state (for partial bills)
   const [collectBalanceMode, setCollectBalanceMode] = useState(false)
-  const [collectPaymentMode, setCollectPaymentMode] = useState<PaymentMode | ''>('')
+  const [collectPaymentMode, setCollectPaymentMode] = useState<PaymentMode | 'split' | ''>('')
   const [collectReferenceNumber, setCollectReferenceNumber] = useState('')
   const [collecting, setCollecting] = useState(false)
+  const [collectSplitPayments, setCollectSplitPayments] = useState<SplitPaymentEntry[]>([])
 
   // Refund dialog state
   const [refundDialogOpen, setRefundDialogOpen] = useState(false)
@@ -199,6 +200,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       setCollectBalanceMode(false)
       setCollectPaymentMode('')
       setCollectReferenceNumber('')
+      setCollectSplitPayments([])
       setRefundDialogOpen(false)
       setExistingPayments([])
 
@@ -637,6 +639,21 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     }
   }
 
+  // Collect balance split helpers
+  function addCollectSplit() {
+    setCollectSplitPayments([...collectSplitPayments, { mode: 'cash', amount: '', reference_number: '' }])
+  }
+  function removeCollectSplit(index: number) {
+    setCollectSplitPayments(collectSplitPayments.filter((_, i) => i !== index))
+  }
+  function updateCollectSplit(index: number, field: 'mode' | 'amount' | 'reference_number', value: string) {
+    const updated = [...collectSplitPayments]
+    if (field === 'mode') { updated[index].mode = value as PaymentMode; updated[index].reference_number = '' }
+    else if (field === 'amount') { updated[index].amount = value }
+    else { updated[index].reference_number = value }
+    setCollectSplitPayments(updated)
+  }
+
   async function collectBalance() {
     if (!existingBill || !order) return
     if (!collectPaymentMode) {
@@ -652,28 +669,64 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       return
     }
 
-    if (requirePaymentRef && (collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && !collectReferenceNumber.trim()) {
-      toast.error('Reference number is required')
-      return
+    // Split payment validation
+    if (collectPaymentMode === 'split') {
+      const splitTotal = collectSplitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+      const diff = Math.abs(splitTotal - outstanding)
+      if (diff > 0.5) {
+        toast.error(`Split total (₹${splitTotal.toFixed(2)}) must equal outstanding (₹${outstanding.toFixed(2)})`)
+        return
+      }
+      for (const sp of collectSplitPayments) {
+        if (!sp.amount || parseFloat(sp.amount) <= 0) {
+          toast.error('All split entries need an amount')
+          return
+        }
+        if (requirePaymentRef && (sp.mode === 'upi' || sp.mode === 'card' || sp.mode === 'zomato') && !sp.reference_number.trim()) {
+          toast.error(`Reference number required for ${sp.mode.toUpperCase()} payment`)
+          return
+        }
+      }
+    } else {
+      if (requirePaymentRef && (collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && !collectReferenceNumber.trim()) {
+        toast.error('Reference number is required')
+        return
+      }
     }
 
     setCollecting(true)
     const supabase = createClient()
 
     try {
-      // Create payment for the balance
-      await supabase.from('payments').insert({
-        bill_id: existingBill.id,
-        mode: collectPaymentMode,
-        amount: outstanding,
-        reference_number: (collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && collectReferenceNumber.trim()
-          ? collectReferenceNumber.trim() : null,
-      })
+      if (collectPaymentMode === 'split') {
+        // Insert multiple payment records
+        const paymentRows = collectSplitPayments.map(sp => ({
+          bill_id: existingBill.id,
+          mode: sp.mode,
+          amount: parseFloat(sp.amount),
+          reference_number: (sp.mode === 'upi' || sp.mode === 'card' || sp.mode === 'zomato') && sp.reference_number.trim()
+            ? sp.reference_number.trim() : null,
+        }))
+        await supabase.from('payments').insert(paymentRows)
+      } else {
+        // Single payment for the balance
+        await supabase.from('payments').insert({
+          bill_id: existingBill.id,
+          mode: collectPaymentMode,
+          amount: outstanding,
+          reference_number: (collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && collectReferenceNumber.trim()
+            ? collectReferenceNumber.trim() : null,
+        })
+      }
 
       // Determine new payment_mode
       const allModes = new Set(existingPayments.map(p => p.mode))
-      allModes.add(collectPaymentMode as PaymentMode)
-      const newPaymentMode = allModes.size > 1 ? 'split' : collectPaymentMode
+      if (collectPaymentMode === 'split') {
+        collectSplitPayments.forEach(sp => allModes.add(sp.mode))
+      } else {
+        allModes.add(collectPaymentMode as PaymentMode)
+      }
+      const newPaymentMode = allModes.size > 1 ? 'split' : (collectPaymentMode === 'split' ? 'split' : collectPaymentMode)
 
       // Update bill to paid
       await supabase
@@ -705,12 +758,14 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         details: {
           bill_number: existingBill.bill_number,
           amount_collected: outstanding,
-          payment_mode: collectPaymentMode,
+          payment_mode: collectPaymentMode === 'split' ? 'split' : collectPaymentMode,
+          split_details: collectPaymentMode === 'split' ? collectSplitPayments.map(sp => ({ mode: sp.mode, amount: parseFloat(sp.amount) })) : undefined,
           total: existingBill.total,
         },
       })
 
-      if (collectPaymentMode === 'cash') {
+      const hasCash = collectPaymentMode === 'cash' || (collectPaymentMode === 'split' && collectSplitPayments.some(sp => sp.mode === 'cash'))
+      if (hasCash) {
         openCashDrawer().catch(() => {})
       }
 
@@ -1112,18 +1167,71 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   ) : (
                     <>
                       <Label className="text-sm font-medium">Payment Mode</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {PAYMENT_MODES.map(pm => (
+                      <div className="grid grid-cols-4 gap-2">
+                        {[...PAYMENT_MODES, { value: 'split', label: 'Split' }].map(pm => (
                           <Button key={pm.value} variant={collectPaymentMode === pm.value ? 'default' : 'outline'}
-                            size="sm" onClick={() => setCollectPaymentMode(pm.value as PaymentMode)}>{pm.label}</Button>
+                            size="sm" onClick={() => {
+                              if (pm.value === 'split') {
+                                setCollectPaymentMode('split')
+                                setCollectReferenceNumber('')
+                                if (collectSplitPayments.length === 0) setCollectSplitPayments([
+                                  { mode: 'cash', amount: '', reference_number: '' },
+                                  { mode: 'upi', amount: '', reference_number: '' },
+                                ])
+                              } else {
+                                setCollectPaymentMode(pm.value as PaymentMode)
+                                setCollectSplitPayments([])
+                              }
+                            }}>{pm.label}</Button>
                         ))}
                       </div>
-                      {(collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && (
+                      {collectPaymentMode !== 'split' && (collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && (
                         <Input placeholder={`${collectPaymentMode === 'upi' ? 'UPI' : collectPaymentMode === 'zomato' ? 'Zomato order' : 'Card'} reference number`}
                           value={collectReferenceNumber} onChange={e => setCollectReferenceNumber(e.target.value)} />
                       )}
+                      {/* Split payment details */}
+                      {collectPaymentMode === 'split' && (
+                        <div className="bg-white rounded-lg p-2.5 space-y-2 border">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium">Split Payments</span>
+                            <Button variant="outline" size="sm" className="h-6 text-xs" onClick={addCollectSplit}>+ Add</Button>
+                          </div>
+                          {collectSplitPayments.map((sp, idx) => (
+                            <div key={idx} className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <select value={sp.mode} onChange={e => updateCollectSplit(idx, 'mode', e.target.value)}
+                                  className="h-8 rounded-lg border border-gray-200 px-2 text-xs bg-white">
+                                  <option value="cash">Cash</option><option value="upi">UPI</option>
+                                  <option value="card">Card</option><option value="zomato">Zomato</option>
+                                </select>
+                                <Input type="number" placeholder="Amount" value={sp.amount}
+                                  onChange={e => updateCollectSplit(idx, 'amount', e.target.value)} className="flex-1 h-8 text-xs" />
+                                <button onClick={() => removeCollectSplit(idx)}
+                                  className="h-6 w-6 flex items-center justify-center rounded text-red-400 hover:bg-red-50">
+                                  <X className="h-3 w-3" /></button>
+                              </div>
+                              {(sp.mode === 'upi' || sp.mode === 'card' || sp.mode === 'zomato') && (
+                                <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`} value={sp.reference_number}
+                                  onChange={e => updateCollectSplit(idx, 'reference_number', e.target.value)} className="h-7 text-xs" />
+                              )}
+                            </div>
+                          ))}
+                          {(() => {
+                            const splitTotal = collectSplitPayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0)
+                            const remaining = Math.round((outstanding - splitTotal) * 100) / 100
+                            return (
+                              <div className="flex justify-between text-xs pt-2 border-t border-gray-200">
+                                <span>Remaining</span>
+                                <span className={`font-semibold ${remaining > 0.5 ? 'text-red-500' : 'text-green-500'}`}>
+                                  ₹{remaining.toFixed(2)}
+                                </span>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
                       <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1" onClick={() => setCollectBalanceMode(false)}>Cancel</Button>
+                        <Button variant="outline" className="flex-1" onClick={() => { setCollectBalanceMode(false); setCollectSplitPayments([]) }}>Cancel</Button>
                         <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={collectBalance}
                           disabled={collecting || !collectPaymentMode}>
                           {collecting ? 'Collecting...' : `Pay ₹${outstanding.toFixed(2)}`}

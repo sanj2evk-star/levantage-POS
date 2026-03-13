@@ -630,49 +630,6 @@ export default function CashierPage() {
         </div>
       </header>
 
-      {/* Day Summary Bar */}
-      <div className="bg-white border-b px-6 py-3">
-        <div className="flex items-center gap-6 text-sm overflow-x-auto font-medium">
-          <div className="flex items-center gap-1.5 text-gray-800">
-            <Receipt className="h-4 w-4" />
-            <span className="font-bold">{daySummary.totalOrders}</span>
-            <span className="text-gray-500">bills</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-amber-800 font-bold">
-            <TrendingUp className="h-4 w-4" />
-            <span>₹{daySummary.totalSales.toLocaleString('en-IN')}</span>
-          </div>
-          <Separator orientation="vertical" className="h-5" />
-          <div className="flex items-center gap-1.5 text-green-800">
-            <Banknote className="h-4 w-4" />
-            <span>₹{daySummary.cashTotal.toLocaleString('en-IN')}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-blue-800">
-            <Smartphone className="h-4 w-4" />
-            <span>₹{daySummary.upiTotal.toLocaleString('en-IN')}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-purple-800">
-            <CreditCard className="h-4 w-4" />
-            <span>₹{daySummary.cardTotal.toLocaleString('en-IN')}</span>
-          </div>
-          {daySummary.ncTotal > 0 && (
-            <div className="flex items-center gap-1.5 text-orange-700">
-              <Gift className="h-4 w-4" />
-              <span>₹{daySummary.ncTotal.toLocaleString('en-IN')}</span>
-            </div>
-          )}
-          {daySummary.outstanding > 0 && (
-            <>
-              <Separator orientation="vertical" className="h-5" />
-              <div className="flex items-center gap-1.5 text-red-700 font-bold">
-                <Clock className="h-4 w-4" />
-                <span>₹{daySummary.outstanding.toLocaleString('en-IN')} due</span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         {activeTab === 'tables' && (

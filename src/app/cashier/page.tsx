@@ -64,6 +64,22 @@ interface DaySummary {
   outstanding: number
 }
 
+interface RecentBill {
+  id: string
+  bill_number: string
+  total: number
+  payment_mode: string
+  payment_status: string
+  created_at: string
+  order: {
+    id: string
+    order_number: string
+    order_type: string
+    table: { number: number; section: string } | null
+    waiter: { name: string } | null
+  } | null
+}
+
 export default function CashierPage() {
   const { profile, isLoading, signOut } = useAuth(['cashier', 'admin', 'manager'])
   const [tables, setTables] = useState<TableType[]>([])
@@ -92,10 +108,11 @@ export default function CashierPage() {
   const [liveStatusFilter, setLiveStatusFilter] = useState<LiveOrderStatusFilter>('all')
   const [orderSearchQuery, setOrderSearchQuery] = useState('')
 
-  // Day summary
+  // Day summary + recent bills
   const [daySummary, setDaySummary] = useState<DaySummary>({
     totalOrders: 0, totalSales: 0, cashTotal: 0, upiTotal: 0, cardTotal: 0, ncTotal: 0, outstanding: 0,
   })
+  const [recentBills, setRecentBills] = useState<RecentBill[]>([])
 
   // Debounce ref for realtime updates
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -209,7 +226,7 @@ export default function CashierPage() {
     today.setHours(0, 0, 0, 0)
     const todayISO = today.toISOString()
 
-    // Get bills for today
+    // Get bills for today (summary)
     const { data: bills } = await supabase
       .from('bills')
       .select('id, total, payment_status')
@@ -220,6 +237,16 @@ export default function CashierPage() {
       .from('payments')
       .select('mode, amount, bill_id')
       .gte('created_at', todayISO)
+
+    // Get recent bills with order details for the list
+    const { data: recentBillsData } = await supabase
+      .from('bills')
+      .select(`
+        id, bill_number, total, payment_mode, payment_status, created_at,
+        order:orders!order_id(id, order_number, order_type, table:tables!table_id(number, section), waiter:profiles!waiter_id(name))
+      `)
+      .gte('created_at', todayISO)
+      .order('created_at', { ascending: false })
 
     const paidBills = (bills || []).filter(b => b.payment_status === 'paid')
     const partialBills = (bills || []).filter(b => b.payment_status === 'partial')
@@ -245,6 +272,13 @@ export default function CashierPage() {
       ncTotal,
       outstanding,
     })
+
+    if (recentBillsData) {
+      setRecentBills(recentBillsData.map((b: any) => ({
+        ...b,
+        order: b.order || null,
+      })) as RecentBill[])
+    }
   }, [])
 
   const loadData = useCallback(async () => {
@@ -382,6 +416,37 @@ export default function CashierPage() {
   function openLiveOrderBilling(order: OrderWithDetails) {
     setBillingOrder(order)
     setBillingDialogOpen(true)
+  }
+
+  async function openRecentBill(bill: RecentBill) {
+    if (!bill.order) return
+    const supabase = createClient()
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select(`
+        id, order_number, status, order_type, created_at, table_id, waiter_id, notes,
+        table:tables!table_id(number, section),
+        items:order_items(
+          id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
+          menu_item:menu_items(name, is_veg)
+        ),
+        bill:bills(id, bill_number, payment_mode, payment_status, total, subtotal,
+          gst_percent, gst_amount, service_charge, service_charge_removed,
+          discount_amount, discount_type, discount_reason)
+      `)
+      .eq('id', bill.order.id)
+      .single()
+
+    if (orderData) {
+      const processed = {
+        ...orderData,
+        bill: Array.isArray(orderData.bill) ? orderData.bill[0] || null : orderData.bill,
+      } as unknown as OrderWithDetails
+      setBillingOrder(processed)
+      setBillingDialogOpen(true)
+    } else {
+      toast.error('Could not load bill details')
+    }
   }
 
   function handleBillSettled() {
@@ -959,6 +1024,67 @@ export default function CashierPage() {
                   Open Day Close / EOD
                 </Button>
               </a>
+            </div>
+
+            {/* Recent Bills */}
+            <div className="mt-8">
+              <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                Today&apos;s Bills ({recentBills.length})
+              </h3>
+              {recentBills.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">No bills yet today</p>
+              ) : (
+                <div className="space-y-2">
+                  {recentBills.map(bill => {
+                    const tableName = bill.order?.table ? getTableDisplayName(bill.order.table) : null
+                    const captainName = bill.order?.waiter?.name || null
+                    const time = new Date(bill.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                    const isPaid = bill.payment_status === 'paid'
+                    const isPartial = bill.payment_status === 'partial'
+
+                    const modeColors: Record<string, string> = {
+                      cash: 'bg-green-100 text-green-700',
+                      upi: 'bg-blue-100 text-blue-700',
+                      card: 'bg-purple-100 text-purple-700',
+                      split: 'bg-indigo-100 text-indigo-700',
+                      nc: 'bg-orange-100 text-orange-700',
+                    }
+
+                    return (
+                      <button
+                        key={bill.id}
+                        onClick={() => openRecentBill(bill)}
+                        className="w-full text-left bg-white rounded-xl p-3.5 border border-gray-200 hover:border-amber-400 hover:shadow-sm transition-all active:scale-[0.99] flex items-center justify-between gap-3"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-bold text-sm">{bill.bill_number}</span>
+                            {tableName && <span className="text-xs text-gray-500">{tableName}</span>}
+                            {bill.order?.order_type === 'takeaway' && <Badge variant="outline" className="text-[10px] py-0 px-1.5">Take</Badge>}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <span>{time}</span>
+                            {captainName && <span>· {captainName}</span>}
+                            {bill.order?.order_number && <span>· {bill.order.order_number}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge className={`text-[10px] py-0.5 px-2 border-0 font-semibold ${
+                            isPartial ? 'bg-red-100 text-red-700' :
+                            modeColors[bill.payment_mode] || 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {isPartial ? 'Partial' : (bill.payment_mode || '').toUpperCase()}
+                          </Badge>
+                          <span className={`font-bold text-sm tabular-nums ${isPaid ? 'text-gray-900' : 'text-red-600'}`}>
+                            ₹{Number(bill.total).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}

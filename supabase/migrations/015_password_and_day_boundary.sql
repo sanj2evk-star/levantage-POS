@@ -9,7 +9,7 @@ ON CONFLICT (key) DO NOTHING;
 INSERT INTO public.settings (key, value) VALUES ('day_boundary_hour', '3')
 ON CONFLICT (key) DO NOTHING;
 
--- 3. Update audit_logs action constraint to include new actions (sc_removal, day_close)
+-- 3. Update audit_logs action constraint to include all existing + new actions
 ALTER TABLE public.audit_logs DROP CONSTRAINT IF EXISTS audit_logs_action_check;
 ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_action_check
-  CHECK (action IN ('item_cancel','nc_payment','bill_reprint','discount_override','sc_removal','day_close','refund'));
+  CHECK (action IN ('item_cancel','nc_payment','bill_reprint','discount_override','sc_removal','day_close','refund','partial_payment','balance_collected','table_transfer','daily_closing'));

@@ -13,7 +13,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const ESC = '\x1B';
 const GS = '\x1D';
 const COMMANDS = {
-  INIT: ESC + '@',
+  INIT: ESC + '@' + ESC + 't' + '\x10', // Init + set Code Page WPC1252 for accented chars
   BOLD_ON: ESC + 'E' + '\x01',
   BOLD_OFF: ESC + 'E' + '\x00',
   DOUBLE_HEIGHT: ESC + '!' + '\x10',
@@ -162,7 +162,7 @@ function buildBillPrintData(data) {
   // Header — Restaurant name (large)
   receipt += COMMANDS.ALIGN_CENTER;
   receipt += COMMANDS.DOUBLE_SIZE;
-  receipt += (cafeName || 'Le Vantage Cafe Bar') + '\n';
+  receipt += (cafeName || 'L\xe9 Vantage Caf\xe9') + '\n';
   receipt += COMMANDS.NORMAL_SIZE;
 
   // Address

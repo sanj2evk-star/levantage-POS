@@ -139,9 +139,9 @@ export async function printBill(billData: Omit<BillPayload, 'cafeName' | 'cafeAd
 
     const payload: BillPayload = {
       ...billData,
-      cafeName: settingsMap.get('cafe_name') || 'Le Vantage Cafe Bar',
+      cafeName: settingsMap.get('cafe_name') || 'Lé Vantage Café',
       cafeAddress: settingsMap.get('cafe_address') || '',
-      gstNumber: settingsMap.get('gst_number') || '',
+      gstNumber: settingsMap.get('gst_number') || '36ADBFS6521Q1ZL',
       fssaiNumber: settingsMap.get('fssai_number') || '',
     }
 

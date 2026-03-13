@@ -32,6 +32,7 @@ import {
   Printer,
   Eye,
   Check,
+  Store,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -72,6 +73,7 @@ interface DaySummary {
   cashTotal: number
   upiTotal: number
   cardTotal: number
+  zomatoTotal: number
   ncTotal: number
   outstanding: number
 }
@@ -115,6 +117,11 @@ export default function CashierPage() {
   const [quickSettlePaymentMode, setQuickSettlePaymentMode] = useState('')
   const [quickSettleRef, setQuickSettleRef] = useState('')
   const [quickSettling, setQuickSettling] = useState(false)
+  // Split payment in quick settle
+  const [quickSettleSplit, setQuickSettleSplit] = useState(false)
+  const [quickSettleAmount1, setQuickSettleAmount1] = useState('')
+  const [quickSettleMode2, setQuickSettleMode2] = useState('')
+  const [quickSettleRef2, setQuickSettleRef2] = useState('')
 
   // Tick every 60s so elapsed times update live
   const [, setTick] = useState(0)
@@ -132,7 +139,7 @@ export default function CashierPage() {
 
   // Day summary + recent bills
   const [daySummary, setDaySummary] = useState<DaySummary>({
-    totalOrders: 0, totalSales: 0, cashTotal: 0, upiTotal: 0, cardTotal: 0, ncTotal: 0, outstanding: 0,
+    totalOrders: 0, totalSales: 0, cashTotal: 0, upiTotal: 0, cardTotal: 0, zomatoTotal: 0, ncTotal: 0, outstanding: 0,
   })
   const [recentBills, setRecentBills] = useState<RecentBill[]>([])
 
@@ -210,8 +217,12 @@ export default function CashierPage() {
     }
   }, [])
 
-  const loadLiveOrders = useCallback(async () => {
-    setLoadingLiveOrders(true)
+  // Track if live orders have been loaded at least once
+  const liveOrdersLoadedRef = useRef(false)
+
+  const loadLiveOrders = useCallback(async (isBackground = false) => {
+    // Only show loading spinner on initial load, not background refreshes
+    if (!isBackground) setLoadingLiveOrders(true)
     const supabase = createClient()
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -235,14 +246,25 @@ export default function CashierPage() {
       .limit(100)
 
     if (data) {
-      const processed = data.map((o: any) => ({
-        ...o,
-        bill: Array.isArray(o.bill) ? o.bill[0] || null : o.bill,
-        waiterName: o.waiter?.name || null,
-      }))
+      const seen = new Set<string>()
+      const processed = data
+        .map((o: any) => ({
+          ...o,
+          bill: Array.isArray(o.bill) ? o.bill[0] || null : o.bill,
+          waiterName: o.waiter?.name || null,
+        }))
+        .filter((o: any) => {
+          // Skip duplicates
+          if (seen.has(o.id)) return false
+          seen.add(o.id)
+          // Safety: skip orders whose bill is fully paid (order status should be 'completed' but wasn't updated)
+          if (o.bill && o.bill.payment_status === 'paid') return false
+          return true
+        })
       setLiveOrders(processed as LiveOrder[])
     }
     setLoadingLiveOrders(false)
+    liveOrdersLoadedRef.current = true
   }, [])
 
   const loadDaySummary = useCallback(async () => {
@@ -276,12 +298,13 @@ export default function CashierPage() {
     const paidBills = (bills || []).filter(b => b.payment_status === 'paid')
     const partialBills = (bills || []).filter(b => b.payment_status === 'partial')
 
-    let cashTotal = 0, upiTotal = 0, cardTotal = 0, ncTotal = 0
+    let cashTotal = 0, upiTotal = 0, cardTotal = 0, zomatoTotal = 0, ncTotal = 0
     ;(payments || []).forEach((p: any) => {
       const amt = Number(p.amount) || 0
       if (p.mode === 'cash') cashTotal += amt
       else if (p.mode === 'upi') upiTotal += amt
       else if (p.mode === 'card') cardTotal += amt
+      else if (p.mode === 'zomato') zomatoTotal += amt
       else if (p.mode === 'nc') ncTotal += amt
     })
 
@@ -294,6 +317,7 @@ export default function CashierPage() {
       cashTotal,
       upiTotal,
       cardTotal,
+      zomatoTotal,
       ncTotal,
       outstanding,
     })
@@ -322,17 +346,25 @@ export default function CashierPage() {
     }
   }, [tables, loadTableOrderInfo])
 
-  // Load live orders when tab switches
+  // Load tab-specific data when tab switches
   useEffect(() => {
     if (activeTab === 'live_orders') {
-      loadLiveOrders()
+      // First load shows spinner, subsequent loads are background
+      loadLiveOrders(!liveOrdersLoadedRef.current ? false : true)
     }
-  }, [activeTab, loadLiveOrders])
+    if (activeTab === 'day_close') {
+      loadDaySummary()
+    }
+  }, [activeTab, loadLiveOrders, loadDaySummary])
 
   // Initial load
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Track active tab in a ref so realtime callbacks don't cause effect re-runs
+  const activeTabRef = useRef(activeTab)
+  useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
 
   // Realtime subscriptions with smart notifications
   useEffect(() => {
@@ -342,9 +374,10 @@ export default function CashierPage() {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
         loadTables()
-        loadDaySummary()
-        if (activeTab === 'live_orders') loadLiveOrders()
-      }, 500)
+        // Only load heavy queries when on the relevant tab
+        if (activeTabRef.current === 'live_orders') loadLiveOrders(true)
+        if (activeTabRef.current === 'day_close') loadDaySummary()
+      }, 1000)
     }
 
     function handleOrderChange(payload: any) {
@@ -370,30 +403,27 @@ export default function CashierPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tables' }, debouncedRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handleOrderChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bills' }, debouncedRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, debouncedRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedRefresh)
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
-          // Auto-retry on channel error
           setTimeout(() => {
             supabase.removeChannel(channel)
-            // The effect will re-run and create a new subscription
           }, 3000)
         }
       })
 
-    // Fallback: auto-refresh every 15 seconds in case realtime disconnects silently
+    // Fallback: auto-refresh every 30 seconds
     const fallbackInterval = setInterval(() => {
       loadTables()
-      if (activeTab === 'live_orders') loadLiveOrders()
-    }, 15000)
+      if (activeTabRef.current === 'live_orders') loadLiveOrders(true)
+    }, 30000)
 
     return () => {
       supabase.removeChannel(channel)
       clearInterval(fallbackInterval)
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [loadTables, loadDaySummary, loadLiveOrders, activeTab])
+  }, [loadTables, loadDaySummary, loadLiveOrders])
 
   // Unlock Web Audio API on first user interaction
   useEffect(() => {
@@ -477,7 +507,7 @@ export default function CashierPage() {
   function handleBillSettled() {
     loadTables()
     loadDaySummary()
-    if (activeTab === 'live_orders') loadLiveOrders()
+    if (activeTab === 'live_orders') loadLiveOrders(true)
   }
 
   // Quick print customer preview from table card
@@ -582,8 +612,19 @@ export default function CashierPage() {
     setQuickSettleTotal(displayTotal)
     setQuickSettlePaymentMode('')
     setQuickSettleRef('')
+    setQuickSettleSplit(false)
+    setQuickSettleAmount1('')
+    setQuickSettleMode2('')
+    setQuickSettleRef2('')
     setQuickSettleOpen(true)
   }
+
+  // Computed: split remaining balance
+  const quickSettleRemaining = (() => {
+    if (!quickSettleSplit || !quickSettleAmount1) return quickSettleTotal
+    const amt1 = parseFloat(quickSettleAmount1) || 0
+    return Math.max(0, Math.round((quickSettleTotal - amt1) * 100) / 100)
+  })()
 
   // Perform quick settlement
   async function performQuickSettle() {
@@ -591,8 +632,23 @@ export default function CashierPage() {
       toast.error('Select a payment mode')
       return
     }
+    // Validate split amounts
+    if (quickSettleSplit) {
+      const amt1 = parseFloat(quickSettleAmount1) || 0
+      if (amt1 <= 0 || amt1 >= quickSettleTotal) {
+        toast.error('Enter a valid partial amount')
+        return
+      }
+      if (!quickSettleMode2) {
+        toast.error('Select second payment mode')
+        return
+      }
+    }
     setQuickSettling(true)
     const supabase = createClient()
+
+    const isSplit = quickSettleSplit && quickSettleMode2
+    const effectivePaymentMode = isSplit ? 'split' : quickSettlePaymentMode
 
     try {
       const orderId = quickSettleTable.current_order_id
@@ -622,7 +678,6 @@ export default function CashierPage() {
       let finalDiscountAmount = 0, finalDiscountType = 'none', finalDiscountReason = ''
 
       if (existBill && existBill.payment_status === 'pending') {
-        // Settle existing bill
         billId = existBill.id
         billNumber = existBill.bill_number
         finalTotal = Number(existBill.total)
@@ -635,11 +690,10 @@ export default function CashierPage() {
         finalDiscountReason = existBill.discount_reason || ''
 
         await supabase.from('bills').update({
-          payment_mode: quickSettlePaymentMode,
+          payment_mode: effectivePaymentMode,
           payment_status: 'paid',
         }).eq('id', billId)
       } else {
-        // Create new bill
         finalSubtotal = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
         finalServiceCharge = Math.round(finalSubtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
         finalGstAmount = Math.round(finalSubtotal * GST_PERCENT / 100 * 100) / 100
@@ -658,7 +712,7 @@ export default function CashierPage() {
             discount_amount: 0,
             discount_type: 'none',
             total: finalTotal,
-            payment_mode: quickSettlePaymentMode,
+            payment_mode: effectivePaymentMode,
             payment_status: 'paid',
             bill_number: billNum || `B-${Date.now()}`,
           })
@@ -670,14 +724,35 @@ export default function CashierPage() {
         billNumber = newBill.bill_number
       }
 
-      // Payment record
-      await supabase.from('payments').insert({
-        bill_id: billId,
-        mode: quickSettlePaymentMode,
-        amount: finalTotal,
-        reference_number: (quickSettlePaymentMode === 'upi' || quickSettlePaymentMode === 'card') && quickSettleRef.trim()
-          ? quickSettleRef.trim() : null,
-      })
+      // Payment records
+      if (isSplit) {
+        const amt1 = parseFloat(quickSettleAmount1) || 0
+        const amt2 = Math.round((finalTotal - amt1) * 100) / 100
+        const hasRef1 = (quickSettlePaymentMode !== 'cash') && quickSettleRef.trim()
+        const hasRef2 = (quickSettleMode2 !== 'cash') && quickSettleRef2.trim()
+        await supabase.from('payments').insert([
+          {
+            bill_id: billId,
+            mode: quickSettlePaymentMode,
+            amount: amt1,
+            reference_number: hasRef1 ? quickSettleRef.trim() : null,
+          },
+          {
+            bill_id: billId,
+            mode: quickSettleMode2,
+            amount: amt2,
+            reference_number: hasRef2 ? quickSettleRef2.trim() : null,
+          },
+        ])
+      } else {
+        await supabase.from('payments').insert({
+          bill_id: billId,
+          mode: quickSettlePaymentMode,
+          amount: finalTotal,
+          reference_number: (quickSettlePaymentMode === 'upi' || quickSettlePaymentMode === 'card' || quickSettlePaymentMode === 'zomato') && quickSettleRef.trim()
+            ? quickSettleRef.trim() : null,
+        })
+      }
 
       // Complete order + free table
       await supabase.from('orders').update({ status: 'completed' }).eq('id', orderId)
@@ -705,12 +780,12 @@ export default function CashierPage() {
         discountType: finalDiscountType,
         discountReason: finalDiscountReason || undefined,
         total: finalTotal,
-        paymentMode: quickSettlePaymentMode,
+        paymentMode: effectivePaymentMode,
         cashierName: profile?.name || null,
         waiterName,
       }).catch(() => toast.error('Bill print failed'))
 
-      if (quickSettlePaymentMode === 'cash') {
+      if (quickSettlePaymentMode === 'cash' || (isSplit && quickSettleMode2 === 'cash')) {
         openCashDrawer().catch(() => toast.error('Cash drawer failed'))
       }
 
@@ -720,6 +795,10 @@ export default function CashierPage() {
       setQuickSettleTable(null)
       setQuickSettlePaymentMode('')
       setQuickSettleRef('')
+      setQuickSettleSplit(false)
+      setQuickSettleAmount1('')
+      setQuickSettleMode2('')
+      setQuickSettleRef2('')
       handleBillSettled()
     } catch (err: any) {
       toast.error(err?.message || 'Settlement failed')
@@ -799,9 +878,9 @@ export default function CashierPage() {
   if (isLoading || loading) {
     return (
       <div className="min-h-screen bg-[#FBF9F6]">
-        <header className="bg-white border-b px-6 py-3 flex items-center gap-2">
-          <Coffee className="h-5 w-5 text-amber-700" />
-          <span className="font-semibold">Cashier</span>
+        <header className="bg-white border-b px-6 py-3.5 flex items-center gap-2">
+          <Coffee className="h-6 w-6 text-amber-700" />
+          <span className="font-bold text-xl">Cashier</span>
         </header>
         <div className="p-6 space-y-6">
           <div className="h-16 bg-gray-200 rounded-lg animate-pulse" />
@@ -823,11 +902,11 @@ export default function CashierPage() {
   return (
     <div className="min-h-screen bg-[#FBF9F6] flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-white border-b px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Coffee className="h-5 w-5 text-amber-700" />
-          <span className="font-bold text-lg text-gray-900">Cashier</span>
-          {profile?.name && <span className="text-sm text-gray-600 font-medium">({profile.name})</span>}
+          <Coffee className="h-6 w-6 text-amber-700" />
+          <span className="font-bold text-xl text-gray-900">Cashier</span>
+          {profile?.name && <span className="text-base text-gray-600 font-medium">({profile.name})</span>}
         </div>
 
         {/* Tabs */}
@@ -840,9 +919,9 @@ export default function CashierPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+              className={`px-5 py-2 text-base rounded-md transition-colors ${
                 activeTab === tab.key
-                  ? 'bg-white shadow-sm font-medium'
+                  ? 'bg-white shadow-sm font-semibold'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -854,14 +933,14 @@ export default function CashierPage() {
         {/* Status Badges */}
         <div className="flex items-center gap-2">
           {statusCounts.foodReady > 0 && (
-            <Badge className="bg-green-100 text-green-700 border border-green-200 text-xs">
-              <UtensilsCrossed className="h-3 w-3 mr-1" />
+            <Badge className="bg-green-100 text-green-700 border border-green-200 text-sm px-2.5 py-0.5">
+              <UtensilsCrossed className="h-3.5 w-3.5 mr-1" />
               {statusCounts.foodReady} Ready
             </Badge>
           )}
           {statusCounts.toSettle > 0 && (
-            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-xs">
-              <Receipt className="h-3 w-3 mr-1" />
+            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-sm px-2.5 py-0.5">
+              <Receipt className="h-3.5 w-3.5 mr-1" />
               {statusCounts.toSettle} To Settle
             </Badge>
           )}
@@ -869,7 +948,7 @@ export default function CashierPage() {
 
         <div className="flex items-center gap-2">
           <a href="/pos">
-            <Button size="sm" className="bg-amber-700 hover:bg-amber-800">
+            <Button size="sm" className="bg-amber-700 hover:bg-amber-800 text-sm">
               <Plus className="h-4 w-4 mr-1" />
               New Order
             </Button>
@@ -908,22 +987,22 @@ export default function CashierPage() {
         {activeTab === 'tables' && (
           <div className="p-6 space-y-6">
             {/* Table Legend */}
-            <div className="flex items-center gap-5 text-xs text-gray-600 pb-3 border-b border-gray-200">
+            <div className="flex items-center gap-5 text-sm text-gray-600 pb-3 border-b border-gray-200">
               <span className="font-semibold text-gray-800">Legend:</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm bg-white border border-gray-300" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-white border border-gray-300" />
                 <span>Available</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm bg-green-600" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-green-600" />
                 <span>Running</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm bg-amber-600" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-amber-600" />
                 <span>Billed</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm bg-yellow-100 border border-yellow-400" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-yellow-100 border border-yellow-400" />
                 <span>Reserved</span>
               </div>
             </div>
@@ -944,14 +1023,14 @@ export default function CashierPage() {
               return (
                 <div key={group.group}>
                   <div className="flex items-center gap-3 mb-3">
-                    <h2 className="font-bold text-gray-900">{group.label}</h2>
-                    <Badge variant="outline" className="text-xs">
+                    <h2 className="font-bold text-lg text-gray-900">{group.label}</h2>
+                    <Badge variant="outline" className="text-sm px-2.5 py-0.5">
                       {occupiedCount}/{group.tables.length}
                       {runningCount > 0 && <span className="text-green-600 ml-1">({runningCount} running)</span>}
                       {billedCount > 0 && <span className="text-amber-600 ml-1">({billedCount} billed)</span>}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2.5">
                     {group.tables.map(table => {
                       const isOccupied = table.status === 'occupied'
                       const info = table.current_order_id ? tableOrderInfo.get(table.current_order_id) : null
@@ -961,17 +1040,17 @@ export default function CashierPage() {
                       return (
                         <div
                           key={table.id}
-                          className={`relative p-2 rounded-lg text-center border-2 min-h-[72px] transition-all ${getTableCardStyle(table, info)}`}
+                          className={`relative p-2 rounded-xl text-center border-2 min-h-[85px] transition-all ${getTableCardStyle(table, info)}`}
                         >
-                          <p className={`text-base font-bold ${getTableNumberColor(table, info)}`}>
+                          <p className={`text-2xl font-bold ${getTableNumberColor(table, info)}`}>
                             {getTableDisplayName(table)}
                           </p>
                           {isOccupied && info ? (
                             <div className="mt-0.5 space-y-0.5">
-                              <p className="text-sm font-bold text-white">
+                              <p className="text-lg font-bold text-white">
                                 ₹{info.total.toLocaleString('en-IN')}
                               </p>
-                              <p className="text-[11px] text-white/70 font-medium">
+                              <p className="text-sm text-white/70 font-medium">
                                 {elapsedMin !== null ? (
                                   elapsedMin < 1 ? '<1m' :
                                   elapsedMin < 60 ? `${elapsedMin}m` :
@@ -980,42 +1059,42 @@ export default function CashierPage() {
                               </p>
                               {/* Action buttons: Print+View or Save */}
                               {info.billStatus === 'paid' ? (
-                                <Badge className="text-[10px] px-1.5 py-0 bg-white/20 text-white border-0 font-semibold">
+                                <Badge className="text-sm px-2.5 py-0.5 bg-white/20 text-white border-0 font-semibold">
                                   Paid
                                 </Badge>
                               ) : isPrinted ? (
                                 <button
                                   onClick={() => openQuickSettle(table)}
-                                  className="mt-0.5 w-full flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded px-2 py-1 text-[11px] font-bold transition-colors active:scale-95"
+                                  className="mt-0.5 w-full flex items-center justify-center gap-1.5 bg-white/30 hover:bg-white/50 text-white rounded-lg px-3 py-1.5 text-sm font-bold transition-colors active:scale-95"
                                 >
-                                  <Check className="h-3 w-3" /> Save
+                                  <Check className="h-5 w-5" /> Save
                                 </button>
                               ) : (
-                                <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                                <div className="flex items-center justify-center gap-3 mt-0.5">
                                   <button
                                     onClick={() => handleQuickPrint(table)}
                                     disabled={quickPrintingTableId === table.id}
-                                    className="bg-white/20 hover:bg-white/40 text-white rounded p-1 transition-colors active:scale-95"
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-2 transition-colors active:scale-95"
                                     title="Print customer copy"
                                   >
                                     {quickPrintingTableId === table.id ? (
-                                      <div className="h-3.5 w-3.5 border-2 border-white/60 border-t-white rounded-full animate-spin" />
+                                      <div className="h-5 w-5 border-2 border-white/60 border-t-white rounded-full animate-spin" />
                                     ) : (
-                                      <Printer className="h-3.5 w-3.5" />
+                                      <Printer className="h-5 w-5" />
                                     )}
                                   </button>
                                   <button
                                     onClick={() => openTableBilling(table)}
-                                    className="bg-white/20 hover:bg-white/40 text-white rounded p-1 transition-colors active:scale-95"
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-2 transition-colors active:scale-95"
                                     title="View bill"
                                   >
-                                    <Eye className="h-3.5 w-3.5" />
+                                    <Eye className="h-5 w-5" />
                                   </button>
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <p className="text-[11px] capitalize text-gray-500 mt-0.5 font-medium">
+                            <p className="text-sm capitalize text-gray-500 mt-1 font-medium">
                               {table.status}
                             </p>
                           )}
@@ -1034,7 +1113,7 @@ export default function CashierPage() {
             {/* Search + Filters Bar */}
             <div className="space-y-3 mb-5">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="font-semibold text-lg flex items-center gap-2 shrink-0">
+                <h2 className="font-semibold text-xl flex items-center gap-2 shrink-0">
                   <Receipt className="h-5 w-5" />
                   Live Orders
                 </h2>
@@ -1047,7 +1126,7 @@ export default function CashierPage() {
                     className="pl-9 h-9"
                   />
                 </div>
-                <Button variant="ghost" size="sm" onClick={loadLiveOrders}>
+                <Button variant="ghost" size="sm" onClick={() => loadLiveOrders()}>
                   <RefreshCw className="h-4 w-4 mr-1" />
                   Refresh
                 </Button>
@@ -1065,7 +1144,7 @@ export default function CashierPage() {
                     <button
                       key={f.key}
                       onClick={() => setLiveOrderFilter(f.key)}
-                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      className={`px-3.5 py-1.5 text-sm rounded-md transition-colors ${
                         liveOrderFilter === f.key
                           ? 'bg-white shadow-sm font-medium'
                           : 'text-gray-500 hover:text-gray-700'
@@ -1090,7 +1169,7 @@ export default function CashierPage() {
                     <button
                       key={f.key}
                       onClick={() => setLiveStatusFilter(f.key)}
-                      className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                      className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                         liveStatusFilter === f.key
                           ? `${f.color} border-current font-medium`
                           : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
@@ -1131,19 +1210,19 @@ export default function CashierPage() {
                       {/* Top row: order number + badge + total */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-base text-gray-900">{order.order_number}</span>
+                          <span className="font-bold text-lg text-gray-900">{order.order_number}</span>
                           <Badge
                             variant="outline"
-                            className={`text-[10px] ${isDineIn ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-orange-200 text-orange-700 bg-orange-50'}`}
+                            className={`text-xs ${isDineIn ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-orange-200 text-orange-700 bg-orange-50'}`}
                           >
                             {isDineIn ? 'Dine In' : 'Takeaway'}
                           </Badge>
                         </div>
-                        <span className="font-bold text-base text-amber-800">₹{orderTotal.toFixed(0)}</span>
+                        <span className="font-bold text-lg text-amber-800">₹{orderTotal.toFixed(0)}</span>
                       </div>
 
                       {/* Table + captain + time */}
-                      <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                      <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                         <div className="flex items-center gap-1.5">
                           {isDineIn && order.table && (
                             <span className="font-medium">{getTableDisplayName(order.table)}</span>
@@ -1158,7 +1237,7 @@ export default function CashierPage() {
                       {/* Status + item count */}
                       <div className="flex items-center justify-between mb-2">
                         <Badge
-                          className={`text-[10px] capitalize border-0 ${
+                          className={`text-xs capitalize border-0 ${
                             order.status === 'ready' ? 'bg-green-100 text-green-700' :
                             order.status === 'preparing' ? 'bg-blue-100 text-blue-700' :
                             order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
@@ -1167,32 +1246,32 @@ export default function CashierPage() {
                         >
                           {order.status}
                         </Badge>
-                        <span className="text-xs text-gray-600 font-medium">
+                        <span className="text-sm text-gray-600 font-medium">
                           {activeItems.reduce((s, i) => s + i.quantity, 0)} items
                         </span>
                       </div>
 
                       {/* Items summary */}
-                      <p className="text-xs text-gray-700 line-clamp-2">
+                      <p className="text-sm text-gray-700 line-clamp-2">
                         {activeItems.map(i => `${i.quantity}x ${i.menu_item?.name}`).join(', ')}
                       </p>
 
                       {/* Payment status */}
                       {hasBill && order.bill?.payment_status === 'paid' && (
-                        <Badge className="mt-2 bg-green-100 text-green-700 text-[10px] border-0">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <Badge className="mt-2 bg-green-100 text-green-700 text-xs border-0">
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                           Paid - {order.bill?.payment_mode?.toUpperCase()}
                         </Badge>
                       )}
                       {hasBill && order.bill?.payment_status === 'partial' && (
-                        <Badge className="mt-2 bg-amber-100 text-amber-700 text-[10px] border-0">
-                          <Clock className="h-3 w-3 mr-1" />
+                        <Badge className="mt-2 bg-amber-100 text-amber-700 text-xs border-0">
+                          <Clock className="h-3.5 w-3.5 mr-1" />
                           Outstanding
                         </Badge>
                       )}
                       {hasBill && order.bill?.payment_status === 'pending' && (
-                        <Badge className="mt-2 bg-orange-100 text-orange-700 text-[10px] border-0">
-                          <Receipt className="h-3 w-3 mr-1" />
+                        <Badge className="mt-2 bg-orange-100 text-orange-700 text-xs border-0">
+                          <Receipt className="h-3.5 w-3.5 mr-1" />
                           Bill Created
                         </Badge>
                       )}
@@ -1206,7 +1285,7 @@ export default function CashierPage() {
 
         {activeTab === 'day_close' && (
           <div className="p-6 max-w-2xl mx-auto">
-            <h2 className="font-semibold text-lg mb-6">Today&apos;s Summary</h2>
+            <h2 className="font-semibold text-xl mb-6">Today&apos;s Summary</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-white rounded-xl p-5 border">
@@ -1247,6 +1326,17 @@ export default function CashierPage() {
                 </div>
                 <span className="font-bold text-lg">₹{daySummary.cardTotal.toLocaleString('en-IN')}</span>
               </div>
+              {daySummary.zomatoTotal > 0 && (
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
+                      <Store className="h-5 w-5 text-red-600" />
+                    </div>
+                    <span className="font-medium">Zomato</span>
+                  </div>
+                  <span className="font-bold text-lg text-red-600">₹{daySummary.zomatoTotal.toLocaleString('en-IN')}</span>
+                </div>
+              )}
               {daySummary.ncTotal > 0 && (
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
@@ -1282,8 +1372,8 @@ export default function CashierPage() {
 
             {/* Recent Bills */}
             <div className="mt-8">
-              <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
-                <Receipt className="h-4 w-4" />
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
                 Today&apos;s Bills ({recentBills.length})
               </h3>
               {recentBills.length === 0 ? (
@@ -1301,6 +1391,7 @@ export default function CashierPage() {
                       cash: 'bg-green-100 text-green-700',
                       upi: 'bg-blue-100 text-blue-700',
                       card: 'bg-purple-100 text-purple-700',
+                      zomato: 'bg-red-100 text-red-700',
                       split: 'bg-indigo-100 text-indigo-700',
                       nc: 'bg-orange-100 text-orange-700',
                     }
@@ -1309,28 +1400,28 @@ export default function CashierPage() {
                       <button
                         key={bill.id}
                         onClick={() => openRecentBill(bill)}
-                        className="w-full text-left bg-white rounded-xl p-3.5 border border-gray-200 hover:border-amber-400 hover:shadow-sm transition-all active:scale-[0.99] flex items-center justify-between gap-3"
+                        className="w-full text-left bg-white rounded-xl p-4 border border-gray-200 hover:border-amber-400 hover:shadow-sm transition-all active:scale-[0.99] flex items-center justify-between gap-3"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <span className="font-bold text-sm">{bill.bill_number}</span>
-                            {tableName && <span className="text-xs text-gray-500">{tableName}</span>}
-                            {bill.order?.order_type === 'takeaway' && <Badge variant="outline" className="text-[10px] py-0 px-1.5">Take</Badge>}
+                            <span className="font-bold text-base">{bill.bill_number}</span>
+                            {tableName && <span className="text-sm text-gray-500">{tableName}</span>}
+                            {bill.order?.order_type === 'takeaway' && <Badge variant="outline" className="text-xs py-0 px-1.5">Take</Badge>}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <div className="flex items-center gap-2 text-sm text-gray-400">
                             <span>{time}</span>
                             {captainName && <span>· {captainName}</span>}
                             {bill.order?.order_number && <span>· {bill.order.order_number}</span>}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Badge className={`text-[10px] py-0.5 px-2 border-0 font-semibold ${
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <Badge className={`text-xs py-0.5 px-2.5 border-0 font-semibold ${
                             isPartial ? 'bg-red-100 text-red-700' :
                             modeColors[bill.payment_mode] || 'bg-gray-100 text-gray-700'
                           }`}>
                             {isPartial ? 'Partial' : (bill.payment_mode || '').toUpperCase()}
                           </Badge>
-                          <span className={`font-bold text-sm tabular-nums ${isPaid ? 'text-gray-900' : 'text-red-600'}`}>
+                          <span className={`font-bold text-base tabular-nums ${isPaid ? 'text-gray-900' : 'text-red-600'}`}>
                             ₹{Number(bill.total).toLocaleString('en-IN')}
                           </span>
                         </div>
@@ -1361,30 +1452,84 @@ export default function CashierPage() {
               <p className="text-3xl font-bold text-amber-800">₹{quickSettleTotal.toLocaleString('en-IN')}</p>
             </div>
 
-            {/* Payment mode buttons */}
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { mode: 'cash', label: 'Cash', Icon: Banknote, color: 'bg-green-600 hover:bg-green-700' },
-                { mode: 'upi', label: 'UPI', Icon: Smartphone, color: 'bg-blue-600 hover:bg-blue-700' },
-                { mode: 'card', label: 'Card', Icon: CreditCard, color: 'bg-purple-600 hover:bg-purple-700' },
-              ].map(pm => (
+            {/* Payment mode 1 */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-xs text-gray-500 font-medium">
+                  {quickSettleSplit ? 'Payment 1' : 'Payment Mode'}
+                </Label>
                 <button
-                  key={pm.mode}
-                  onClick={() => setQuickSettlePaymentMode(pm.mode === quickSettlePaymentMode ? '' : pm.mode)}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
-                    quickSettlePaymentMode === pm.mode
-                      ? `${pm.color} text-white border-transparent shadow-lg scale-105`
-                      : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                  onClick={() => {
+                    setQuickSettleSplit(!quickSettleSplit)
+                    if (!quickSettleSplit) {
+                      setQuickSettleAmount1('')
+                      setQuickSettleMode2('')
+                      setQuickSettleRef2('')
+                    }
+                  }}
+                  className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${
+                    quickSettleSplit
+                      ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                   }`}
                 >
-                  <pm.Icon className="h-5 w-5" />
-                  <span className="text-xs font-semibold">{pm.label}</span>
+                  Split
                 </button>
-              ))}
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { mode: 'cash', label: 'Cash', Icon: Banknote, color: 'bg-green-600 hover:bg-green-700' },
+                  { mode: 'upi', label: 'UPI', Icon: Smartphone, color: 'bg-blue-600 hover:bg-blue-700' },
+                  { mode: 'card', label: 'Card', Icon: CreditCard, color: 'bg-purple-600 hover:bg-purple-700' },
+                  { mode: 'zomato', label: 'Zomato', Icon: Store, color: 'bg-red-600 hover:bg-red-700' },
+                ].map(pm => (
+                  <button
+                    key={pm.mode}
+                    onClick={() => setQuickSettlePaymentMode(pm.mode === quickSettlePaymentMode ? '' : pm.mode)}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                      quickSettlePaymentMode === pm.mode
+                        ? `${pm.color} text-white border-transparent shadow-lg scale-105`
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <pm.Icon className="h-5 w-5" />
+                    <span className="text-xs font-semibold">{pm.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Reference number for UPI/Card */}
-            {(quickSettlePaymentMode === 'upi' || quickSettlePaymentMode === 'card') && (
+            {/* Amount input + Ref for payment 1 (when split) */}
+            {quickSettleSplit && quickSettlePaymentMode && (
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs text-gray-500">Amount</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={quickSettleAmount1}
+                    onChange={(e) => setQuickSettleAmount1(e.target.value)}
+                    placeholder={`₹${quickSettleTotal.toLocaleString('en-IN')}`}
+                    className="mt-1"
+                    autoFocus
+                  />
+                </div>
+                {(quickSettlePaymentMode !== 'cash') && (
+                  <div>
+                    <Label className="text-xs text-gray-500">Ref # (optional)</Label>
+                    <Input
+                      value={quickSettleRef}
+                      onChange={(e) => setQuickSettleRef(e.target.value)}
+                      placeholder="Transaction reference"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Ref for payment 1 (non-split mode) */}
+            {!quickSettleSplit && (quickSettlePaymentMode === 'upi' || quickSettlePaymentMode === 'card' || quickSettlePaymentMode === 'zomato') && (
               <div>
                 <Label className="text-xs text-gray-500">Reference # (optional)</Label>
                 <Input
@@ -1393,6 +1538,50 @@ export default function CashierPage() {
                   placeholder="Transaction reference"
                   className="mt-1"
                 />
+              </div>
+            )}
+
+            {/* Payment 2 (split mode) */}
+            {quickSettleSplit && quickSettlePaymentMode && quickSettleAmount1 && parseFloat(quickSettleAmount1) > 0 && parseFloat(quickSettleAmount1) < quickSettleTotal && (
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-gray-500 font-medium">Payment 2</Label>
+                  <span className="text-sm font-bold text-amber-700">
+                    Remaining: ₹{quickSettleRemaining.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { mode: 'cash', label: 'Cash', Icon: Banknote, color: 'bg-green-600 hover:bg-green-700' },
+                    { mode: 'upi', label: 'UPI', Icon: Smartphone, color: 'bg-blue-600 hover:bg-blue-700' },
+                    { mode: 'card', label: 'Card', Icon: CreditCard, color: 'bg-purple-600 hover:bg-purple-700' },
+                    { mode: 'zomato', label: 'Zomato', Icon: Store, color: 'bg-red-600 hover:bg-red-700' },
+                  ].map(pm => (
+                    <button
+                      key={pm.mode}
+                      onClick={() => setQuickSettleMode2(pm.mode === quickSettleMode2 ? '' : pm.mode)}
+                      className={`flex flex-col items-center gap-1 p-2.5 rounded-lg border-2 transition-all ${
+                        quickSettleMode2 === pm.mode
+                          ? `${pm.color} text-white border-transparent shadow-lg scale-105`
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <pm.Icon className="h-4 w-4" />
+                      <span className="text-[11px] font-semibold">{pm.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {quickSettleMode2 && quickSettleMode2 !== 'cash' && (
+                  <div>
+                    <Label className="text-xs text-gray-500">Ref # (optional)</Label>
+                    <Input
+                      value={quickSettleRef2}
+                      onChange={(e) => setQuickSettleRef2(e.target.value)}
+                      placeholder="Transaction reference"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -1412,7 +1601,10 @@ export default function CashierPage() {
               <Button
                 className="flex-1 bg-amber-700 hover:bg-amber-800"
                 onClick={performQuickSettle}
-                disabled={!quickSettlePaymentMode || quickSettling}
+                disabled={
+                  !quickSettlePaymentMode || quickSettling ||
+                  (quickSettleSplit && (!quickSettleAmount1 || parseFloat(quickSettleAmount1) <= 0 || parseFloat(quickSettleAmount1) >= quickSettleTotal || !quickSettleMode2))
+                }
               >
                 {quickSettling ? (
                   <div className="h-4 w-4 border-2 border-white/60 border-t-white rounded-full animate-spin mr-1" />

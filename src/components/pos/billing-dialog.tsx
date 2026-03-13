@@ -227,7 +227,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   const activeItems = localItems.filter(i => !i.is_cancelled)
   const subtotal = activeItems.reduce((sum, item) => sum + item.total_price, 0)
 
-  const serviceCharge = serviceChargeRemoved ? 0 : Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+  const serviceChargeOriginal = Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+  const serviceCharge = serviceChargeRemoved ? 0 : serviceChargeOriginal
 
   let discountAmount = 0
   if (discountType === 'percent' && discountValue) {
@@ -399,7 +400,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           subtotal,
           gst_percent: GST_PERCENT,
           gst_amount: gstAmount,
-          service_charge: serviceCharge,
+          service_charge: serviceChargeOriginal,
           service_charge_removed: serviceChargeRemoved,
           discount_amount: discountAmount,
           discount_type: discountType,
@@ -546,7 +547,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           subtotal,
           gst_percent: GST_PERCENT,
           gst_amount: gstAmount,
-          service_charge: serviceCharge,
+          service_charge: serviceChargeOriginal,
           service_charge_removed: serviceChargeRemoved,
           discount_amount: discountAmount,
           discount_type: discountType,

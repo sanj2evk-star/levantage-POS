@@ -456,7 +456,7 @@ export default function CashierPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         <header className="bg-white border-b px-6 py-3 flex items-center gap-2">
           <Coffee className="h-5 w-5 text-amber-700" />
           <span className="font-semibold">Cashier</span>
@@ -479,7 +479,7 @@ export default function CashierPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <header className="bg-white border-b px-6 py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">

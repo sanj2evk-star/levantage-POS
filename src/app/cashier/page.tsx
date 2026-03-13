@@ -434,24 +434,21 @@ export default function CashierPage() {
     if (table.status === 'reserved') {
       return 'border-yellow-400 bg-yellow-50 opacity-80 cursor-default'
     }
-    // occupied
+    // occupied — dark filled cards for active tables
     if (info?.hasBill) {
       if (info.billStatus === 'paid') {
-        return 'border-emerald-500 bg-emerald-50 hover:border-emerald-600 hover:shadow-md cursor-pointer active:scale-95'
+        return 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg cursor-pointer active:scale-95'
       }
-      return 'border-amber-500 bg-amber-50 hover:border-amber-600 hover:shadow-md cursor-pointer active:scale-95'
+      return 'border-amber-600 bg-amber-600 text-white hover:bg-amber-700 hover:shadow-lg cursor-pointer active:scale-95'
     }
-    return 'border-green-500 bg-green-50 hover:border-green-600 hover:shadow-md cursor-pointer active:scale-95'
+    return 'border-green-600 bg-green-600 text-white hover:bg-green-700 hover:shadow-lg cursor-pointer active:scale-95'
   }
 
   function getTableNumberColor(table: TableType, info: TableOrderInfo | null | undefined): string {
     if (table.status === 'available') return 'text-gray-400'
     if (table.status === 'reserved') return 'text-yellow-800'
-    if (info?.hasBill) {
-      if (info.billStatus === 'paid') return 'text-emerald-800'
-      return 'text-amber-800'
-    }
-    return 'text-green-800'
+    // Active tables have dark bg, so use white text
+    return 'text-white'
   }
 
   if (isLoading || loading) {
@@ -616,11 +613,11 @@ export default function CashierPage() {
                 <span>Available</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm bg-green-100 border border-green-400" />
+                <div className="w-3 h-3 rounded-sm bg-green-600" />
                 <span>Running</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm bg-amber-100 border border-amber-400" />
+                <div className="w-3 h-3 rounded-sm bg-amber-600" />
                 <span>Billed</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -670,19 +667,19 @@ export default function CashierPage() {
                           </p>
                           {isOccupied && info ? (
                             <div className="mt-0.5 space-y-0.5">
-                              <p className={`text-sm font-bold ${getTableNumberColor(table, info)}`}>
+                              <p className="text-sm font-bold text-white">
                                 ₹{info.total.toLocaleString('en-IN')}
                               </p>
-                              <p className="text-[11px] text-gray-600 font-medium">
+                              <p className="text-[11px] text-white/70 font-medium">
                                 {elapsedMin !== null ? (elapsedMin < 1 ? '<1 Min' : `${elapsedMin} Min`) : ''}
                               </p>
                               {info.hasBill && info.billStatus === 'pending' && (
-                                <Badge className="text-[10px] px-1.5 py-0 bg-amber-200 text-amber-900 border-0 font-semibold">
+                                <Badge className="text-[10px] px-1.5 py-0 bg-white/20 text-white border-0 font-semibold">
                                   Billed
                                 </Badge>
                               )}
                               {info.hasBill && info.billStatus === 'paid' && (
-                                <Badge className="text-[10px] px-1.5 py-0 bg-green-200 text-green-900 border-0 font-semibold">
+                                <Badge className="text-[10px] px-1.5 py-0 bg-white/20 text-white border-0 font-semibold">
                                   Paid
                                 </Badge>
                               )}

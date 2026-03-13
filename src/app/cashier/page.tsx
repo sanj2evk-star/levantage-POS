@@ -29,10 +29,22 @@ import {
   UtensilsCrossed,
   Volume2,
   VolumeX,
+  Printer,
+  Eye,
+  Check,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 import { playNewOrderSound, playFoodReadySound, unlockAudio } from '@/lib/utils/notification-sound'
+import { printBill, openCashDrawer } from '@/lib/utils/print'
+import { GST_PERCENT, SERVICE_CHARGE_PERCENT } from '@/lib/constants'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 
 type CashierTab = 'tables' | 'live_orders' | 'day_close'
 type LiveOrderFilter = 'all' | 'dine_in' | 'takeaway'
@@ -93,6 +105,16 @@ export default function CashierPage() {
   // Billing dialog
   const [billingOrder, setBillingOrder] = useState<OrderWithDetails | null>(null)
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
+
+  // Quick actions on table cards (Pet Pooja style)
+  const [printedTables, setPrintedTables] = useState<Set<string>>(new Set())
+  const [quickPrintingTableId, setQuickPrintingTableId] = useState<string | null>(null)
+  const [quickSettleOpen, setQuickSettleOpen] = useState(false)
+  const [quickSettleTable, setQuickSettleTable] = useState<TableType | null>(null)
+  const [quickSettleTotal, setQuickSettleTotal] = useState(0)
+  const [quickSettlePaymentMode, setQuickSettlePaymentMode] = useState('')
+  const [quickSettleRef, setQuickSettleRef] = useState('')
+  const [quickSettling, setQuickSettling] = useState(false)
 
   // Tick every 60s so elapsed times update live
   const [, setTick] = useState(0)
@@ -455,6 +477,254 @@ export default function CashierPage() {
     if (activeTab === 'live_orders') loadLiveOrders()
   }
 
+  // Quick print customer preview from table card
+  async function handleQuickPrint(table: TableType) {
+    if (!table.current_order_id) return
+    setQuickPrintingTableId(table.id)
+    try {
+      const supabase = createClient()
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select(`
+          id, order_number, order_type, waiter_id,
+          table:tables!table_id(number, section),
+          items:order_items(id, quantity, unit_price, total_price, is_cancelled, menu_item:menu_items(name, is_veg)),
+          bill:bills(id, total, subtotal, gst_amount, service_charge, service_charge_removed, discount_amount, discount_type, discount_reason),
+          waiter:profiles!waiter_id(name)
+        `)
+        .eq('id', table.current_order_id)
+        .single()
+
+      if (!orderData) { toast.error('Could not load order'); return }
+
+      const existBill = Array.isArray(orderData.bill) ? orderData.bill[0] : orderData.bill
+      const activeItems = (orderData.items || []).filter((i: any) => !i.is_cancelled)
+      const waiterName = (orderData as any).waiter?.name || null
+
+      let subtotal: number, gstAmt: number, sc: number, tot: number
+      let scRemoved = false, discAmt = 0, discType = 'none', discReason = ''
+
+      if (existBill) {
+        subtotal = Number(existBill.subtotal)
+        gstAmt = Number(existBill.gst_amount)
+        sc = Number(existBill.service_charge)
+        scRemoved = existBill.service_charge_removed
+        discAmt = Number(existBill.discount_amount)
+        discType = existBill.discount_type
+        discReason = existBill.discount_reason || ''
+        tot = Number(existBill.total)
+      } else {
+        subtotal = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
+        sc = Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+        gstAmt = Math.round(subtotal * GST_PERCENT / 100 * 100) / 100
+        tot = Math.round((subtotal + sc + gstAmt) * 100) / 100
+      }
+
+      await printBill({
+        billNumber: 'PREVIEW',
+        orderNumber: orderData.order_number,
+        tableName: orderData.table ? getTableDisplayName(orderData.table as any) : null,
+        orderType: orderData.order_type as 'dine_in' | 'takeaway',
+        items: activeItems.map((i: any) => ({
+          name: i.menu_item?.name || 'Unknown',
+          quantity: i.quantity,
+          unitPrice: i.unit_price,
+        })),
+        subtotal,
+        gstPercent: GST_PERCENT,
+        gstAmount: gstAmt,
+        serviceCharge: sc,
+        serviceChargeRemoved: scRemoved,
+        discountAmount: discAmt,
+        discountType: discType,
+        discountReason: discReason || undefined,
+        total: tot,
+        paymentMode: 'preview',
+        cashierName: profile?.name || null,
+        waiterName,
+      })
+
+      setPrintedTables(prev => new Set(prev).add(table.id))
+      toast.success('Customer copy printed')
+    } catch {
+      toast.error('Print failed — check printer')
+    } finally {
+      setQuickPrintingTableId(null)
+    }
+  }
+
+  // Open quick settle dialog
+  async function openQuickSettle(table: TableType) {
+    if (!table.current_order_id) return
+    const info = tableOrderInfo.get(table.current_order_id)
+
+    const supabase = createClient()
+    const { data: billData } = await supabase
+      .from('bills')
+      .select('id, total, payment_status')
+      .eq('order_id', table.current_order_id)
+      .maybeSingle()
+
+    let displayTotal = 0
+    if (billData && billData.payment_status === 'pending') {
+      displayTotal = Number(billData.total)
+    } else if (info) {
+      const sub = info.total
+      const sc = Math.round(sub * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+      const gst = Math.round(sub * GST_PERCENT / 100 * 100) / 100
+      displayTotal = Math.round((sub + sc + gst) * 100) / 100
+    }
+
+    setQuickSettleTable(table)
+    setQuickSettleTotal(displayTotal)
+    setQuickSettlePaymentMode('')
+    setQuickSettleRef('')
+    setQuickSettleOpen(true)
+  }
+
+  // Perform quick settlement
+  async function performQuickSettle() {
+    if (!quickSettleTable || !quickSettlePaymentMode) {
+      toast.error('Select a payment mode')
+      return
+    }
+    setQuickSettling(true)
+    const supabase = createClient()
+
+    try {
+      const orderId = quickSettleTable.current_order_id
+      if (!orderId) throw new Error('No order')
+
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select(`
+          id, order_number, order_type, waiter_id,
+          table:tables!table_id(number, section),
+          items:order_items(id, quantity, unit_price, total_price, is_cancelled, menu_item:menu_items(name, is_veg)),
+          bill:bills(id, bill_number, payment_status, total, subtotal, gst_percent, gst_amount, service_charge, service_charge_removed, discount_amount, discount_type, discount_reason),
+          waiter:profiles!waiter_id(name)
+        `)
+        .eq('id', orderId)
+        .single()
+
+      if (!orderData) throw new Error('Order not found')
+
+      const existBill = Array.isArray(orderData.bill) ? orderData.bill[0] : orderData.bill
+      const activeItems = (orderData.items || []).filter((i: any) => !i.is_cancelled)
+      const waiterName = (orderData as any).waiter?.name || null
+
+      let billId: string, billNumber: string
+      let finalTotal: number, finalSubtotal: number, finalGstAmount: number
+      let finalServiceCharge: number, finalServiceChargeRemoved = false
+      let finalDiscountAmount = 0, finalDiscountType = 'none', finalDiscountReason = ''
+
+      if (existBill && existBill.payment_status === 'pending') {
+        // Settle existing bill
+        billId = existBill.id
+        billNumber = existBill.bill_number
+        finalTotal = Number(existBill.total)
+        finalSubtotal = Number(existBill.subtotal)
+        finalGstAmount = Number(existBill.gst_amount)
+        finalServiceCharge = Number(existBill.service_charge)
+        finalServiceChargeRemoved = existBill.service_charge_removed
+        finalDiscountAmount = Number(existBill.discount_amount)
+        finalDiscountType = existBill.discount_type || 'none'
+        finalDiscountReason = existBill.discount_reason || ''
+
+        await supabase.from('bills').update({
+          payment_mode: quickSettlePaymentMode,
+          payment_status: 'paid',
+        }).eq('id', billId)
+      } else {
+        // Create new bill
+        finalSubtotal = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
+        finalServiceCharge = Math.round(finalSubtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+        finalGstAmount = Math.round(finalSubtotal * GST_PERCENT / 100 * 100) / 100
+        finalTotal = Math.round((finalSubtotal + finalServiceCharge + finalGstAmount) * 100) / 100
+
+        const { data: billNum } = await supabase.rpc('generate_bill_number')
+        const { data: newBill, error: billError } = await supabase
+          .from('bills')
+          .insert({
+            order_id: orderId,
+            subtotal: finalSubtotal,
+            gst_percent: GST_PERCENT,
+            gst_amount: finalGstAmount,
+            service_charge: finalServiceCharge,
+            service_charge_removed: false,
+            discount_amount: 0,
+            discount_type: 'none',
+            total: finalTotal,
+            payment_mode: quickSettlePaymentMode,
+            payment_status: 'paid',
+            bill_number: billNum || `B-${Date.now()}`,
+          })
+          .select()
+          .single()
+
+        if (billError || !newBill) throw new Error(billError?.message || 'Bill creation failed')
+        billId = newBill.id
+        billNumber = newBill.bill_number
+      }
+
+      // Payment record
+      await supabase.from('payments').insert({
+        bill_id: billId,
+        mode: quickSettlePaymentMode,
+        amount: finalTotal,
+        reference_number: (quickSettlePaymentMode === 'upi' || quickSettlePaymentMode === 'card') && quickSettleRef.trim()
+          ? quickSettleRef.trim() : null,
+      })
+
+      // Complete order + free table
+      await supabase.from('orders').update({ status: 'completed' }).eq('id', orderId)
+      if (quickSettleTable.id) {
+        await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', quickSettleTable.id)
+      }
+
+      // Print final receipt
+      printBill({
+        billNumber,
+        orderNumber: orderData.order_number,
+        tableName: orderData.table ? getTableDisplayName(orderData.table as any) : null,
+        orderType: orderData.order_type as 'dine_in' | 'takeaway',
+        items: activeItems.map((i: any) => ({
+          name: i.menu_item?.name || 'Unknown',
+          quantity: i.quantity,
+          unitPrice: i.unit_price,
+        })),
+        subtotal: finalSubtotal,
+        gstPercent: GST_PERCENT,
+        gstAmount: finalGstAmount,
+        serviceCharge: finalServiceCharge,
+        serviceChargeRemoved: finalServiceChargeRemoved,
+        discountAmount: finalDiscountAmount,
+        discountType: finalDiscountType,
+        discountReason: finalDiscountReason || undefined,
+        total: finalTotal,
+        paymentMode: quickSettlePaymentMode,
+        cashierName: profile?.name || null,
+        waiterName,
+      }).catch(() => toast.error('Bill print failed'))
+
+      if (quickSettlePaymentMode === 'cash') {
+        openCashDrawer().catch(() => toast.error('Cash drawer failed'))
+      }
+
+      toast.success(`${billNumber} settled — ₹${finalTotal.toFixed(0)}`)
+      setPrintedTables(prev => { const next = new Set(prev); next.delete(quickSettleTable.id); return next })
+      setQuickSettleOpen(false)
+      setQuickSettleTable(null)
+      setQuickSettlePaymentMode('')
+      setQuickSettleRef('')
+      handleBillSettled()
+    } catch (err: any) {
+      toast.error(err?.message || 'Settlement failed')
+    } finally {
+      setQuickSettling(false)
+    }
+  }
+
   // Derived status counts
   const statusCounts = useMemo(() => {
     let foodReady = 0
@@ -509,11 +779,11 @@ export default function CashierPage() {
     // occupied — dark filled cards for active tables
     if (info?.hasBill) {
       if (info.billStatus === 'paid') {
-        return 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg cursor-pointer active:scale-95'
+        return 'border-emerald-600 bg-emerald-600 text-white'
       }
-      return 'border-amber-600 bg-amber-600 text-white hover:bg-amber-700 hover:shadow-lg cursor-pointer active:scale-95'
+      return 'border-amber-600 bg-amber-600 text-white'
     }
-    return 'border-green-600 bg-green-600 text-white hover:bg-green-700 hover:shadow-lg cursor-pointer active:scale-95'
+    return 'border-green-600 bg-green-600 text-white'
   }
 
   function getTableNumberColor(table: TableType, info: TableOrderInfo | null | undefined): string {
@@ -683,12 +953,11 @@ export default function CashierPage() {
                       const isOccupied = table.status === 'occupied'
                       const info = table.current_order_id ? tableOrderInfo.get(table.current_order_id) : null
                       const elapsedMin = info ? Math.floor((Date.now() - new Date(info.createdAt).getTime()) / 60000) : null
+                      const isPrinted = printedTables.has(table.id)
 
                       return (
-                        <button
+                        <div
                           key={table.id}
-                          onClick={() => isOccupied && openTableBilling(table)}
-                          disabled={!isOccupied}
                           className={`relative p-2 rounded-lg text-center border-2 min-h-[72px] transition-all ${getTableCardStyle(table, info)}`}
                         >
                           <p className={`text-base font-bold ${getTableNumberColor(table, info)}`}>
@@ -706,15 +975,40 @@ export default function CashierPage() {
                                   `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`
                                 ) : ''}
                               </p>
-                              {info.hasBill && info.billStatus === 'pending' && (
-                                <Badge className="text-[10px] px-1.5 py-0 bg-white/20 text-white border-0 font-semibold">
-                                  Billed
-                                </Badge>
-                              )}
-                              {info.hasBill && info.billStatus === 'paid' && (
+                              {/* Action buttons: Print+View or Save */}
+                              {info.billStatus === 'paid' ? (
                                 <Badge className="text-[10px] px-1.5 py-0 bg-white/20 text-white border-0 font-semibold">
                                   Paid
                                 </Badge>
+                              ) : isPrinted ? (
+                                <button
+                                  onClick={() => openQuickSettle(table)}
+                                  className="mt-0.5 w-full flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded px-2 py-1 text-[11px] font-bold transition-colors active:scale-95"
+                                >
+                                  <Check className="h-3 w-3" /> Save
+                                </button>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                                  <button
+                                    onClick={() => handleQuickPrint(table)}
+                                    disabled={quickPrintingTableId === table.id}
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded p-1 transition-colors active:scale-95"
+                                    title="Print customer copy"
+                                  >
+                                    {quickPrintingTableId === table.id ? (
+                                      <div className="h-3.5 w-3.5 border-2 border-white/60 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                      <Printer className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => openTableBilling(table)}
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded p-1 transition-colors active:scale-95"
+                                    title="View bill"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
                               )}
                             </div>
                           ) : (
@@ -722,7 +1016,7 @@ export default function CashierPage() {
                               {table.status}
                             </p>
                           )}
-                        </button>
+                        </div>
                       )
                     })}
                   </div>
@@ -1046,6 +1340,88 @@ export default function CashierPage() {
           </div>
         )}
       </div>
+
+      {/* Quick Settle Dialog */}
+      <Dialog open={quickSettleOpen} onOpenChange={(o) => { if (!o) { setQuickSettleOpen(false); setQuickSettleTable(null) } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-amber-700" />
+              Settle {quickSettleTable && getTableDisplayName(quickSettleTable)}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Total */}
+            <div className="text-center py-3 bg-amber-50 rounded-lg">
+              <p className="text-sm text-gray-500">Total Amount</p>
+              <p className="text-3xl font-bold text-amber-800">₹{quickSettleTotal.toLocaleString('en-IN')}</p>
+            </div>
+
+            {/* Payment mode buttons */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { mode: 'cash', label: 'Cash', Icon: Banknote, color: 'bg-green-600 hover:bg-green-700' },
+                { mode: 'upi', label: 'UPI', Icon: Smartphone, color: 'bg-blue-600 hover:bg-blue-700' },
+                { mode: 'card', label: 'Card', Icon: CreditCard, color: 'bg-purple-600 hover:bg-purple-700' },
+              ].map(pm => (
+                <button
+                  key={pm.mode}
+                  onClick={() => setQuickSettlePaymentMode(pm.mode === quickSettlePaymentMode ? '' : pm.mode)}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                    quickSettlePaymentMode === pm.mode
+                      ? `${pm.color} text-white border-transparent shadow-lg scale-105`
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <pm.Icon className="h-5 w-5" />
+                  <span className="text-xs font-semibold">{pm.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Reference number for UPI/Card */}
+            {(quickSettlePaymentMode === 'upi' || quickSettlePaymentMode === 'card') && (
+              <div>
+                <Label className="text-xs text-gray-500">Reference # (optional)</Label>
+                <Input
+                  value={quickSettleRef}
+                  onChange={(e) => setQuickSettleRef(e.target.value)}
+                  placeholder="Transaction reference"
+                  className="mt-1"
+                />
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setQuickSettleOpen(false)
+                  if (quickSettleTable) openTableBilling(quickSettleTable)
+                }}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View Bill
+              </Button>
+              <Button
+                className="flex-1 bg-amber-700 hover:bg-amber-800"
+                onClick={performQuickSettle}
+                disabled={!quickSettlePaymentMode || quickSettling}
+              >
+                {quickSettling ? (
+                  <div className="h-4 w-4 border-2 border-white/60 border-t-white rounded-full animate-spin mr-1" />
+                ) : (
+                  <Check className="h-4 w-4 mr-1" />
+                )}
+                Settle ₹{quickSettleTotal.toLocaleString('en-IN')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Billing Dialog */}
       <BillingDialog

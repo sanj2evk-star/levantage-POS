@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { GST_PERCENT, SERVICE_CHARGE_PERCENT } from '@/lib/constants'
+import { getBusinessDayRange, getCurrentBusinessDate, loadDayBoundaryHour } from '@/lib/utils/business-day'
 import {
   IndianRupee,
   TrendingUp,
@@ -74,10 +75,8 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function AdminDashboard() {
   const { profile } = useAuth(['admin', 'manager', 'accountant'])
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })
+  const [boundaryHour, setBoundaryHour] = useState(3)
+  const [selectedDate, setSelectedDate] = useState(() => getCurrentBusinessDate(3))
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [categoryPerf, setCategoryPerf] = useState<{ name: string; total: number }[]>([])
@@ -87,10 +86,11 @@ export default function AdminDashboard() {
     setLoading(true)
     const supabase = createClient()
 
-    const localStart = new Date(selectedDate + 'T00:00:00')
-    const localEnd = new Date(selectedDate + 'T23:59:59')
-    const startOfDay = localStart.toISOString()
-    const endOfDay = localEnd.toISOString()
+    // Load boundary hour setting
+    const bh = await loadDayBoundaryHour(supabase)
+    setBoundaryHour(bh)
+
+    const { start: startOfDay, end: endOfDay } = getBusinessDayRange(selectedDate, bh)
 
     const fmtDate = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -105,8 +105,8 @@ export default function AdminDashboard() {
 
     const weekStartStr = fmtDate(weekStart)
     const weekEndStr = fmtDate(weekEnd)
-    const weekStartUTC = new Date(weekStartStr + 'T00:00:00').toISOString()
-    const weekEndUTC = new Date(weekEndStr + 'T23:59:59').toISOString()
+    const weekStartUTC = getBusinessDayRange(weekStartStr, bh).start
+    const weekEndUTC = getBusinessDayRange(weekEndStr, bh).end
 
     const [billsResult, weeklyBillsResult, tablesResult, runningOrdersResult, allTablesResult] = await Promise.all([
       supabase
@@ -343,10 +343,7 @@ export default function AdminDashboard() {
     setSelectedDate(f(d))
   }
 
-  const todayStr = (() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })()
+  const todayStr = getCurrentBusinessDate(boundaryHour)
 
   const isToday = selectedDate === todayStr
   const displayDate = new Date(selectedDate + 'T12:00:00')

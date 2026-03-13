@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Save, Printer, Lock, PlayCircle } from 'lucide-react'
+import { Save, Printer, Lock, PlayCircle, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { testPrinter } from '@/lib/utils/print'
@@ -172,7 +172,7 @@ export default function SettingsPage() {
             Security PIN
           </CardTitle>
           <CardDescription>
-            PIN required for sensitive actions like item cancellation and bill reprints. Leave empty to disable.
+            PIN required for item cancellation, service charge removal, NC, and bill reprints. Must be set for cashier operations to work.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -191,6 +191,50 @@ export default function SettingsPage() {
               Save
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Business Day Boundary */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Business Day Boundary
+          </CardTitle>
+          <CardDescription>
+            When does a new business day start? Orders placed between midnight and this hour count as the previous day.
+            Useful for late-night service on weekends.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3 items-end">
+            <div className="space-y-2 flex-1 max-w-xs">
+              <Label>New Day Starts At</Label>
+              <Select
+                value={settings.day_boundary_hour || '3'}
+                onValueChange={(v) => v != null && setSettings({ ...settings, day_boundary_hour: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">12:00 AM (Midnight)</SelectItem>
+                  <SelectItem value="1">1:00 AM</SelectItem>
+                  <SelectItem value="2">2:00 AM</SelectItem>
+                  <SelectItem value="3">3:00 AM (Recommended)</SelectItem>
+                  <SelectItem value="4">4:00 AM</SelectItem>
+                  <SelectItem value="5">5:00 AM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={saveSettings} disabled={saving}>
+              <Save className="h-4 w-4 mr-2" />
+              Save
+            </Button>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Example: If set to 3 AM, a bill at 1 AM on Saturday will appear under Friday&apos;s sales.
+          </p>
         </CardContent>
       </Card>
 

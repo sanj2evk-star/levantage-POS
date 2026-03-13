@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { getBusinessDayRange, getCurrentBusinessDate, loadDayBoundaryHour } from '@/lib/utils/business-day'
 
 type ReportTab = 'item_sales' | 'master_sales' | 'waiter_performance' | 'payment_breakdown' | 'settlement'
 
@@ -110,8 +111,8 @@ function formatDate(d: Date): string {
 
 export default function ReportsPage() {
   const { profile } = useAuth(['admin', 'manager', 'accountant'])
-  const [dateFrom, setDateFrom] = useState(() => formatDate(new Date()))
-  const [dateTo, setDateTo] = useState(() => formatDate(new Date()))
+  const [dateFrom, setDateFrom] = useState(() => getCurrentBusinessDate(3))
+  const [dateTo, setDateTo] = useState(() => getCurrentBusinessDate(3))
   const [summary, setSummary] = useState<DaySummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ReportTab>('item_sales')
@@ -122,8 +123,9 @@ export default function ReportsPage() {
     setLoading(true)
     const supabase = createClient()
 
-    const startOfDay = new Date(dateFrom + 'T00:00:00').toISOString()
-    const endOfDay = new Date(dateTo + 'T23:59:59').toISOString()
+    const bh = await loadDayBoundaryHour(supabase)
+    const startOfDay = getBusinessDayRange(dateFrom, bh).start
+    const endOfDay = getBusinessDayRange(dateTo, bh).end
 
     const [billsResult, ordersResult, refundsResult, partialBillsResult] = await Promise.all([
       supabase

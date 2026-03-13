@@ -33,12 +33,14 @@ import {
   Eye,
   Check,
   Store,
+  Lock,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 import { playNewOrderSound, playFoodReadySound, unlockAudio } from '@/lib/utils/notification-sound'
 import { printBill, openCashDrawer } from '@/lib/utils/print'
 import { GST_PERCENT, SERVICE_CHARGE_PERCENT } from '@/lib/constants'
+import { getBusinessDayRange, getCurrentBusinessDate, loadDayBoundaryHour } from '@/lib/utils/business-day'
 import {
   Dialog,
   DialogContent,
@@ -143,6 +145,15 @@ export default function CashierPage() {
   })
   const [recentBills, setRecentBills] = useState<RecentBill[]>([])
 
+  // Business day boundary
+  const [boundaryHour, setBoundaryHour] = useState(3)
+
+  // Manual day close state
+  const [dayCloseDialogOpen, setDayCloseDialogOpen] = useState(false)
+  const [dayClosePin, setDayClosePin] = useState('')
+  const [dayClosing, setDayClosing] = useState(false)
+  const [dayAlreadyClosed, setDayAlreadyClosed] = useState(false)
+
   // Debounce ref for realtime updates
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -224,8 +235,10 @@ export default function CashierPage() {
     // Only show loading spinner on initial load, not background refreshes
     if (!isBackground) setLoadingLiveOrders(true)
     const supabase = createClient()
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const bh = await loadDayBoundaryHour(supabase)
+    setBoundaryHour(bh)
+    const businessDate = getCurrentBusinessDate(bh)
+    const { start: dayStart } = getBusinessDayRange(businessDate, bh)
     const { data } = await supabase
       .from('orders')
       .select(`
@@ -241,7 +254,7 @@ export default function CashierPage() {
         waiter:profiles!waiter_id(name)
       `)
       .in('status', ['pending', 'preparing', 'ready', 'served'])
-      .gte('created_at', today.toISOString())
+      .gte('created_at', dayStart)
       .order('created_at', { ascending: false })
       .limit(100)
 
@@ -269,21 +282,32 @@ export default function CashierPage() {
 
   const loadDaySummary = useCallback(async () => {
     const supabase = createClient()
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayISO = today.toISOString()
+    const bh = await loadDayBoundaryHour(supabase)
+    setBoundaryHour(bh)
+    const businessDate = getCurrentBusinessDate(bh)
+    const { start: dayStart, end: dayEnd } = getBusinessDayRange(businessDate, bh)
+
+    // Check if day is already closed
+    const { data: closingData } = await supabase
+      .from('daily_closings')
+      .select('id')
+      .eq('date', businessDate)
+      .maybeSingle()
+    setDayAlreadyClosed(!!closingData)
 
     // Get bills for today (summary)
     const { data: bills } = await supabase
       .from('bills')
       .select('id, total, payment_status')
-      .gte('created_at', todayISO)
+      .gte('created_at', dayStart)
+      .lte('created_at', dayEnd)
 
     // Get payments for today
     const { data: payments } = await supabase
       .from('payments')
       .select('mode, amount, bill_id')
-      .gte('created_at', todayISO)
+      .gte('created_at', dayStart)
+      .lte('created_at', dayEnd)
 
     // Get recent bills with order details for the list
     const { data: recentBillsData } = await supabase
@@ -292,7 +316,8 @@ export default function CashierPage() {
         id, bill_number, total, payment_mode, payment_status, created_at,
         order:orders!order_id(id, order_number, order_type, table:tables!table_id(number, section), waiter:profiles!waiter_id(name))
       `)
-      .gte('created_at', todayISO)
+      .gte('created_at', dayStart)
+      .lte('created_at', dayEnd)
       .order('created_at', { ascending: false })
 
     const paidBills = (bills || []).filter(b => b.payment_status === 'paid')
@@ -875,6 +900,91 @@ export default function CashierPage() {
     return 'text-white'
   }
 
+  // Manual Day Close
+  async function performDayClose() {
+    if (!dayClosePin.trim()) {
+      toast.error('Enter security PIN')
+      return
+    }
+    setDayClosing(true)
+    const supabase = createClient()
+
+    // Verify PIN
+    const { data: pinData } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'security_pin')
+      .single()
+
+    if (!pinData?.value) {
+      toast.error('Security PIN not configured. Ask admin to set it.')
+      setDayClosing(false)
+      return
+    }
+    if (pinData.value !== dayClosePin) {
+      toast.error('Invalid PIN')
+      setDayClosing(false)
+      return
+    }
+
+    // Get business date
+    const businessDate = getCurrentBusinessDate(boundaryHour)
+
+    // Check if already closed
+    const { data: existing } = await supabase
+      .from('daily_closings')
+      .select('id')
+      .eq('date', businessDate)
+      .maybeSingle()
+
+    if (existing) {
+      toast.error('This day is already closed')
+      setDayAlreadyClosed(true)
+      setDayClosing(false)
+      setDayCloseDialogOpen(false)
+      return
+    }
+
+    // Create closing record
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase
+      .from('daily_closings')
+      .insert({
+        date: businessDate,
+        total_sales: daySummary.totalSales,
+        total_orders: daySummary.totalOrders,
+        cash_total: daySummary.cashTotal,
+        upi_total: daySummary.upiTotal,
+        card_total: daySummary.cardTotal,
+        closed_by: user?.id || null,
+      })
+
+    if (error) {
+      toast.error('Failed to close day: ' + error.message)
+      setDayClosing(false)
+      return
+    }
+
+    // Audit log
+    await supabase.from('audit_logs').insert({
+      action: 'day_close',
+      performed_by: user?.id || null,
+      details: {
+        business_date: businessDate,
+        total_sales: daySummary.totalSales,
+        total_orders: daySummary.totalOrders,
+        cash: daySummary.cashTotal,
+        upi: daySummary.upiTotal,
+        card: daySummary.cardTotal,
+      },
+    })
+
+    setDayAlreadyClosed(true)
+    setDayClosing(false)
+    setDayCloseDialogOpen(false)
+    toast.success('Day closed successfully')
+  }
+
   if (isLoading || loading) {
     return (
       <div className="min-h-screen bg-[#FBF9F6]">
@@ -1361,11 +1471,28 @@ export default function CashierPage() {
               )}
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
+              {dayAlreadyClosed ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-green-800">Day Closed</p>
+                    <p className="text-sm text-green-600">Today&apos;s business day has been closed.</p>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  className="w-full h-12 bg-red-600 hover:bg-red-700 text-base"
+                  onClick={() => { setDayClosePin(''); setDayCloseDialogOpen(true) }}
+                >
+                  <Lock className="h-5 w-5 mr-2" />
+                  Close Day
+                </Button>
+              )}
               <a href="/admin/eod">
-                <Button className="w-full h-12 bg-amber-700 hover:bg-amber-800 text-base">
+                <Button variant="outline" className="w-full h-12 text-base">
                   <IndianRupee className="h-5 w-5 mr-2" />
-                  Open Day Close / EOD
+                  Open Full EOD
                 </Button>
               </a>
             </div>
@@ -1627,6 +1754,55 @@ export default function CashierPage() {
         tables={tables}
         waiters={waiters}
       />
+
+      {/* Day Close PIN Dialog */}
+      <Dialog open={dayCloseDialogOpen} onOpenChange={setDayCloseDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-red-600" />
+              Close Business Day
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-amber-50 rounded-lg p-3 text-sm">
+              <p className="font-medium text-amber-800 mb-1">Day Summary</p>
+              <div className="grid grid-cols-2 gap-1 text-amber-700">
+                <span>Total Sales:</span>
+                <span className="font-bold text-right">₹{daySummary.totalSales.toLocaleString('en-IN')}</span>
+                <span>Bills:</span>
+                <span className="font-bold text-right">{daySummary.totalOrders}</span>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600">
+              Enter security PIN to close today&apos;s business day. This action cannot be undone.
+            </p>
+            <div className="space-y-2">
+              <Label>Security PIN</Label>
+              <Input
+                type="password"
+                placeholder="Enter PIN"
+                value={dayClosePin}
+                onChange={(e) => setDayClosePin(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && performDayClose()}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setDayCloseDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                onClick={performDayClose}
+                disabled={dayClosing}
+              >
+                {dayClosing ? 'Closing...' : 'Close Day'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

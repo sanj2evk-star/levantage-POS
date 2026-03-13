@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { getBusinessDayRange, getCurrentBusinessDate, loadDayBoundaryHour } from '@/lib/utils/business-day'
 
 type ViewTab = 'close_day' | 'history'
 
@@ -63,7 +64,8 @@ export default function EODPage() {
   const [activeTab, setActiveTab] = useState<ViewTab>('close_day')
 
   // Close Day state
-  const [selectedDate, setSelectedDate] = useState(() => formatDate(new Date()))
+  const [selectedDate, setSelectedDate] = useState(() => getCurrentBusinessDate(3))
+  const [boundaryHour, setBoundaryHour] = useState(3)
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<DaySummary | null>(null)
   const [openingBalance, setOpeningBalance] = useState(0)
@@ -97,8 +99,9 @@ export default function EODPage() {
     setLoading(true)
     const supabase = createClient()
 
-    const startOfDay = new Date(selectedDate + 'T00:00:00').toISOString()
-    const endOfDay = new Date(selectedDate + 'T23:59:59').toISOString()
+    const bh = await loadDayBoundaryHour(supabase)
+    setBoundaryHour(bh)
+    const { start: startOfDay, end: endOfDay } = getBusinessDayRange(selectedDate, bh)
 
     const [billsResult, refundsResult, partialResult, lastClosingResult] = await Promise.all([
       supabase

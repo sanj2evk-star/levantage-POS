@@ -39,6 +39,7 @@ import {
   Clock,
   RotateCcw,
   Gift,
+  Store,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -114,6 +115,11 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   const [reprintDialogOpen, setReprintDialogOpen] = useState(false)
   const [reprintPassword, setReprintPassword] = useState('')
   const [reprinting, setReprinting] = useState(false)
+
+  // Service charge removal PIN state
+  const [scPinDialogOpen, setScPinDialogOpen] = useState(false)
+  const [scPin, setScPin] = useState('')
+  const [scPinVerifying, setScPinVerifying] = useState(false)
 
   // Table transfer state
   const [transferDialogOpen, setTransferDialogOpen] = useState(false)
@@ -252,6 +258,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     && !discountPinVerified
 
   async function verifyPassword(password: string): Promise<boolean> {
+    if (!password.trim()) return false
     const supabase = createClient()
     const { data } = await supabase
       .from('settings')
@@ -259,7 +266,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       .eq('key', 'security_pin')
       .single()
 
-    if (!data?.value) return true
+    if (!data?.value) {
+      toast.error('Security PIN not configured. Ask admin to set it in Settings.')
+      return false
+    }
     return data.value === password
   }
 
@@ -343,8 +353,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     }
 
     // Validate reference number
-    if (requirePaymentRef && (paymentMode === 'upi' || paymentMode === 'card') && !referenceNumber.trim()) {
-      toast.error('Reference number is required for UPI/Card payments')
+    if (requirePaymentRef && (paymentMode === 'upi' || paymentMode === 'card' || paymentMode === 'zomato') && !referenceNumber.trim()) {
+      toast.error('Reference number is required for UPI/Card/Zomato payments')
       return
     }
 
@@ -365,10 +375,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       // Validate reference numbers for split UPI/Card
       if (requirePaymentRef) {
         const missingRef = splitPayments.some(p =>
-          (p.mode === 'upi' || p.mode === 'card') && !p.reference_number.trim()
+          (p.mode === 'upi' || p.mode === 'card' || p.mode === 'zomato') && !p.reference_number.trim()
         )
         if (missingRef) {
-          toast.error('Reference number required for UPI/Card split payments')
+          toast.error('Reference number required for UPI/Card/Zomato split payments')
           return
         }
       }
@@ -411,7 +421,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           bill_id: bill.id,
           mode: p.mode,
           amount: parseFloat(p.amount) || 0,
-          reference_number: (p.mode === 'upi' || p.mode === 'card') && p.reference_number.trim()
+          reference_number: (p.mode === 'upi' || p.mode === 'card' || p.mode === 'zomato') && p.reference_number.trim()
             ? p.reference_number.trim() : null,
         }))
         await supabase.from('payments').insert(paymentRecords)
@@ -420,7 +430,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           bill_id: bill.id,
           mode: paymentMode,
           amount: total,
-          reference_number: (paymentMode === 'upi' || paymentMode === 'card') && referenceNumber.trim()
+          reference_number: (paymentMode === 'upi' || paymentMode === 'card' || paymentMode === 'zomato') && referenceNumber.trim()
             ? referenceNumber.trim() : null,
         })
       }
@@ -511,8 +521,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       return
     }
 
-    if (partialAmt > 0 && requirePaymentRef && (selectedMode === 'upi' || selectedMode === 'card') && !referenceNumber.trim()) {
-      toast.error('Reference number is required for UPI/Card payments')
+    if (partialAmt > 0 && requirePaymentRef && (selectedMode === 'upi' || selectedMode === 'card' || selectedMode === 'zomato') && !referenceNumber.trim()) {
+      toast.error('Reference number is required for UPI/Card/Zomato payments')
       return
     }
 
@@ -558,7 +568,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           bill_id: bill.id,
           mode: selectedMode,
           amount: partialAmt,
-          reference_number: (selectedMode === 'upi' || selectedMode === 'card') && referenceNumber.trim()
+          reference_number: (selectedMode === 'upi' || selectedMode === 'card' || selectedMode === 'zomato') && referenceNumber.trim()
             ? referenceNumber.trim() : null,
         })
       }
@@ -642,7 +652,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       return
     }
 
-    if (requirePaymentRef && (collectPaymentMode === 'upi' || collectPaymentMode === 'card') && !collectReferenceNumber.trim()) {
+    if (requirePaymentRef && (collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && !collectReferenceNumber.trim()) {
       toast.error('Reference number is required')
       return
     }
@@ -656,7 +666,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         bill_id: existingBill.id,
         mode: collectPaymentMode,
         amount: outstanding,
-        reference_number: (collectPaymentMode === 'upi' || collectPaymentMode === 'card') && collectReferenceNumber.trim()
+        reference_number: (collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && collectReferenceNumber.trim()
           ? collectReferenceNumber.trim() : null,
       })
 
@@ -954,6 +964,48 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     setReprintDialogOpen(false)
   }
 
+  // Service charge removal with PIN
+  function handleScRemoveClick() {
+    if (serviceChargeRemoved) {
+      // Re-adding service charge → no PIN needed
+      setServiceChargeRemoved(false)
+    } else {
+      // Removing service charge → require PIN
+      setScPin('')
+      setScPinDialogOpen(true)
+    }
+  }
+
+  async function confirmScRemoval() {
+    setScPinVerifying(true)
+    const valid = await verifyPassword(scPin)
+    if (!valid) {
+      toast.error('Invalid PIN')
+      setScPinVerifying(false)
+      return
+    }
+
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    await supabase.from('audit_logs').insert({
+      action: 'sc_removal',
+      order_id: order?.id || null,
+      performed_by: user?.id || null,
+      details: {
+        order_number: order?.order_number,
+        table: order?.table ? getTableDisplayName(order.table) : 'Takeaway',
+        service_charge_amount: (Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100).toFixed(2),
+      },
+    })
+
+    setServiceChargeRemoved(true)
+    setScPinDialogOpen(false)
+    setScPinVerifying(false)
+    setScPin('')
+    toast.success('Service charge removed')
+  }
+
   // If bill already exists, show bill details
   if (existingBill) {
     const paidSoFar = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0)
@@ -1066,8 +1118,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                             size="sm" onClick={() => setCollectPaymentMode(pm.value as PaymentMode)}>{pm.label}</Button>
                         ))}
                       </div>
-                      {(collectPaymentMode === 'upi' || collectPaymentMode === 'card') && (
-                        <Input placeholder={`${collectPaymentMode === 'upi' ? 'UPI' : 'Card'} reference number`}
+                      {(collectPaymentMode === 'upi' || collectPaymentMode === 'card' || collectPaymentMode === 'zomato') && (
+                        <Input placeholder={`${collectPaymentMode === 'upi' ? 'UPI' : collectPaymentMode === 'zomato' ? 'Zomato order' : 'Card'} reference number`}
                           value={collectReferenceNumber} onChange={e => setCollectReferenceNumber(e.target.value)} />
                       )}
                       <div className="flex gap-2">
@@ -1222,7 +1274,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                         ? 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
                         : 'bg-red-50 text-red-500 hover:bg-red-100 border border-red-200'
                     }`}
-                    onClick={() => setServiceChargeRemoved(!serviceChargeRemoved)}
+                    onClick={handleScRemoveClick}
                   >
                     {serviceChargeRemoved ? '+ Add' : '✕ Remove'}
                   </button>
@@ -1283,11 +1335,12 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             {!payLaterMode && (
               <div className="space-y-2.5">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-6 gap-2">
                   {[
                     { mode: 'cash' as const, icon: Banknote, label: 'Cash' },
                     { mode: 'upi' as const, icon: Smartphone, label: 'UPI' },
                     { mode: 'card' as const, icon: CreditCard, label: 'Card' },
+                    { mode: 'zomato' as const, icon: Store, label: 'Zomato' },
                     { mode: 'split' as const, icon: Split, label: 'Split' },
                     { mode: 'nc' as const, icon: Gift, label: 'NC' },
                   ].map(pm => (
@@ -1316,9 +1369,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   ))}
                 </div>
 
-                {/* UPI/Card ref */}
-                {(paymentMode === 'upi' || paymentMode === 'card') && (
-                  <Input placeholder={`${paymentMode === 'upi' ? 'UPI' : 'Card'} reference${requirePaymentRef ? ' *' : ''}`}
+                {/* UPI/Card/Zomato ref */}
+                {(paymentMode === 'upi' || paymentMode === 'card' || paymentMode === 'zomato') && (
+                  <Input placeholder={`${paymentMode === 'upi' ? 'UPI' : paymentMode === 'zomato' ? 'Zomato order' : 'Card'} reference${requirePaymentRef ? ' *' : ''}`}
                     value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-9" />
                 )}
 
@@ -1335,7 +1388,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                           <select value={payment.mode} onChange={e => updateSplitPayment(index, 'mode', e.target.value)}
                             className="h-8 rounded-lg border border-gray-200 px-2 text-xs bg-white">
                             <option value="cash">Cash</option><option value="upi">UPI</option>
-                            <option value="card">Card</option><option value="nc">NC</option>
+                            <option value="card">Card</option><option value="zomato">Zomato</option><option value="nc">NC</option>
                           </select>
                           <Input type="number" placeholder="Amount" value={payment.amount}
                             onChange={e => updateSplitPayment(index, 'amount', e.target.value)} className="flex-1 h-8 text-xs" />
@@ -1343,7 +1396,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                             className="h-6 w-6 flex items-center justify-center rounded text-red-400 hover:bg-red-50">
                             <X className="h-3 w-3" /></button>
                         </div>
-                        {(payment.mode === 'upi' || payment.mode === 'card') && (
+                        {(payment.mode === 'upi' || payment.mode === 'card' || payment.mode === 'zomato') && (
                           <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`} value={payment.reference_number}
                             onChange={e => updateSplitPayment(index, 'reference_number', e.target.value)} className="h-7 text-xs" />
                         )}
@@ -1374,7 +1427,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                           size="sm" className="h-8 text-xs" onClick={() => setPaymentMode(pm.value as PaymentMode)}>{pm.label}</Button>
                       ))}
                     </div>
-                    {(paymentMode === 'upi' || paymentMode === 'card') && (
+                    {(paymentMode === 'upi' || paymentMode === 'card' || paymentMode === 'zomato') && (
                       <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`}
                         value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-8 text-sm" />
                     )}
@@ -1607,6 +1660,42 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 disabled={ncVerifying || !ncReason.trim()}
               >
                 {ncVerifying ? 'Verifying...' : 'Authorize NC'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Charge Removal PIN Dialog */}
+      <Dialog open={scPinDialogOpen} onOpenChange={setScPinDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-amber-600" />
+              Remove Service Charge
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Enter security PIN to remove service charge of <strong>₹{(Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100).toFixed(2)}</strong>
+            </p>
+            <div className="space-y-2">
+              <Label>Security PIN</Label>
+              <Input
+                type="password"
+                placeholder="Enter PIN"
+                value={scPin}
+                onChange={(e) => setScPin(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && confirmScRemoval()}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setScPinDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={confirmScRemoval} disabled={scPinVerifying}>
+                {scPinVerifying ? 'Verifying...' : 'Remove SC'}
               </Button>
             </div>
           </div>

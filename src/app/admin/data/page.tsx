@@ -85,10 +85,11 @@ const fmtTime = (dateStr: string) => {
 const fmtCurrency = (n: number) => `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
 
 import { getTableDisplayName } from '@/lib/utils/table-display'
+import { getBusinessDayRange, getCurrentBusinessDate, loadDayBoundaryHour } from '@/lib/utils/business-day'
 
 export default function DataManagementPage() {
   const { profile } = useAuth(['admin'])
-  const [selectedDate, setSelectedDate] = useState(fmtDate(new Date()))
+  const [selectedDate, setSelectedDate] = useState(() => getCurrentBusinessDate(3))
   const [activeTab, setActiveTab] = useState<'bills' | 'orders' | 'bulk'>('bills')
   const [bills, setBills] = useState<BillWithDetails[]>([])
   const [orders, setOrders] = useState<OrderWithDetails[]>([])
@@ -122,10 +123,8 @@ export default function DataManagementPage() {
     setSelectedOrders(new Set())
     const supabase = createClient()
 
-    const localStart = new Date(selectedDate + 'T00:00:00')
-    const localEnd = new Date(selectedDate + 'T23:59:59')
-    const startISO = localStart.toISOString()
-    const endISO = localEnd.toISOString()
+    const bh = await loadDayBoundaryHour(supabase)
+    const { start: startISO, end: endISO } = getBusinessDayRange(selectedDate, bh)
 
     const [billsResult, ordersResult] = await Promise.all([
       supabase
@@ -247,14 +246,15 @@ export default function DataManagementPage() {
     setSelectedBulkBills(new Set())
     const supabase = createClient()
 
-    const startISO = new Date(bulkFromDate + 'T00:00:00').toISOString()
-    const endISO = new Date(bulkToDate + 'T23:59:59').toISOString()
+    const bh2 = await loadDayBoundaryHour(supabase)
+    const bulkStartISO = getBusinessDayRange(bulkFromDate, bh2).start
+    const bulkEndISO = getBusinessDayRange(bulkToDate, bh2).end
 
     let query = supabase
       .from('bills')
       .select('id, bill_number, total, payment_mode, order_id, created_at, order:orders!order_id(order_number, table:tables!table_id(number, section))')
-      .gte('created_at', startISO)
-      .lte('created_at', endISO)
+      .gte('created_at', bulkStartISO)
+      .lte('created_at', bulkEndISO)
       .order('created_at', { ascending: false })
 
     if (bulkPaymentMode !== 'all') {

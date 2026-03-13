@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { getBusinessDayRange, getCurrentBusinessDate, loadDayBoundaryHour } from '@/lib/utils/business-day'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -68,7 +69,7 @@ const fmtDateTime = (dateStr: string) => {
 
 export default function HawkEyePage() {
   const { profile } = useAuth(['admin'])
-  const [selectedDate, setSelectedDate] = useState(fmtDate(new Date()))
+  const [selectedDate, setSelectedDate] = useState(() => getCurrentBusinessDate(3))
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | AuditAction>('all')
@@ -83,8 +84,8 @@ export default function HawkEyePage() {
     setLoading(true)
     const supabase = createClient()
 
-    const startISO = new Date(selectedDate + 'T00:00:00').toISOString()
-    const endISO = new Date(selectedDate + 'T23:59:59').toISOString()
+    const bh = await loadDayBoundaryHour(supabase)
+    const { start: startISO, end: endISO } = getBusinessDayRange(selectedDate, bh)
 
     const { data } = await supabase
       .from('audit_logs')

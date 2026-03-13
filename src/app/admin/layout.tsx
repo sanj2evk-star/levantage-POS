@@ -20,6 +20,7 @@ import {
   Database,
   Eye,
   CalendarCheck,
+  Clock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -27,6 +28,7 @@ import { useState } from 'react'
 // Which roles can see each nav item
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, roles: ['admin', 'manager'] as UserRole[] },
+  { href: '/admin/running', label: 'Running Orders', icon: Clock, roles: ['admin', 'manager'] as UserRole[] },
   { href: '/admin/menu', label: 'Menu', icon: UtensilsCrossed, roles: ['admin', 'manager'] as UserRole[] },
   { href: '/admin/tables', label: 'Tables', icon: Grid3X3, roles: ['admin', 'manager'] as UserRole[] },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3, roles: ['admin', 'manager', 'accountant'] as UserRole[] },

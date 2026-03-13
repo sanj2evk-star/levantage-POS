@@ -187,13 +187,12 @@ function buildBillPrintData(data) {
   if (isPreview) {
     receipt += formatLine('Order: ' + orderNumber, '** PREVIEW **') + '\n';
   } else {
-    // Extract short bill number from full format (e.g., "BILL-20260312-003" -> "3")
-    let shortBillNo = billNumber;
-    if (billNumber && billNumber.includes('-')) {
-      const parts = billNumber.split('-');
-      const lastPart = parts[parts.length - 1];
-      shortBillNo = String(parseInt(lastPart, 10) || lastPart);
-    }
+    // Bill number — bold and prominent
+    receipt += COMMANDS.BOLD_ON;
+    receipt += COMMANDS.DOUBLE_HEIGHT;
+    receipt += 'Bill No: ' + billNumber + '\n';
+    receipt += COMMANDS.NORMAL_SIZE;
+    receipt += COMMANDS.BOLD_OFF;
 
     receipt += formatLine('Date: ' + dateStr, timeStr) + '\n';
 
@@ -204,13 +203,12 @@ function buildBillPrintData(data) {
       receipt += 'Dine In: ' + tableName + '\n';
     }
 
-    // Cashier + Bill No — like Petpooja: "Cashier: CASHIER  Bill No.: 30"
-    const cashierLabel = cashierName ? 'Cashier: ' + cashierName.toUpperCase() : '';
-    const billLabel = 'Bill No.: ' + shortBillNo;
-    if (cashierLabel) {
-      receipt += formatLine(cashierLabel, billLabel) + '\n';
-    } else {
-      receipt += 'Bill No.: ' + shortBillNo + '\n';
+    // Order number
+    receipt += 'Order: ' + orderNumber + '\n';
+
+    // Cashier
+    if (cashierName) {
+      receipt += 'Cashier: ' + cashierName.toUpperCase() + '\n';
     }
 
     // Waiter — like Petpooja: "Assign to MAHESH"
@@ -221,25 +219,27 @@ function buildBillPrintData(data) {
 
   receipt += COMMANDS.SEPARATOR;
 
+  // Switch to left alignment for items and totals
+  receipt += COMMANDS.ALIGN_LEFT;
+
   // Items header — 4 columns like Petpooja: Item | Qty | Price | Amount
   receipt += COMMANDS.BOLD_ON;
-  // Item(16) Qty(3) Price(6) Amount(7) = 32
+  // Item(14) Qty(4) Price(7) Amount(7) = 32
   receipt += padText('Item', 14) + padText('Qty', 4, 'right') + padText('Price', 7, 'right') + padText('Amount', 7, 'right') + '\n';
   receipt += COMMANDS.BOLD_OFF;
   receipt += COMMANDS.SEPARATOR;
 
-  // Items — 4 columns
+  // Items — 4 columns, left aligned
   for (const item of items) {
     const amt = (item.unitPrice * item.quantity).toFixed(0);
     const price = item.unitPrice.toFixed(0);
-    const name = item.name.length > 14 ? item.name : item.name;
 
     if (item.name.length > 14) {
       // Long name: print name on first line, numbers on second
       receipt += item.name + '\n';
       receipt += padText('', 14) + padText(item.quantity.toString(), 4, 'right') + padText(price, 7, 'right') + padText(amt, 7, 'right') + '\n';
     } else {
-      receipt += padText(name, 14) + padText(item.quantity.toString(), 4, 'right') + padText(price, 7, 'right') + padText(amt, 7, 'right') + '\n';
+      receipt += padText(item.name, 14) + padText(item.quantity.toString(), 4, 'right') + padText(price, 7, 'right') + padText(amt, 7, 'right') + '\n';
     }
 
     if (item.variant) {

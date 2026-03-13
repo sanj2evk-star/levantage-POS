@@ -213,6 +213,8 @@ export default function CashierPage() {
   const loadLiveOrders = useCallback(async () => {
     setLoadingLiveOrders(true)
     const supabase = createClient()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
       .select(`
@@ -228,6 +230,7 @@ export default function CashierPage() {
         waiter:profiles!waiter_id(name)
       `)
       .in('status', ['pending', 'preparing', 'ready', 'served'])
+      .gte('created_at', today.toISOString())
       .order('created_at', { ascending: false })
       .limit(100)
 

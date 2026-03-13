@@ -339,7 +339,7 @@ export default function ReportsPage() {
 
   function exportMasterSalesCSV() {
     if (!summary) return
-    const headers = ['#', 'Bill Number', 'Order #', 'Table', 'Waiter', 'Time', 'Subtotal', 'GST', 'Service Charge', 'SC Removed', 'Discount', 'Net Sales', 'Total', 'Payment Mode', 'Ref #']
+    const headers = ['#', 'Bill Number', 'Order #', 'Table', 'Captain', 'Time', 'Subtotal', 'GST', 'Service Charge', 'SC Removed', 'Discount', 'Net Sales', 'Total', 'Payment Mode', 'Ref #']
     const rows = summary.bills.map((bill, i) => {
       const tbl = bill.order?.table
         ? getTableDisplayName(bill.order.table)
@@ -386,7 +386,7 @@ export default function ReportsPage() {
 
   function exportWaiterCSV() {
     if (!summary) return
-    const headers = ['#', 'Waiter', 'Role', 'Orders', 'Revenue', 'Avg Order Value']
+    const headers = ['#', 'Captain', 'Role', 'Orders', 'Revenue', 'Avg Order Value']
     const rows = summary.waiterStats.map((w, i) => [
       i + 1,
       w.name,
@@ -424,7 +424,7 @@ export default function ReportsPage() {
   const tabs: { key: ReportTab; label: string; icon: typeof ClipboardList }[] = [
     { key: 'item_sales', label: 'Item Sales', icon: ClipboardList },
     { key: 'master_sales', label: 'Master Sales', icon: FileSpreadsheet },
-    { key: 'waiter_performance', label: 'Waiter', icon: Users },
+    { key: 'waiter_performance', label: 'Captain', icon: Users },
     { key: 'payment_breakdown', label: 'Payments', icon: PieChart },
     { key: 'settlement', label: 'Settlement', icon: BarChart3 },
   ]
@@ -668,7 +668,7 @@ export default function ReportsPage() {
                             <th className="pb-2 font-medium w-10">#</th>
                             <th className="pb-2 font-medium">Bill #</th>
                             <th className="pb-2 font-medium">Table</th>
-                            <th className="pb-2 font-medium">Waiter</th>
+                            <th className="pb-2 font-medium">Captain</th>
                             <th className="pb-2 font-medium">Time</th>
                             <th className="pb-2 font-medium text-right">Subtotal</th>
                             <th className="pb-2 font-medium text-right">GST</th>
@@ -767,7 +767,7 @@ export default function ReportsPage() {
           {activeTab === 'waiter_performance' && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Waiter Performance</CardTitle>
+                <CardTitle className="text-base">Captain Performance</CardTitle>
                 <Button variant="outline" size="sm" onClick={exportWaiterCSV}>
                   <Download className="h-4 w-4 mr-1" />
                   Download CSV
@@ -775,7 +775,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 {summary.waiterStats.length === 0 ? (
-                  <p className="text-center text-gray-400 py-8">No waiter data for this period</p>
+                  <p className="text-center text-gray-400 py-8">No captain data for this period</p>
                 ) : (
                   <>
                     <div className="overflow-x-auto">
@@ -783,7 +783,7 @@ export default function ReportsPage() {
                         <thead>
                           <tr className="border-b text-left text-gray-500">
                             <th className="pb-2 font-medium w-10">#</th>
-                            <th className="pb-2 font-medium">Waiter</th>
+                            <th className="pb-2 font-medium">Captain</th>
                             <th className="pb-2 font-medium">Role</th>
                             <th className="pb-2 font-medium text-right">Orders</th>
                             <th className="pb-2 font-medium text-right">Revenue</th>

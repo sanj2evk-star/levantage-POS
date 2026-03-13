@@ -463,7 +463,7 @@ export default function WaiterPage() {
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white border-b px-4 py-3 flex items-center gap-2">
           <Coffee className="h-5 w-5 text-amber-700" />
-          <span className="font-semibold">Waiter</span>
+          <span className="font-semibold">Captain</span>
         </header>
         <div className="p-4 space-y-6">
           {[1, 2, 3].map(i => (
@@ -721,7 +721,7 @@ export default function WaiterPage() {
                     <Coffee className="h-5 w-5 text-amber-700" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">{profile?.name || 'Waiter'}</p>
+                    <p className="font-semibold text-sm">{profile?.name || 'Captain'}</p>
                     <p className="text-xs text-gray-400 capitalize">{profile?.role}</p>
                   </div>
                 </div>

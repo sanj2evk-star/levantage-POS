@@ -1156,7 +1156,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   {waiters && waiters.length > 0 && (
                     <button onClick={() => setReassignDialogOpen(true)}
                       className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-amber-700 transition-colors"
-                      title="Reassign Waiter"><UserRound className="h-4 w-4" /></button>
+                      title="Reassign Captain"><UserRound className="h-4 w-4" /></button>
                   )}
                 </div>
               )}
@@ -1483,7 +1483,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserRound className="h-5 w-5" />
-              Reassign Waiter
+              Reassign Captain
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2 max-h-[60vh] overflow-y-auto">

@@ -40,7 +40,7 @@ const ROLES = [
   { value: 'manager', label: 'Manager', description: 'Menu, tables, and reports' },
   { value: 'accountant', label: 'Accountant', description: 'View reports and billing data' },
   { value: 'cashier', label: 'Cashier', description: 'POS, billing, and basic reports' },
-  { value: 'waiter', label: 'Waiter', description: 'Order taking on mobile' },
+  { value: 'waiter', label: 'Captain', description: 'Order taking on mobile' },
 ]
 
 export default function UserManagement() {

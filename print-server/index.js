@@ -215,9 +215,9 @@ function buildBillPrintData(data) {
       receipt += 'Cashier: ' + cashierName.toUpperCase() + '\n';
     }
 
-    // Waiter — like Petpooja: "Assign to MAHESH"
+    // Captain (waiter)
     if (waiterName) {
-      receipt += 'Assign to ' + waiterName.toUpperCase() + '\n';
+      receipt += 'Captain: ' + waiterName.toUpperCase() + '\n';
     }
   }
 

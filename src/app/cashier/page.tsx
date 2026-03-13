@@ -812,7 +812,7 @@ export default function CashierPage() {
                         <span className="font-bold text-base text-amber-800">₹{orderTotal.toFixed(0)}</span>
                       </div>
 
-                      {/* Table + waiter + time */}
+                      {/* Table + captain + time */}
                       <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
                         <div className="flex items-center gap-1.5">
                           {isDineIn && order.table && (

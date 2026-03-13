@@ -27,13 +27,16 @@ const COMMANDS = {
   UNDERLINE_OFF: ESC + '-' + '\x00',
   LINE_FEED: '\n',
   CUT: GS + 'V' + '\x41' + '\x03', // Partial cut with 3-line feed
-  SEPARATOR: '--------------------------------\n',
-  DOUBLE_SEPARATOR: '================================\n',
+  SEPARATOR: '------------------------------------------\n', // 42 chars for 80mm paper
+  DOUBLE_SEPARATOR: '==========================================\n',
   OPEN_DRAWER: ESC + 'p' + '\x00' + '\x19' + '\xFA',
 };
 
-// Format a line with left and right aligned text (for 32-char width)
-function formatLine(left, right, width = 32) {
+// Paper width: 42 chars for 80mm Epson printers (Font A, 12×24)
+const PAPER_WIDTH = 42;
+
+// Format a line with left and right aligned text
+function formatLine(left, right, width = PAPER_WIDTH) {
   left = String(left);
   right = String(right);
   const space = width - left.length - right.length;
@@ -108,7 +111,7 @@ function buildKOTPrintData(data) {
   for (const item of items) {
     receipt += COMMANDS.DOUBLE_HEIGHT;
     receipt += formatLine(
-      padText(item.name, 28),
+      padText(item.name, PAPER_WIDTH - 6),
       padText('x' + item.quantity, 4, 'right')
     ) + '\n';
     receipt += COMMANDS.NORMAL_SIZE;
@@ -222,10 +225,11 @@ function buildBillPrintData(data) {
   // Switch to left alignment for items and totals
   receipt += COMMANDS.ALIGN_LEFT;
 
-  // Items header — 4 columns like Petpooja: Item | Qty | Price | Amount
+  // Items header — 4 columns: Item | Qty | Price | Amount
+  // Layout for 42 chars: Item(22) Qty(4) Price(8) Amount(8) = 42
+  const ITEM_COL = PAPER_WIDTH - 20; // 22 chars for item name
   receipt += COMMANDS.BOLD_ON;
-  // Item(14) Qty(4) Price(7) Amount(7) = 32
-  receipt += padText('Item', 14) + padText('Qty', 4, 'right') + padText('Price', 7, 'right') + padText('Amount', 7, 'right') + '\n';
+  receipt += padText('Item', ITEM_COL) + padText('Qty', 4, 'right') + padText('Price', 8, 'right') + padText('Amt', 8, 'right') + '\n';
   receipt += COMMANDS.BOLD_OFF;
   receipt += COMMANDS.SEPARATOR;
 
@@ -234,12 +238,12 @@ function buildBillPrintData(data) {
     const amt = (item.unitPrice * item.quantity).toFixed(0);
     const price = item.unitPrice.toFixed(0);
 
-    if (item.name.length > 14) {
+    if (item.name.length > ITEM_COL) {
       // Long name: print name on first line, numbers on second
       receipt += item.name + '\n';
-      receipt += padText('', 14) + padText(item.quantity.toString(), 4, 'right') + padText(price, 7, 'right') + padText(amt, 7, 'right') + '\n';
+      receipt += padText('', ITEM_COL) + padText(item.quantity.toString(), 4, 'right') + padText(price, 8, 'right') + padText(amt, 8, 'right') + '\n';
     } else {
-      receipt += padText(item.name, 14) + padText(item.quantity.toString(), 4, 'right') + padText(price, 7, 'right') + padText(amt, 7, 'right') + '\n';
+      receipt += padText(item.name, ITEM_COL) + padText(item.quantity.toString(), 4, 'right') + padText(price, 8, 'right') + padText(amt, 8, 'right') + '\n';
     }
 
     if (item.variant) {
@@ -286,12 +290,12 @@ function buildBillPrintData(data) {
     receipt += formatLine('Round off', roundOffStr) + '\n';
   }
 
-  // Grand Total — large, bold, like Petpooja
-  // DOUBLE_SIZE = 2x width, so effective line is 16 chars (32/2)
+  // Grand Total — large, bold
+  // DOUBLE_SIZE = 2x width, so effective line is PAPER_WIDTH/2 chars
   receipt += COMMANDS.SEPARATOR;
   receipt += COMMANDS.BOLD_ON;
   receipt += COMMANDS.DOUBLE_SIZE;
-  receipt += formatLine('Total', 'Rs.' + roundedTotal.toFixed(0), 16) + '\n';
+  receipt += formatLine('Total', 'Rs.' + roundedTotal.toFixed(0), Math.floor(PAPER_WIDTH / 2)) + '\n';
   receipt += COMMANDS.NORMAL_SIZE;
   receipt += COMMANDS.BOLD_OFF;
   receipt += COMMANDS.SEPARATOR;

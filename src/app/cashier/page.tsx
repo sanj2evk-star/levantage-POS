@@ -429,7 +429,7 @@ export default function CashierPage() {
   // Helper: table card style based on status + bill
   function getTableCardStyle(table: TableType, info: TableOrderInfo | null | undefined): string {
     if (table.status === 'available') {
-      return 'border-gray-300 bg-gray-100 opacity-60 cursor-default'
+      return 'border-gray-200 bg-white shadow-sm cursor-default'
     }
     if (table.status === 'reserved') {
       return 'border-yellow-400 bg-yellow-50 opacity-80 cursor-default'
@@ -445,7 +445,7 @@ export default function CashierPage() {
   }
 
   function getTableNumberColor(table: TableType, info: TableOrderInfo | null | undefined): string {
-    if (table.status === 'available') return 'text-gray-500'
+    if (table.status === 'available') return 'text-gray-400'
     if (table.status === 'reserved') return 'text-yellow-800'
     if (info?.hasBill) {
       if (info.billStatus === 'paid') return 'text-emerald-800'
@@ -612,7 +612,7 @@ export default function CashierPage() {
             <div className="flex items-center gap-5 text-xs text-gray-600 pb-3 border-b border-gray-200">
               <span className="font-semibold text-gray-800">Legend:</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm bg-gray-100 border border-gray-300" />
+                <div className="w-3 h-3 rounded-sm bg-white border border-gray-300" />
                 <span>Available</span>
               </div>
               <div className="flex items-center gap-1.5">

@@ -78,6 +78,13 @@ export default function CashierPage() {
   const [billingOrder, setBillingOrder] = useState<OrderWithDetails | null>(null)
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
 
+  // Tick every 60s so elapsed times update live
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 60000)
+    return () => clearInterval(timer)
+  }, [])
+
   // Live orders (all active orders)
   const [liveOrders, setLiveOrders] = useState<LiveOrder[]>([])
   const [loadingLiveOrders, setLoadingLiveOrders] = useState(false)
@@ -671,7 +678,11 @@ export default function CashierPage() {
                                 ₹{info.total.toLocaleString('en-IN')}
                               </p>
                               <p className="text-[11px] text-white/70 font-medium">
-                                {elapsedMin !== null ? (elapsedMin < 1 ? '<1 Min' : `${elapsedMin} Min`) : ''}
+                                {elapsedMin !== null ? (
+                                  elapsedMin < 1 ? '<1m' :
+                                  elapsedMin < 60 ? `${elapsedMin}m` :
+                                  `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`
+                                ) : ''}
                               </p>
                               {info.hasBill && info.billStatus === 'pending' && (
                                 <Badge className="text-[10px] px-1.5 py-0 bg-white/20 text-white border-0 font-semibold">

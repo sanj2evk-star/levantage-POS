@@ -67,6 +67,14 @@ export interface SplitPaymentEntry {
 }
 
 export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems, tables, waiters }: BillingDialogProps) {
+  // Live timer for active time display
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!open) return
+    const timer = setInterval(() => setTick(t => t + 1), 60000)
+    return () => clearInterval(timer)
+  }, [open])
+
   const [serviceChargeRemoved, setServiceChargeRemoved] = useState(false)
   const [discountType, setDiscountType] = useState<DiscountType>('none')
   const [discountValue, setDiscountValue] = useState('')
@@ -1141,6 +1149,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 <p className="text-xs text-gray-500 font-medium">
                   {order.order_number} · {order.order_type === 'takeaway' ? 'Takeaway' : 'Dine In'}
                   {waiterName && <span className="text-amber-700"> · Cpt: {waiterName}</span>}
+                  {(() => {
+                    const mins = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000)
+                    return <span className="text-gray-400"> · {mins < 1 ? '<1m' : mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`}</span>
+                  })()}
                 </p>
               </div>
               {/* Quick actions */}

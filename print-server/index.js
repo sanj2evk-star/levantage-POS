@@ -27,13 +27,14 @@ const COMMANDS = {
   UNDERLINE_OFF: ESC + '-' + '\x00',
   LINE_FEED: '\n',
   CUT: GS + 'V' + '\x41' + '\x03', // Partial cut with 3-line feed
-  SEPARATOR: '------------------------------------------\n', // 42 chars for 80mm paper
-  DOUBLE_SEPARATOR: '==========================================\n',
+  SEPARATOR: '------------------------------------------------\n', // 48 chars for Epson TM-T82II (M335A)
+  DOUBLE_SEPARATOR: '================================================\n',
   OPEN_DRAWER: ESC + 'p' + '\x00' + '\x19' + '\xFA',
 };
 
-// Paper width: 42 chars for 80mm Epson printers (Font A, 12×24)
-const PAPER_WIDTH = 42;
+// Paper width: 48 chars for 80mm Epson printers (Font A, 12×24 at 203 DPI)
+// Billing: Epson M335A (TM-T82II), KOT: Epson M352A3 — all 80mm, 48 chars
+const PAPER_WIDTH = 48;
 
 // Format a line with left and right aligned text
 function formatLine(left, right, width = PAPER_WIDTH) {
@@ -226,8 +227,8 @@ function buildBillPrintData(data) {
   receipt += COMMANDS.ALIGN_LEFT;
 
   // Items header — 4 columns: Item | Qty | Price | Amount
-  // Layout for 42 chars: Item(22) Qty(4) Price(8) Amount(8) = 42
-  const ITEM_COL = PAPER_WIDTH - 20; // 22 chars for item name
+  // Layout for 48 chars: Item(28) Qty(4) Price(8) Amount(8) = 48
+  const ITEM_COL = PAPER_WIDTH - 20; // 28 chars for item name (48-20)
   receipt += COMMANDS.BOLD_ON;
   receipt += padText('Item', ITEM_COL) + padText('Qty', 4, 'right') + padText('Price', 8, 'right') + padText('Amt', 8, 'right') + '\n';
   receipt += COMMANDS.BOLD_OFF;

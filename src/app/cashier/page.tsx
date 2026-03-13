@@ -170,7 +170,7 @@ export default function CashierPage() {
     const { data } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, order_type, created_at, table_id, notes,
+        id, order_number, status, order_type, created_at, table_id, waiter_id, notes,
         table:tables!table_id(number, section),
         items:order_items(
           id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
@@ -347,7 +347,7 @@ export default function CashierPage() {
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, order_type, created_at, table_id, notes,
+        id, order_number, status, order_type, created_at, table_id, waiter_id, notes,
         table:tables!table_id(number, section),
         items:order_items(
           id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,

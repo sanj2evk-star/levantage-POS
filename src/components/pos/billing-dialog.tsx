@@ -1138,7 +1138,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             <div className="flex items-center justify-between mb-2 pr-8">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">{tableName}</h2>
-                <p className="text-xs text-gray-500 font-medium">{order.order_number} · {order.order_type === 'takeaway' ? 'Takeaway' : 'Dine In'}</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  {order.order_number} · {order.order_type === 'takeaway' ? 'Takeaway' : 'Dine In'}
+                  {waiterName && <span className="text-amber-700"> · Cpt: {waiterName}</span>}
+                </p>
               </div>
               {/* Quick actions */}
               {order.status !== 'completed' && (

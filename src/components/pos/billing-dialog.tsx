@@ -1137,8 +1137,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           <div className="px-4 pt-4 pb-3 border-b bg-white shrink-0">
             <div className="flex items-center justify-between mb-2 pr-8">
               <div>
-                <h2 className="text-lg font-bold">{tableName}</h2>
-                <p className="text-xs text-gray-400">{order.order_number} · {order.order_type === 'takeaway' ? 'Takeaway' : 'Dine In'}</p>
+                <h2 className="text-lg font-bold text-gray-900">{tableName}</h2>
+                <p className="text-xs text-gray-500 font-medium">{order.order_number} · {order.order_type === 'takeaway' ? 'Takeaway' : 'Dine In'}</p>
               </div>
               {/* Quick actions */}
               {order.status !== 'completed' && (
@@ -1193,15 +1193,23 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </div>
 
             {/* Charges */}
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between text-gray-500">
-                <span>Subtotal</span><span className="tabular-nums">₹{subtotal.toFixed(2)}</span>
+            <div className="rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 space-y-1.5">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span className="font-medium">Subtotal</span>
+                <span className="tabular-nums font-medium">₹{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-500">
-                <span className="flex items-center gap-1.5">
-                  SC ({SERVICE_CHARGE_PERCENT}%)
-                  <button className="text-[10px] text-red-400 hover:text-red-600 underline" onClick={() => setServiceChargeRemoved(!serviceChargeRemoved)}>
-                    {serviceChargeRemoved ? 'add' : 'remove'}
+              <div className="flex justify-between text-sm text-gray-500 items-center">
+                <span className="flex items-center gap-2">
+                  Service Charge ({SERVICE_CHARGE_PERCENT}%)
+                  <button
+                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors ${
+                      serviceChargeRemoved
+                        ? 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
+                        : 'bg-red-50 text-red-500 hover:bg-red-100 border border-red-200'
+                    }`}
+                    onClick={() => setServiceChargeRemoved(!serviceChargeRemoved)}
+                  >
+                    {serviceChargeRemoved ? '+ Add' : '✕ Remove'}
                   </button>
                 </span>
                 <span className={`tabular-nums ${serviceChargeRemoved ? 'line-through text-gray-300' : ''}`}>
@@ -1209,28 +1217,28 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 </span>
               </div>
               {discountAmount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Discount</span><span className="tabular-nums">-₹{discountAmount.toFixed(2)}</span>
+                <div className="flex justify-between text-sm text-green-600 font-medium">
+                  <span>Discount</span>
+                  <span className="tabular-nums">-₹{discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-gray-500">
-                <span>GST ({GST_PERCENT}%)</span><span className="tabular-nums">₹{gstAmount.toFixed(2)}</span>
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>GST ({GST_PERCENT}%)</span>
+                <span className="tabular-nums">₹{gstAmount.toFixed(2)}</span>
+              </div>
+              <div className="border-t border-gray-100 pt-2 mt-1 flex justify-between items-center">
+                <span className="font-bold text-base text-gray-900">Total</span>
+                <span className="font-bold text-xl text-amber-700 tabular-nums">₹{total.toFixed(2)}</span>
               </div>
             </div>
 
-            {/* Total */}
-            <div className="flex justify-between items-center bg-amber-50 rounded-xl px-4 py-3">
-              <span className="font-bold text-lg">Total</span>
-              <span className="font-bold text-2xl text-amber-700 tabular-nums">₹{total.toFixed(2)}</span>
-            </div>
-
             {/* Discount Toggle */}
-            <details className="group">
-              <summary className="flex items-center justify-between cursor-pointer text-xs text-gray-400 hover:text-gray-600 py-1">
-                <span className="flex items-center gap-1"><Percent className="h-3 w-3" /> Discount</span>
-                <span className="text-[10px] group-open:hidden">tap to expand</span>
+            <details className="group rounded-xl border border-gray-100 bg-white overflow-hidden">
+              <summary className="flex items-center justify-between cursor-pointer px-3.5 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
+                <span className="flex items-center gap-1.5 font-medium"><Percent className="h-3.5 w-3.5" /> Discount</span>
+                <span className="text-xs text-gray-400 group-open:hidden">tap to expand ›</span>
               </summary>
-              <div className="pt-2 space-y-2">
+              <div className="px-3.5 pb-3 space-y-2 border-t border-gray-100 pt-2.5">
                 <div className="flex gap-1.5">
                   <Button variant={discountType === 'none' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
                     onClick={() => { setDiscountType('none'); setDiscountValue('') }}>None</Button>
@@ -1258,8 +1266,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
             {/* Payment Mode */}
             {!payLaterMode && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Payment</p>
+              <div className="space-y-2.5">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
                 <div className="grid grid-cols-5 gap-2">
                   {[
                     { mode: 'cash' as const, icon: Banknote, label: 'Cash' },
@@ -1281,10 +1289,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                         }
                         setPaymentMode(pm.mode); setSplitPayments([]); setReferenceNumber('')
                       }}
-                      className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 transition-all text-xs font-medium ${
+                      className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition-all text-xs font-medium ${
                         paymentMode === pm.mode
-                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-sm'
-                          : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-200'
+                          : 'border-gray-150 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
                       <pm.icon className="h-5 w-5" />
@@ -1363,17 +1371,17 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           </div>
 
           {/* ── STICKY FOOTER ── */}
-          <div className="px-4 py-3 border-t bg-white shrink-0 space-y-2">
+          <div className="px-4 py-3 border-t bg-gray-50/80 shrink-0 space-y-2.5">
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-9 flex-1"
+              <Button variant="outline" size="sm" className="h-10 flex-1 text-sm font-medium"
                 onClick={() => { setPayLaterMode(!payLaterMode); if (!payLaterMode) { setPaymentMode(''); setPartialAmount('') } }}>
-                <Clock className="h-3.5 w-3.5 mr-1" />{payLaterMode ? 'Full Pay' : 'Pay Later'}
+                <Clock className="h-4 w-4 mr-1.5" />{payLaterMode ? 'Full Pay' : 'Pay Later'}
               </Button>
-              <Button variant="outline" size="sm" className="h-9 flex-1" onClick={printPreviewBill} disabled={printing}>
-                <Printer className="h-3.5 w-3.5 mr-1" />{printing ? '...' : 'Print'}
+              <Button variant="outline" size="sm" className="h-10 flex-1 text-sm font-medium" onClick={printPreviewBill} disabled={printing}>
+                <Printer className="h-4 w-4 mr-1.5" />{printing ? '...' : 'Print'}
               </Button>
             </div>
-            <Button className="w-full h-12 text-base font-semibold bg-green-600 hover:bg-green-700 rounded-xl shadow-lg shadow-green-600/20"
+            <Button className="w-full h-13 text-base font-bold bg-green-600 hover:bg-green-700 rounded-xl shadow-lg shadow-green-600/25 tracking-wide"
               onClick={settleBill} disabled={settling || (!payLaterMode && !paymentMode)}>
               {settling ? 'Settling...' : payLaterMode
                 ? `Create Bill — ₹${total.toFixed(2)}`

@@ -208,7 +208,7 @@ export default function AdminDashboard() {
       }
     })
 
-    const netSales = totalSales - taxes - discounts
+    const netSales = totalSales - taxes - scCollected
 
     const uniqueTables = new Set(
       (tablesResult.data || []).map((o: any) => o.table_id).filter(Boolean)
@@ -348,10 +348,7 @@ export default function AdminDashboard() {
   const isToday = selectedDate === todayStr
   const displayDate = new Date(selectedDate + 'T12:00:00')
 
-  const fmt = (n: number) => {
-    if (n >= 100000) return `₹${(n / 1000).toFixed(1)}k`
-    return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-  }
+  const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
   const MEAL_COLORS = ['#f59e0b', '#ef4444', '#8b5cf6', '#3b82f6']
 
@@ -448,13 +445,13 @@ export default function AdminDashboard() {
               </div>
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/15">
                 <div>
-                  <p className="text-[11px] text-amber-200/80 uppercase tracking-wider">Tables Settled</p>
-                  <p className="text-lg font-semibold">{data.tablesServed}</p>
+                  <p className="text-[11px] text-amber-200/80 uppercase tracking-wider">Bills Settled</p>
+                  <p className="text-lg font-semibold">{data.totalOrders}</p>
                 </div>
                 <div className="w-px h-8 bg-white/15" />
                 <div>
-                  <p className="text-[11px] text-amber-200/80 uppercase tracking-wider">Avg/Table</p>
-                  <p className="text-lg font-semibold">{data.tablesServed > 0 ? fmt(Math.round(data.totalSales / data.tablesServed)) : '₹0'}</p>
+                  <p className="text-[11px] text-amber-200/80 uppercase tracking-wider">Avg/Bill</p>
+                  <p className="text-lg font-semibold">{data.totalOrders > 0 ? fmt(Math.round(data.totalSales / data.totalOrders)) : '₹0'}</p>
                 </div>
               </div>
             </div>
@@ -504,7 +501,7 @@ export default function AdminDashboard() {
                 <span className="text-xs font-medium text-gray-500">Net Sales</span>
               </div>
               <p className="text-xl font-bold text-gray-900">{fmt(data.netSales)}</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">After tax & discounts</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Excl. tax & service charge</p>
             </div>
 
             {/* GST */}
@@ -528,25 +525,32 @@ export default function AdminDashboard() {
                 <span className="text-xs font-medium text-gray-500">SC Collected</span>
               </div>
               <p className="text-xl font-bold text-gray-900">{fmt(data.scCollected)}</p>
-              {data.scDeleted > 0 && (
-                <p className="text-[11px] text-red-400 mt-0.5 flex items-center gap-0.5">
-                  <ArrowDownRight className="h-3 w-3" />
-                  {fmt(data.scDeleted)} waived
-                </p>
-              )}
-              {data.scDeleted === 0 && <p className="text-[11px] text-gray-400 mt-0.5">Service charge</p>}
+              <p className="text-[11px] text-gray-400 mt-0.5">Service charge</p>
             </div>
 
-            {/* Discounts */}
+            {/* SC Deleted */}
             <div className="rounded-xl bg-white border border-gray-100 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50">
+                  <XCircle className="h-3.5 w-3.5 text-red-500" />
+                </div>
+                <span className="text-xs font-medium text-gray-500">SC Deleted</span>
+              </div>
+              <p className="text-xl font-bold text-red-600">{fmt(data.scDeleted)}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Service charge waived</p>
+            </div>
+          </div>
+
+          {/* ── Discounts ── */}
+          <div className="rounded-xl bg-white border border-gray-100 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50">
                   <Percent className="h-3.5 w-3.5 text-rose-600" />
                 </div>
                 <span className="text-xs font-medium text-gray-500">Discounts</span>
               </div>
               <p className="text-xl font-bold text-gray-900">{fmt(data.discounts)}</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">Total discounts</p>
             </div>
           </div>
 

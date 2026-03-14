@@ -29,24 +29,41 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const pathname = request.nextUrl.pathname
 
   // Public routes that don't require authentication
   const publicRoutes = ['/menu', '/login']
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
-  if (!user && !isPublicRoute) {
+  // If it's a public route, skip the auth check entirely (no Supabase call)
+  if (isPublicRoute) {
+    return supabaseResponse
+  }
+
+  // For protected routes, try to get the user with a timeout
+  // so the site doesn't go down if Supabase is slow
+  let user = null
+  try {
+    const userPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Auth timeout')), 5000)
+    )
+    const result = await Promise.race([userPromise, timeoutPromise]) as any
+    user = result?.data?.user || null
+  } catch {
+    // Supabase timed out or errored — redirect to login as fallback
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   if (user && pathname === '/login') {
-    // Redirect to root which handles role-based routing
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

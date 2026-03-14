@@ -159,7 +159,8 @@ export default function WaiterPage() {
       .from('orders')
       .select(`
         id, order_number, status, order_type, table_id, notes, created_at, bill_print_count,
-        items:order_items(*, menu_item:menu_items(name, is_veg))
+        items:order_items(*, menu_item:menu_items(name, is_veg)),
+        bill:bills(id)
       `)
       .eq('id', table.current_order_id)
       .single()
@@ -173,10 +174,13 @@ export default function WaiterPage() {
 
     if (table.status === 'occupied' && table.current_order_id) {
       const order = await fetchActiveOrder(table)
-      if (order && order.status !== 'completed') {
-        // If bill was already printed, treat as available for a new order
-        // (old order stays in cashier's pending settlement)
-        if ((order as any).bill_print_count > 0) {
+      if (order) {
+        const billPrinted = (order as any).bill_print_count > 0
+        const billExists = Array.isArray((order as any).bill) ? (order as any).bill.length > 0 : !!(order as any).bill
+        const orderCompleted = order.status === 'completed'
+
+        // If bill printed/exists or order completed, reuse table for new order
+        if (billPrinted || billExists || orderCompleted) {
           setActiveOrder(null)
           setAddingToOrder(null)
           setSearchQuery('')

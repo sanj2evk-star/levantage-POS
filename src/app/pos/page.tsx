@@ -739,7 +739,7 @@ export default function POSPage() {
                       key={table.id}
                       onClick={async () => {
                         if (table.status === 'occupied' && table.current_order_id) {
-                          // Occupied table — check if bill was already printed
+                          // Occupied table — check if bill was already printed or order completed
                           const supabase = createClient()
                           const { data: orderData } = await supabase
                             .from('orders')
@@ -749,17 +749,22 @@ export default function POSPage() {
                               items:order_items(
                                 id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
                                 menu_item:menu_items(name, is_veg)
-                              )
+                              ),
+                              bill:bills(id)
                             `)
                             .eq('id', table.current_order_id)
                             .single()
 
-                          if (orderData && (orderData as any).bill_print_count > 0) {
-                            // Bill already printed — treat as new order (old order stays for cashier settlement)
+                          const billPrinted = (orderData as any)?.bill_print_count > 0
+                          const billExists = orderData && (Array.isArray((orderData as any).bill) ? (orderData as any).bill.length > 0 : !!(orderData as any).bill)
+                          const orderCompleted = orderData?.status === 'completed'
+
+                          if (orderData && (billPrinted || billExists || orderCompleted)) {
+                            // Bill printed/exists or order completed — reuse table for new order
                             setSelectedTable(table.id)
                             setAddingToOrder(null)
                             setTableDialogOpen(false)
-                            toast.info(`New order on ${getTableDisplayName(table)} (previous bill pending settlement)`)
+                            toast.success(`${getTableDisplayName(table)} selected for new order`)
                           } else if (orderData) {
                             setAddingToOrder(orderData)
                             setSelectedTable(table.id)
@@ -767,7 +772,10 @@ export default function POSPage() {
                             setPosMode('menu')
                             toast.info(`Adding items to ${orderData.order_number} (${getTableDisplayName(table)})`)
                           } else {
-                            toast.error('Could not load order for this table')
+                            // Order not found — table is stale, allow new order
+                            setSelectedTable(table.id)
+                            setAddingToOrder(null)
+                            setTableDialogOpen(false)
                           }
                         } else {
                           // Available table — new order

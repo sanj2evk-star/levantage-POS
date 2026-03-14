@@ -80,6 +80,7 @@ export interface Order {
   waiter_id: string | null
   notes: string | null
   service_charge_removed?: boolean
+  bill_print_count?: number
   created_at: string
   updated_at: string
   // Joined data

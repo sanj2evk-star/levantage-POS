@@ -66,6 +66,7 @@ interface TableOrderInfo {
   waiterName: string | null
   hasBill: boolean
   billStatus: 'pending' | 'paid' | 'partial' | null
+  billPrintCount: number
 }
 
 interface LiveOrder extends OrderWithDetails {
@@ -116,17 +117,6 @@ export default function CashierPage() {
   // Quick actions on table cards (Pet Pooja style)
   const [printedTables, setPrintedTables] = useState<Set<string>>(new Set())
   const [quickPrintingTableId, setQuickPrintingTableId] = useState<string | null>(null)
-  const [quickSettleOpen, setQuickSettleOpen] = useState(false)
-  const [quickSettleTable, setQuickSettleTable] = useState<TableType | null>(null)
-  const [quickSettleTotal, setQuickSettleTotal] = useState(0)
-  const [quickSettlePaymentMode, setQuickSettlePaymentMode] = useState('')
-  const [quickSettleRef, setQuickSettleRef] = useState('')
-  const [quickSettling, setQuickSettling] = useState(false)
-  // Split payment in quick settle
-  const [quickSettleSplit, setQuickSettleSplit] = useState(false)
-  const [quickSettleAmount1, setQuickSettleAmount1] = useState('')
-  const [quickSettleMode2, setQuickSettleMode2] = useState('')
-  const [quickSettleRef2, setQuickSettleRef2] = useState('')
 
   // Tick every 60s so elapsed times update live
   const [, setTick] = useState(0)
@@ -215,10 +205,10 @@ export default function CashierPage() {
     const { data } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, created_at, waiter_id,
+        id, order_number, status, created_at, waiter_id, service_charge_removed, bill_print_count,
         items:order_items(quantity, total_price, is_cancelled),
         waiter:profiles!waiter_id(name),
-        bill:bills(id, payment_status)
+        bill:bills(id, payment_status, total)
       `)
       .in('id', occupiedIds)
 
@@ -227,16 +217,29 @@ export default function CashierPage() {
       data.forEach((order: any) => {
         const activeItems = (order.items || []).filter((i: any) => !i.is_cancelled)
         const billData = Array.isArray(order.bill) ? order.bill[0] : order.bill
+        // If bill exists, use bill.total (already includes GST + SC + discount)
+        // Otherwise compute full total with GST + SC
+        let fullTotal: number
+        if (billData?.total) {
+          fullTotal = Number(billData.total)
+        } else {
+          const sub = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
+          const scRemoved = order.service_charge_removed ?? false
+          const sc = scRemoved ? 0 : Math.round(sub * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+          const gst = Math.round(sub * GST_PERCENT / 100 * 100) / 100
+          fullTotal = Math.round((sub + sc + gst) * 100) / 100
+        }
         infoMap.set(order.id, {
           orderId: order.id,
           orderNumber: order.order_number,
           itemCount: activeItems.reduce((s: number, i: any) => s + i.quantity, 0),
-          total: activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0),
+          total: fullTotal,
           createdAt: order.created_at,
           status: order.status,
           waiterName: order.waiter?.name || null,
           hasBill: !!billData,
           billStatus: billData?.payment_status || null,
+          billPrintCount: order.bill_print_count || 0,
         })
       })
       setTableOrderInfo(infoMap)
@@ -257,7 +260,7 @@ export default function CashierPage() {
     const { data } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed,
+        id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed, bill_print_count,
         table:tables!table_id(number, section),
         items:order_items(
           id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
@@ -492,7 +495,7 @@ export default function CashierPage() {
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed,
+        id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed, bill_print_count,
         table:tables!table_id(number, section),
         items:order_items(
           id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
@@ -568,7 +571,7 @@ export default function CashierPage() {
       const { data: orderData } = await supabase
         .from('orders')
         .select(`
-          id, order_number, order_type, waiter_id, service_charge_removed,
+          id, order_number, order_type, waiter_id, service_charge_removed, bill_print_count,
           table:tables!table_id(number, section),
           items:order_items(id, quantity, unit_price, total_price, is_cancelled, menu_item:menu_items(name, is_veg)),
           bill:bills(id, total, subtotal, gst_amount, service_charge, service_charge_removed, discount_amount, discount_type, discount_reason),
@@ -629,236 +632,37 @@ export default function CashierPage() {
         waiterName,
       })
 
+      // Track print count for Hawkeye reprint flagging
+      const currentPrintCount = (orderData as any).bill_print_count || 0
+      const newPrintCount = currentPrintCount + 1
+      await supabase.from('orders')
+        .update({ bill_print_count: newPrintCount })
+        .eq('id', orderData.id)
+
+      // If this is a reprint (already printed before), flag in Hawkeye
+      if (currentPrintCount >= 1) {
+        const { data: { user } } = await supabase.auth.getUser()
+        const tableName = orderData.table ? getTableDisplayName(orderData.table as any) : 'Unknown'
+        await supabase.from('audit_logs').insert({
+          action: 'bill_reprint',
+          order_id: orderData.id,
+          performed_by: user?.id || null,
+          details: {
+            order_number: orderData.order_number,
+            table: tableName,
+            total: tot,
+            print_count: newPrintCount,
+            reason: 'Preview reprinted from table card',
+          },
+        })
+      }
+
       setPrintedTables(prev => new Set(prev).add(table.id))
-      toast.success('Customer copy printed')
+      toast.success(currentPrintCount >= 1 ? 'Bill reprinted (flagged)' : 'Customer copy printed')
     } catch {
       toast.error('Print failed — check printer')
     } finally {
       setQuickPrintingTableId(null)
-    }
-  }
-
-  // Open quick settle dialog
-  async function openQuickSettle(table: TableType) {
-    if (!table.current_order_id) return
-    const info = tableOrderInfo.get(table.current_order_id)
-
-    const supabase = createClient()
-    const { data: billData } = await supabase
-      .from('bills')
-      .select('id, total, payment_status')
-      .eq('order_id', table.current_order_id)
-      .maybeSingle()
-
-    let displayTotal = 0
-    if (billData && billData.payment_status === 'pending') {
-      displayTotal = Number(billData.total)
-    } else if (info) {
-      const sub = info.total
-      const sc = Math.round(sub * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
-      const gst = Math.round(sub * GST_PERCENT / 100 * 100) / 100
-      displayTotal = Math.round((sub + sc + gst) * 100) / 100
-    }
-
-    setQuickSettleTable(table)
-    setQuickSettleTotal(displayTotal)
-    setQuickSettlePaymentMode('')
-    setQuickSettleRef('')
-    setQuickSettleSplit(false)
-    setQuickSettleAmount1('')
-    setQuickSettleMode2('')
-    setQuickSettleRef2('')
-    setQuickSettleOpen(true)
-  }
-
-  // Computed: split remaining balance
-  const quickSettleRemaining = (() => {
-    if (!quickSettleSplit || !quickSettleAmount1) return quickSettleTotal
-    const amt1 = parseFloat(quickSettleAmount1) || 0
-    return Math.max(0, Math.round((quickSettleTotal - amt1) * 100) / 100)
-  })()
-
-  // Perform quick settlement
-  async function performQuickSettle() {
-    if (!quickSettleTable || !quickSettlePaymentMode) {
-      toast.error('Select a payment mode')
-      return
-    }
-    // Validate split amounts
-    if (quickSettleSplit) {
-      const amt1 = parseFloat(quickSettleAmount1) || 0
-      if (amt1 <= 0 || amt1 >= quickSettleTotal) {
-        toast.error('Enter a valid partial amount')
-        return
-      }
-      if (!quickSettleMode2) {
-        toast.error('Select second payment mode')
-        return
-      }
-    }
-    setQuickSettling(true)
-    const supabase = createClient()
-
-    const isSplit = quickSettleSplit && quickSettleMode2
-    const effectivePaymentMode = isSplit ? 'split' : quickSettlePaymentMode
-
-    try {
-      const orderId = quickSettleTable.current_order_id
-      if (!orderId) throw new Error('No order')
-
-      const { data: orderData } = await supabase
-        .from('orders')
-        .select(`
-          id, order_number, order_type, waiter_id, service_charge_removed,
-          table:tables!table_id(number, section),
-          items:order_items(id, quantity, unit_price, total_price, is_cancelled, menu_item:menu_items(name, is_veg)),
-          bill:bills(id, bill_number, payment_status, total, subtotal, gst_percent, gst_amount, service_charge, service_charge_removed, discount_amount, discount_type, discount_reason),
-          waiter:profiles!waiter_id(name)
-        `)
-        .eq('id', orderId)
-        .single()
-
-      if (!orderData) throw new Error('Order not found')
-
-      const existBill = Array.isArray(orderData.bill) ? orderData.bill[0] : orderData.bill
-      const activeItems = (orderData.items || []).filter((i: any) => !i.is_cancelled)
-      const waiterName = (orderData as any).waiter?.name || null
-
-      let billId: string, billNumber: string
-      let finalTotal: number, finalSubtotal: number, finalGstAmount: number
-      let finalServiceCharge: number, finalServiceChargeRemoved = false
-      let finalDiscountAmount = 0, finalDiscountType = 'none', finalDiscountReason = ''
-
-      if (existBill && existBill.payment_status === 'pending') {
-        billId = existBill.id
-        billNumber = existBill.bill_number
-        finalTotal = Number(existBill.total)
-        finalSubtotal = Number(existBill.subtotal)
-        finalGstAmount = Number(existBill.gst_amount)
-        finalServiceCharge = Number(existBill.service_charge)
-        finalServiceChargeRemoved = existBill.service_charge_removed
-        finalDiscountAmount = Number(existBill.discount_amount)
-        finalDiscountType = existBill.discount_type || 'none'
-        finalDiscountReason = existBill.discount_reason || ''
-
-        await supabase.from('bills').update({
-          payment_mode: effectivePaymentMode,
-          payment_status: 'paid',
-        }).eq('id', billId)
-      } else {
-        const orderScRemoved = (orderData as any).service_charge_removed ?? false
-        finalSubtotal = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
-        finalServiceCharge = Math.round(finalSubtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
-        finalServiceChargeRemoved = orderScRemoved
-        finalGstAmount = Math.round(finalSubtotal * GST_PERCENT / 100 * 100) / 100
-        const effectiveSC = finalServiceChargeRemoved ? 0 : finalServiceCharge
-        finalTotal = Math.round((finalSubtotal + effectiveSC + finalGstAmount) * 100) / 100
-
-        const { data: billNum } = await supabase.rpc('generate_bill_number')
-        const { data: newBill, error: billError } = await supabase
-          .from('bills')
-          .insert({
-            order_id: orderId,
-            subtotal: finalSubtotal,
-            gst_percent: GST_PERCENT,
-            gst_amount: finalGstAmount,
-            service_charge: finalServiceCharge,
-            service_charge_removed: finalServiceChargeRemoved,
-            discount_amount: 0,
-            discount_type: 'none',
-            total: finalTotal,
-            payment_mode: effectivePaymentMode,
-            payment_status: 'paid',
-            bill_number: billNum || `B-${Date.now()}`,
-          })
-          .select()
-          .single()
-
-        if (billError || !newBill) throw new Error(billError?.message || 'Bill creation failed')
-        billId = newBill.id
-        billNumber = newBill.bill_number
-      }
-
-      // Payment records
-      if (isSplit) {
-        const amt1 = parseFloat(quickSettleAmount1) || 0
-        const amt2 = Math.round((finalTotal - amt1) * 100) / 100
-        const hasRef1 = (quickSettlePaymentMode !== 'cash') && quickSettleRef.trim()
-        const hasRef2 = (quickSettleMode2 !== 'cash') && quickSettleRef2.trim()
-        await supabase.from('payments').insert([
-          {
-            bill_id: billId,
-            mode: quickSettlePaymentMode,
-            amount: amt1,
-            reference_number: hasRef1 ? quickSettleRef.trim() : null,
-          },
-          {
-            bill_id: billId,
-            mode: quickSettleMode2,
-            amount: amt2,
-            reference_number: hasRef2 ? quickSettleRef2.trim() : null,
-          },
-        ])
-      } else {
-        await supabase.from('payments').insert({
-          bill_id: billId,
-          mode: quickSettlePaymentMode,
-          amount: finalTotal,
-          reference_number: (quickSettlePaymentMode === 'upi' || quickSettlePaymentMode === 'card' || quickSettlePaymentMode === 'zomato') && quickSettleRef.trim()
-            ? quickSettleRef.trim() : null,
-        })
-      }
-
-      // Complete order + free table
-      await supabase.from('orders').update({ status: 'completed' }).eq('id', orderId)
-      if (quickSettleTable.id) {
-        await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', quickSettleTable.id)
-      }
-
-      // Print final receipt
-      printBill({
-        billNumber,
-        orderNumber: orderData.order_number,
-        tableName: orderData.table ? getTableDisplayName(orderData.table as any) : null,
-        orderType: orderData.order_type as 'dine_in' | 'takeaway',
-        items: activeItems.map((i: any) => ({
-          name: i.menu_item?.name || 'Unknown',
-          quantity: i.quantity,
-          unitPrice: i.unit_price,
-        })),
-        subtotal: finalSubtotal,
-        gstPercent: GST_PERCENT,
-        gstAmount: finalGstAmount,
-        serviceCharge: finalServiceCharge,
-        serviceChargeRemoved: finalServiceChargeRemoved,
-        discountAmount: finalDiscountAmount,
-        discountType: finalDiscountType,
-        discountReason: finalDiscountReason || undefined,
-        total: finalTotal,
-        paymentMode: effectivePaymentMode,
-        cashierName: profile?.name || null,
-        waiterName,
-      }).catch(() => toast.error('Bill print failed'))
-
-      if (quickSettlePaymentMode === 'cash' || (isSplit && quickSettleMode2 === 'cash')) {
-        openCashDrawer().catch(() => toast.error('Cash drawer failed'))
-      }
-
-      toast.success(`${billNumber} settled — ₹${finalTotal.toFixed(0)}`)
-      setPrintedTables(prev => { const next = new Set(prev); next.delete(quickSettleTable.id); return next })
-      setQuickSettleOpen(false)
-      setQuickSettleTable(null)
-      setQuickSettlePaymentMode('')
-      setQuickSettleRef('')
-      setQuickSettleSplit(false)
-      setQuickSettleAmount1('')
-      setQuickSettleMode2('')
-      setQuickSettleRef2('')
-      handleBillSettled()
-    } catch (err: any) {
-      toast.error(err?.message || 'Settlement failed')
-    } finally {
-      setQuickSettling(false)
     }
   }
 
@@ -1334,6 +1138,15 @@ export default function CashierPage() {
                           key={table.id}
                           className={`relative p-2 rounded-xl text-center border-2 min-h-[85px] transition-all ${getTableCardStyle(table, info)}`}
                         >
+                          {/* Print count badge (top-right) */}
+                          {info && (info.billPrintCount > 0 || isPrinted) && (
+                            <div className={`absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                              (info.billPrintCount || 0) > 1 ? 'bg-red-500 text-white' : 'bg-white text-gray-700 shadow-sm border'
+                            }`}>
+                              <Printer className="h-3 w-3" />
+                              {(info.billPrintCount || 0) > 1 && <span>{info.billPrintCount}</span>}
+                            </div>
+                          )}
                           <p className={`text-2xl font-bold ${getTableNumberColor(table, info)}`}>
                             {getTableDisplayName(table)}
                           </p>
@@ -1357,10 +1170,10 @@ export default function CashierPage() {
                               ) : isPrinted ? (
                                 <div className="flex items-center justify-center gap-2 mt-0.5">
                                   <button
-                                    onClick={() => openQuickSettle(table)}
+                                    onClick={() => openTableBilling(table)}
                                     className="flex-1 flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded-lg px-2 py-1.5 text-sm font-bold transition-colors active:scale-95"
                                   >
-                                    <Check className="h-4 w-4" /> Save
+                                    <Check className="h-4 w-4" /> Settle
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); openTransferDialog(table) }}
@@ -1504,7 +1317,15 @@ export default function CashierPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filteredLiveOrders.map(order => {
                   const activeItems = order.items.filter(i => !i.is_cancelled)
-                  const orderTotal = activeItems.reduce((sum, i) => sum + i.total_price, 0)
+                  // Show full total with GST + SC, or bill.total if bill exists
+                  const orderTotal = (() => {
+                    if (order.bill?.total) return Number(order.bill.total)
+                    const sub = activeItems.reduce((sum, i) => sum + i.total_price, 0)
+                    const scRemoved = (order as any).service_charge_removed ?? false
+                    const sc = scRemoved ? 0 : Math.round(sub * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+                    const gst = Math.round(sub * GST_PERCENT / 100 * 100) / 100
+                    return Math.round((sub + sc + gst) * 100) / 100
+                  })()
                   const timeAgo = formatDistanceToNow(new Date(order.created_at), { addSuffix: true })
                   const hasBill = !!order.bill
                   const isDineIn = order.order_type === 'dine_in'
@@ -1559,10 +1380,33 @@ export default function CashierPage() {
                         </span>
                       </div>
 
-                      {/* Items summary */}
-                      <p className="text-sm text-gray-700 line-clamp-2">
-                        {activeItems.map(i => `${i.quantity}x ${i.menu_item?.name}`).join(', ')}
-                      </p>
+                      {/* KOT Items with status dots */}
+                      <div className="space-y-1 mt-1">
+                        {activeItems.slice(0, 6).map((item, idx) => {
+                          const kotStatus = (item as any).kot_status || 'pending'
+                          const dotColor = kotStatus === 'ready' ? 'bg-green-500' :
+                            kotStatus === 'preparing' ? 'bg-blue-500' :
+                            kotStatus === 'served' ? 'bg-purple-500' :
+                            'bg-yellow-500'
+                          return (
+                            <div key={idx} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                                <span className="text-gray-700 truncate">{item.quantity}x {item.menu_item?.name}</span>
+                              </div>
+                              <span className={`text-xs capitalize shrink-0 ml-2 ${
+                                kotStatus === 'ready' ? 'text-green-600' :
+                                kotStatus === 'preparing' ? 'text-blue-600' :
+                                kotStatus === 'served' ? 'text-purple-600' :
+                                'text-yellow-600'
+                              }`}>{kotStatus}</span>
+                            </div>
+                          )
+                        })}
+                        {activeItems.length > 6 && (
+                          <p className="text-xs text-gray-400 pl-3.5">+{activeItems.length - 6} more items</p>
+                        )}
+                      </div>
 
                       {/* Payment status */}
                       {hasBill && order.bill?.payment_status === 'paid' && (
@@ -2002,189 +1846,6 @@ export default function CashierPage() {
               )}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Quick Settle Dialog */}
-      <Dialog open={quickSettleOpen} onOpenChange={(o) => { if (!o) { setQuickSettleOpen(false); setQuickSettleTable(null) } }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-amber-700" />
-              Settle {quickSettleTable && getTableDisplayName(quickSettleTable)}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Total */}
-            <div className="text-center py-3 bg-amber-50 rounded-lg">
-              <p className="text-sm text-gray-500">Total Amount</p>
-              <p className="text-3xl font-bold text-amber-800">₹{quickSettleTotal.toLocaleString('en-IN')}</p>
-            </div>
-
-            {/* Payment mode 1 */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs text-gray-500 font-medium">
-                  {quickSettleSplit ? 'Payment 1' : 'Payment Mode'}
-                </Label>
-                <button
-                  onClick={() => {
-                    setQuickSettleSplit(!quickSettleSplit)
-                    if (!quickSettleSplit) {
-                      setQuickSettleAmount1('')
-                      setQuickSettleMode2('')
-                      setQuickSettleRef2('')
-                    }
-                  }}
-                  className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${
-                    quickSettleSplit
-                      ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
-                >
-                  Split
-                </button>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { mode: 'cash', label: 'Cash', Icon: Banknote, color: 'bg-green-600 hover:bg-green-700' },
-                  { mode: 'upi', label: 'UPI', Icon: Smartphone, color: 'bg-blue-600 hover:bg-blue-700' },
-                  { mode: 'card', label: 'Card', Icon: CreditCard, color: 'bg-purple-600 hover:bg-purple-700' },
-                  { mode: 'zomato', label: 'Zomato', Icon: Store, color: 'bg-red-600 hover:bg-red-700' },
-                ].map(pm => (
-                  <button
-                    key={pm.mode}
-                    onClick={() => setQuickSettlePaymentMode(pm.mode === quickSettlePaymentMode ? '' : pm.mode)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
-                      quickSettlePaymentMode === pm.mode
-                        ? `${pm.color} text-white border-transparent shadow-lg scale-105`
-                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <pm.Icon className="h-5 w-5" />
-                    <span className="text-xs font-semibold">{pm.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Amount input + Ref for payment 1 (when split) */}
-            {quickSettleSplit && quickSettlePaymentMode && (
-              <div className="space-y-2">
-                <div>
-                  <Label className="text-xs text-gray-500">Amount</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={quickSettleAmount1}
-                    onChange={(e) => setQuickSettleAmount1(e.target.value)}
-                    placeholder={`₹${quickSettleTotal.toLocaleString('en-IN')}`}
-                    className="mt-1"
-                    autoFocus
-                  />
-                </div>
-                {(quickSettlePaymentMode !== 'cash') && (
-                  <div>
-                    <Label className="text-xs text-gray-500">Ref # (optional)</Label>
-                    <Input
-                      value={quickSettleRef}
-                      onChange={(e) => setQuickSettleRef(e.target.value)}
-                      placeholder="Transaction reference"
-                      className="mt-1"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Ref for payment 1 (non-split mode) */}
-            {!quickSettleSplit && (quickSettlePaymentMode === 'upi' || quickSettlePaymentMode === 'card' || quickSettlePaymentMode === 'zomato') && (
-              <div>
-                <Label className="text-xs text-gray-500">Reference # (optional)</Label>
-                <Input
-                  value={quickSettleRef}
-                  onChange={(e) => setQuickSettleRef(e.target.value)}
-                  placeholder="Transaction reference"
-                  className="mt-1"
-                />
-              </div>
-            )}
-
-            {/* Payment 2 (split mode) */}
-            {quickSettleSplit && quickSettlePaymentMode && quickSettleAmount1 && parseFloat(quickSettleAmount1) > 0 && parseFloat(quickSettleAmount1) < quickSettleTotal && (
-              <div className="border-t pt-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-gray-500 font-medium">Payment 2</Label>
-                  <span className="text-sm font-bold text-amber-700">
-                    Remaining: ₹{quickSettleRemaining.toLocaleString('en-IN')}
-                  </span>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { mode: 'cash', label: 'Cash', Icon: Banknote, color: 'bg-green-600 hover:bg-green-700' },
-                    { mode: 'upi', label: 'UPI', Icon: Smartphone, color: 'bg-blue-600 hover:bg-blue-700' },
-                    { mode: 'card', label: 'Card', Icon: CreditCard, color: 'bg-purple-600 hover:bg-purple-700' },
-                    { mode: 'zomato', label: 'Zomato', Icon: Store, color: 'bg-red-600 hover:bg-red-700' },
-                  ].map(pm => (
-                    <button
-                      key={pm.mode}
-                      onClick={() => setQuickSettleMode2(pm.mode === quickSettleMode2 ? '' : pm.mode)}
-                      className={`flex flex-col items-center gap-1 p-2.5 rounded-lg border-2 transition-all ${
-                        quickSettleMode2 === pm.mode
-                          ? `${pm.color} text-white border-transparent shadow-lg scale-105`
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      <pm.Icon className="h-4 w-4" />
-                      <span className="text-[11px] font-semibold">{pm.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {quickSettleMode2 && quickSettleMode2 !== 'cash' && (
-                  <div>
-                    <Label className="text-xs text-gray-500">Ref # (optional)</Label>
-                    <Input
-                      value={quickSettleRef2}
-                      onChange={(e) => setQuickSettleRef2(e.target.value)}
-                      placeholder="Transaction reference"
-                      className="mt-1"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 pt-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setQuickSettleOpen(false)
-                  if (quickSettleTable) openTableBilling(quickSettleTable)
-                }}
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                View Bill
-              </Button>
-              <Button
-                className="flex-1 bg-amber-700 hover:bg-amber-800"
-                onClick={performQuickSettle}
-                disabled={
-                  !quickSettlePaymentMode || quickSettling ||
-                  (quickSettleSplit && (!quickSettleAmount1 || parseFloat(quickSettleAmount1) <= 0 || parseFloat(quickSettleAmount1) >= quickSettleTotal || !quickSettleMode2))
-                }
-              >
-                {quickSettling ? (
-                  <div className="h-4 w-4 border-2 border-white/60 border-t-white rounded-full animate-spin mr-1" />
-                ) : (
-                  <Check className="h-4 w-4 mr-1" />
-                )}
-                Settle ₹{quickSettleTotal.toLocaleString('en-IN')}
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 

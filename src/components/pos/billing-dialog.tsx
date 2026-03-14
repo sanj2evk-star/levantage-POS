@@ -332,7 +332,34 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         cashierName,
         waiterName,
       })
-      toast.success('Bill printed — show to customer')
+
+      // Track print count for Hawkeye reprint flagging
+      const supabase = createClient()
+      const currentPrintCount = order.bill_print_count || 0
+      const newPrintCount = currentPrintCount + 1
+      await supabase.from('orders')
+        .update({ bill_print_count: newPrintCount })
+        .eq('id', order.id)
+
+      // If this is a reprint (already printed before), flag in Hawkeye
+      if (currentPrintCount >= 1) {
+        const { data: { user } } = await supabase.auth.getUser()
+        const tableName = order.table ? getTableDisplayName(order.table) : 'Unknown'
+        await supabase.from('audit_logs').insert({
+          action: 'bill_reprint',
+          order_id: order.id,
+          performed_by: user?.id || null,
+          details: {
+            order_number: order.order_number,
+            table: tableName,
+            total,
+            print_count: newPrintCount,
+            reason: 'Preview reprinted from billing dialog',
+          },
+        })
+      }
+
+      toast.success(currentPrintCount >= 1 ? 'Bill reprinted (flagged)' : 'Bill printed — show to customer')
     } catch {
       toast.error('Bill print failed — check printer')
     } finally {
@@ -1189,7 +1216,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-lg w-[95vw] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden">
           {/* ── HEADER ── */}
           <div className="px-4 pt-4 pb-3 border-b bg-white shrink-0">
             <div className="flex items-center justify-between mb-2 pr-8">
@@ -1227,110 +1254,120 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </div>
           </div>
 
-          {/* ── SCROLLABLE BODY ── */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {/* Items */}
-            <div className="rounded-xl border border-gray-100 bg-gray-50/50 divide-y divide-gray-100">
-              {activeItems.map(item => (
-                <div key={item.id} className="flex items-center justify-between px-3 py-2">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className={`h-2 w-2 rounded-full shrink-0 ${item.menu_item?.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-sm truncate">{item.quantity}× {item.menu_item?.name}</span>
+          {/* ── SIDE-BY-SIDE BODY ── */}
+          <div className="flex-1 flex min-h-0 overflow-hidden">
+            {/* LEFT PANEL — Bill Items & Charges */}
+            <div className="w-[45%] border-r overflow-y-auto px-4 py-3 space-y-3">
+              {/* Items */}
+              <div className="rounded-xl border border-gray-100 bg-gray-50/50 divide-y divide-gray-100">
+                {activeItems.map(item => (
+                  <div key={item.id} className="flex items-center justify-between px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className={`h-2 w-2 rounded-full shrink-0 ${item.menu_item?.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
+                      <span className="text-sm truncate">{item.quantity}× {item.menu_item?.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <span className="text-sm font-medium tabular-nums">₹{item.total_price.toFixed(0)}</span>
+                      {order.status !== 'completed' && (
+                        <button onClick={() => openCancelDialog(item.id, item.menu_item?.name || 'Item')}
+                          className="h-5 w-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <span className="text-sm font-medium tabular-nums">₹{item.total_price.toFixed(0)}</span>
-                    {order.status !== 'completed' && (
-                      <button onClick={() => openCancelDialog(item.id, item.menu_item?.name || 'Item')}
-                        className="h-5 w-5 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
+                ))}
+                {localItems.filter(i => i.is_cancelled).map(item => (
+                  <div key={item.id} className="flex justify-between px-3 py-1.5 text-xs text-gray-400 line-through">
+                    <span>{item.quantity}× {item.menu_item?.name}</span>
+                    <span>₹{item.total_price.toFixed(0)}</span>
                   </div>
-                </div>
-              ))}
-              {localItems.filter(i => i.is_cancelled).map(item => (
-                <div key={item.id} className="flex justify-between px-3 py-1.5 text-xs text-gray-400 line-through">
-                  <span>{item.quantity}× {item.menu_item?.name}</span>
-                  <span>₹{item.total_price.toFixed(0)}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            {/* Charges */}
-            <div className="rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 space-y-1.5">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span className="font-medium">Subtotal</span>
-                <span className="tabular-nums font-medium">₹{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-500 items-center">
-                <span className="flex items-center gap-2">
-                  Service Charge ({SERVICE_CHARGE_PERCENT}%)
-                  <button
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                      serviceChargeRemoved
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
-                        : 'bg-red-100 text-red-600 hover:bg-red-200 border border-red-300'
-                    }`}
-                    onClick={handleScRemoveClick}
-                  >
-                    {serviceChargeRemoved ? '+ Add SC' : '✕ Remove SC'}
-                  </button>
-                </span>
-                <span className={`tabular-nums ${serviceChargeRemoved ? 'line-through text-gray-300' : ''}`}>
-                  ₹{(Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100).toFixed(2)}
-                </span>
-              </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-green-600 font-medium">
-                  <span>Discount</span>
-                  <span className="tabular-nums">-₹{discountAmount.toFixed(2)}</span>
+              {/* Charges */}
+              <div className="rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 space-y-1.5">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span className="font-medium">Subtotal</span>
+                  <span className="tabular-nums font-medium">₹{subtotal.toFixed(2)}</span>
                 </div>
-              )}
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>GST ({GST_PERCENT}%)</span>
-                <span className="tabular-nums">₹{gstAmount.toFixed(2)}</span>
-              </div>
-              <div className="border-t border-gray-100 pt-2 mt-1 flex justify-between items-center">
-                <span className="font-bold text-base text-gray-900">Total</span>
-                <span className="font-bold text-xl text-amber-700 tabular-nums">₹{total.toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Discount Toggle */}
-            <details className="group rounded-xl border border-gray-100 bg-white overflow-hidden">
-              <summary className="flex items-center justify-between cursor-pointer px-3.5 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
-                <span className="flex items-center gap-1.5 font-medium"><Percent className="h-3.5 w-3.5" /> Discount</span>
-                <span className="text-xs text-gray-400 group-open:hidden">tap to expand ›</span>
-              </summary>
-              <div className="px-3.5 pb-3 space-y-2 border-t border-gray-100 pt-2.5">
-                <div className="flex gap-1.5">
-                  <Button variant={discountType === 'none' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
-                    onClick={() => { setDiscountType('none'); setDiscountValue('') }}>None</Button>
-                  <Button variant={discountType === 'percent' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
-                    onClick={() => setDiscountType('percent')}>% Percent</Button>
-                  <Button variant={discountType === 'flat' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
-                    onClick={() => setDiscountType('flat')}>₹ Flat</Button>
+                <div className="flex justify-between text-sm text-gray-500 items-center">
+                  <span className="flex items-center gap-2">
+                    SC ({SERVICE_CHARGE_PERCENT}%)
+                    <button
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                        serviceChargeRemoved
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
+                          : 'bg-red-100 text-red-600 hover:bg-red-200 border border-red-300'
+                      }`}
+                      onClick={handleScRemoveClick}
+                    >
+                      {serviceChargeRemoved ? '+ Add' : '✕ Remove'}
+                    </button>
+                  </span>
+                  <span className={`tabular-nums ${serviceChargeRemoved ? 'line-through text-gray-300' : ''}`}>
+                    ₹{(Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100).toFixed(2)}
+                  </span>
                 </div>
-                {discountType !== 'none' && (
-                  <div className="flex gap-2">
-                    <Input type="number" placeholder={discountType === 'percent' ? '%' : '₹ amount'}
-                      value={discountValue} onChange={e => { setDiscountValue(e.target.value); setDiscountPinVerified(false) }}
-                      className="h-8 text-sm flex-1" />
-                    <Input placeholder="Reason" value={discountReason}
-                      onChange={e => setDiscountReason(e.target.value)} className="h-8 text-sm flex-1" />
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600 font-medium">
+                    <span>Discount</span>
+                    <span className="tabular-nums">-₹{discountAmount.toFixed(2)}</span>
                   </div>
                 )}
-                {needsDiscountAuth && (
-                  <p className="text-xs text-amber-600 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />PIN required ({effectiveDiscountPercent.toFixed(0)}% &gt; {discountMaxPercent}%)
-                  </p>
-                )}
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>GST ({GST_PERCENT}%)</span>
+                  <span className="tabular-nums">₹{gstAmount.toFixed(2)}</span>
+                </div>
+                <div className="border-t border-gray-100 pt-2 mt-1 flex justify-between items-center">
+                  <span className="font-bold text-base text-gray-900">Total</span>
+                  <span className="font-bold text-xl text-amber-700 tabular-nums">₹{total.toFixed(2)}</span>
+                </div>
               </div>
-            </details>
 
-            {/* Payment Mode */}
-              <div className="space-y-2.5">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
+              {/* Discount Toggle */}
+              <details className="group rounded-xl border border-gray-100 bg-white overflow-hidden">
+                <summary className="flex items-center justify-between cursor-pointer px-3.5 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
+                  <span className="flex items-center gap-1.5 font-medium"><Percent className="h-3.5 w-3.5" /> Discount</span>
+                  <span className="text-xs text-gray-400 group-open:hidden">tap to expand ›</span>
+                </summary>
+                <div className="px-3.5 pb-3 space-y-2 border-t border-gray-100 pt-2.5">
+                  <div className="flex gap-1.5">
+                    <Button variant={discountType === 'none' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
+                      onClick={() => { setDiscountType('none'); setDiscountValue('') }}>None</Button>
+                    <Button variant={discountType === 'percent' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
+                      onClick={() => setDiscountType('percent')}>% Percent</Button>
+                    <Button variant={discountType === 'flat' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1"
+                      onClick={() => setDiscountType('flat')}>₹ Flat</Button>
+                  </div>
+                  {discountType !== 'none' && (
+                    <div className="flex gap-2">
+                      <Input type="number" placeholder={discountType === 'percent' ? '%' : '₹ amount'}
+                        value={discountValue} onChange={e => { setDiscountValue(e.target.value); setDiscountPinVerified(false) }}
+                        className="h-8 text-sm flex-1" />
+                      <Input placeholder="Reason" value={discountReason}
+                        onChange={e => setDiscountReason(e.target.value)} className="h-8 text-sm flex-1" />
+                    </div>
+                  )}
+                  {needsDiscountAuth && (
+                    <p className="text-xs text-amber-600 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />PIN required ({effectiveDiscountPercent.toFixed(0)}% &gt; {discountMaxPercent}%)
+                    </p>
+                  )}
+                </div>
+              </details>
+
+              {/* Print Preview button in left panel */}
+              <Button variant="outline" size="sm" className="h-10 w-full text-sm font-medium" onClick={printPreviewBill} disabled={printing}>
+                <Printer className="h-4 w-4 mr-1.5" />{printing ? '...' : 'Print Preview'}
+              </Button>
+            </div>
+
+            {/* RIGHT PANEL — Payment & Settlement */}
+            <div className="w-[55%] flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                <div className="space-y-2.5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { mode: 'cash' as const, icon: Banknote, label: 'Cash' },
@@ -1508,17 +1545,16 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 })()}
               </div>
 
-          </div>
+              </div>
 
-          {/* ── STICKY FOOTER ── */}
-          <div className="px-4 py-3 border-t bg-gray-50/80 shrink-0 space-y-2.5">
-            <Button variant="outline" size="sm" className="h-10 w-full text-sm font-medium" onClick={printPreviewBill} disabled={printing}>
-              <Printer className="h-4 w-4 mr-1.5" />{printing ? '...' : 'Print Preview'}
-            </Button>
-            <Button className="w-full h-13 text-base font-bold bg-green-600 hover:bg-green-700 rounded-xl shadow-lg shadow-green-600/25 tracking-wide"
-              onClick={settleBill} disabled={settling || !paymentMode}>
-              {settling ? 'Settling...' : `Settle — ₹${total.toFixed(2)}`}
-            </Button>
+              {/* Settle button pinned at bottom of right panel */}
+              <div className="px-4 py-3 border-t bg-gray-50/80 shrink-0">
+                <Button className="w-full h-13 text-base font-bold bg-green-600 hover:bg-green-700 rounded-xl shadow-lg shadow-green-600/25 tracking-wide"
+                  onClick={settleBill} disabled={settling || !paymentMode}>
+                  {settling ? 'Settling...' : `Settle — ₹${total.toFixed(2)}`}
+                </Button>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

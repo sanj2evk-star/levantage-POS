@@ -739,12 +739,12 @@ export default function POSPage() {
                       key={table.id}
                       onClick={async () => {
                         if (table.status === 'occupied' && table.current_order_id) {
-                          // Occupied table — load existing order and switch to "add items" mode
+                          // Occupied table — check if bill was already printed
                           const supabase = createClient()
                           const { data: orderData } = await supabase
                             .from('orders')
                             .select(`
-                              id, order_number, status, order_type, created_at, table_id, notes,
+                              id, order_number, status, order_type, created_at, table_id, notes, bill_print_count,
                               table:tables!table_id(number, section),
                               items:order_items(
                                 id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
@@ -754,7 +754,13 @@ export default function POSPage() {
                             .eq('id', table.current_order_id)
                             .single()
 
-                          if (orderData) {
+                          if (orderData && (orderData as any).bill_print_count > 0) {
+                            // Bill already printed — treat as new order (old order stays for cashier settlement)
+                            setSelectedTable(table.id)
+                            setAddingToOrder(null)
+                            setTableDialogOpen(false)
+                            toast.info(`New order on ${getTableDisplayName(table)} (previous bill pending settlement)`)
+                          } else if (orderData) {
                             setAddingToOrder(orderData)
                             setSelectedTable(table.id)
                             setTableDialogOpen(false)

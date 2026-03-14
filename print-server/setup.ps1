@@ -121,7 +121,9 @@ Write-Host ""
 # ── Install dependencies ───────────────────────
 Write-Host "  Installing dependencies (this takes 1-2 minutes)..." -ForegroundColor Cyan
 Set-Location $dir
-& npm install 2>&1 | Out-Null
+$ErrorActionPreference = "Continue"
+cmd /c "npm install 2>&1"
+$ErrorActionPreference = "Stop"
 Write-Host "  [OK] Dependencies installed" -ForegroundColor Green
 Write-Host ""
 

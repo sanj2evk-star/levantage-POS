@@ -189,7 +189,21 @@ function buildBillPrintData(data) {
   const isPreview = paymentMode === 'preview';
 
   if (isPreview) {
+    receipt += formatLine('Date: ' + dateStr, timeStr) + '\n';
+
+    // Dine In / Takeaway with table
+    if (orderType === 'takeaway') {
+      receipt += 'Type: TAKEAWAY\n';
+    } else if (tableName) {
+      receipt += 'Dine In: ' + tableName + '\n';
+    }
+
     receipt += formatLine('Order: ' + orderNumber, '** PREVIEW **') + '\n';
+
+    // Captain (waiter)
+    if (waiterName) {
+      receipt += 'Captain: ' + waiterName.toUpperCase() + '\n';
+    }
   } else {
     // Bill number — bold and prominent
     receipt += COMMANDS.BOLD_ON;

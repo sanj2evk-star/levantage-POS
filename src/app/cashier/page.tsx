@@ -35,6 +35,7 @@ import {
   Store,
   Lock,
   ArrowRightLeft,
+  X,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -146,6 +147,7 @@ export default function CashierPage() {
     totalOrders: 0, totalSales: 0, cashTotal: 0, upiTotal: 0, cardTotal: 0, zomatoTotal: 0, ncTotal: 0, outstanding: 0,
   })
   const [recentBills, setRecentBills] = useState<RecentBill[]>([])
+  const [billSearchQuery, setBillSearchQuery] = useState('')
 
   // Business day boundary — loaded once on mount, cached for session
   const [boundaryHour, setBoundaryHour] = useState(3)
@@ -1699,11 +1701,52 @@ export default function CashierPage() {
                 <Receipt className="h-5 w-5" />
                 Today&apos;s Bills ({recentBills.length})
               </h3>
+
+              {/* Bill search */}
+              {recentBills.length > 0 && (
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search bill #, table, captain, order #..."
+                    value={billSearchQuery}
+                    onChange={e => setBillSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-400 transition-colors"
+                  />
+                  {billSearchQuery && (
+                    <button onClick={() => setBillSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+
               {recentBills.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-6">No bills yet today</p>
-              ) : (
+              ) : (() => {
+                const q = billSearchQuery.toLowerCase().trim()
+                const filtered = q ? recentBills.filter(bill => {
+                  const tableName = bill.order?.table ? getTableDisplayName(bill.order.table) : ''
+                  const captainName = bill.order?.waiter?.name || ''
+                  const orderNum = bill.order?.order_number || ''
+                  return (
+                    bill.bill_number.toLowerCase().includes(q) ||
+                    tableName.toLowerCase().includes(q) ||
+                    captainName.toLowerCase().includes(q) ||
+                    orderNum.toLowerCase().includes(q) ||
+                    (bill.payment_mode || '').toLowerCase().includes(q) ||
+                    String(Number(bill.total)).includes(q)
+                  )
+                }) : recentBills
+
+                if (filtered.length === 0) {
+                  return <p className="text-sm text-gray-400 text-center py-6">No bills match &quot;{billSearchQuery}&quot;</p>
+                }
+
+                return (
                 <div className="space-y-2">
-                  {recentBills.map(bill => {
+                  {q && <p className="text-xs text-gray-400 mb-1">{filtered.length} of {recentBills.length} bills</p>}
+                  {filtered.map(bill => {
                     const tableName = bill.order?.table ? getTableDisplayName(bill.order.table) : null
                     const captainName = bill.order?.waiter?.name || null
                     const time = new Date(bill.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
@@ -1752,7 +1795,8 @@ export default function CashierPage() {
                     )
                   })}
                 </div>
-              )}
+                )
+              })()}
             </div>
           </div>
         )}

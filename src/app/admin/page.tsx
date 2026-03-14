@@ -108,7 +108,7 @@ export default function AdminDashboard() {
     const weekStartUTC = getBusinessDayRange(weekStartStr, bh).start
     const weekEndUTC = getBusinessDayRange(weekEndStr, bh).end
 
-    const [billsResult, weeklyBillsResult, tablesResult, runningOrdersResult, allTablesResult] = await Promise.all([
+    const [billsResult, weeklyBillsResult, tablesResult, allTablesResult] = await Promise.all([
       supabase
         .from('bills')
         .select('*, payments(*), order:orders!order_id(waiter_id, waiter:profiles!waiter_id(name))')
@@ -128,15 +128,10 @@ export default function AdminDashboard() {
         .lte('created_at', endOfDay)
         .not('table_id', 'is', null)
         .eq('status', 'completed'),
-      // Running order items (live - for estimated running sales)
-      supabase
-        .from('order_items')
-        .select('total_price, is_cancelled, order:orders!order_id(status)')
-        .in('order.status', ['pending', 'preparing', 'ready', 'served']),
-      // All tables with status
+      // All tables with status + current order
       supabase
         .from('tables')
-        .select('id, status'),
+        .select('id, status, current_order_id'),
     ])
 
     const bills = (billsResult.data || []) as (Bill & { payments?: Payment[]; order?: { waiter_id: string | null; waiter: { name: string } | null } })[]
@@ -245,14 +240,29 @@ export default function AdminDashboard() {
     const scByStaff = Array.from(scStaffMap.values()).sort((a, b) => b.amount - a.amount)
 
     const allTablesList = allTablesResult.data || []
-    const runningItemsRaw = runningOrdersResult.data || []
-    // Sum active (non-cancelled) items from running orders, then apply GST + SC
-    const runningSubtotal = runningItemsRaw
-      .filter((r: any) => r.order && !r.is_cancelled)
-      .reduce((s: number, r: any) => s + Number(r.total_price), 0)
-    const runningEstSales = Math.round(runningSubtotal * (1 + GST_PERCENT / 100 + SERVICE_CHARGE_PERCENT / 100))
-    const runningTables = allTablesList.filter((t: any) => t.status === 'occupied').length
+    const occupiedTables = allTablesList.filter((t: any) => t.status === 'occupied' && t.current_order_id)
+    const runningTables = occupiedTables.length
     const totalTables = allTablesList.length
+
+    // Compute running est. sales same way as Running Tables page:
+    // get occupied tables → fetch their orders → sum active items → add SC + GST
+    let runningEstSales = 0
+    if (occupiedTables.length > 0) {
+      const orderIds = occupiedTables.map((t: any) => t.current_order_id)
+      const { data: runningOrders } = await supabase
+        .from('orders')
+        .select('id, items:order_items(total_price, is_cancelled)')
+        .in('id', orderIds)
+      if (runningOrders) {
+        const runningSubtotal = runningOrders.reduce((sum: number, o: any) => {
+          const activeItems = (o.items || []).filter((i: any) => !i.is_cancelled)
+          return sum + activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
+        }, 0)
+        const runningSC = Math.round(runningSubtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+        const runningGST = Math.round(runningSubtotal * GST_PERCENT / 100 * 100) / 100
+        runningEstSales = Math.round((runningSubtotal + runningSC + runningGST) * 100) / 100
+      }
+    }
 
     setData({
       totalSales, netSales, taxes, discounts,

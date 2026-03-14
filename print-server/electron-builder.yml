@@ -1,0 +1,28 @@
+appId: com.levantage.printproxy
+productName: LeVantage Print Proxy
+copyright: Le Vantage Cafe
+
+directories:
+  output: dist
+
+files:
+  - electron-main.js
+  - preload.js
+  - index.js
+  - ui/**/*
+  - package.json
+  - node_modules/**/*
+
+extraResources:
+  - from: .env
+    to: .env
+    filter:
+      - "**/*"
+
+win:
+  target: portable
+
+portable:
+  artifactName: LeVantage-PrintProxy.exe
+
+asar: false

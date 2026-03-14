@@ -435,14 +435,14 @@ async function processJob(job) {
       printed_at: new Date().toISOString()
     }).eq('id', job.id);
 
-    console.log(`[PRINT] Job ${job.id} printed successfully`);
+    console.log(`[JOB:printed] Job ${job.id} type=${job.type} printer=${job.printer_ip}`);
   } catch (err) {
     await supabase.from('print_jobs').update({
       status: 'failed',
       error: err.message
     }).eq('id', job.id);
 
-    console.error(`[PRINT] Job ${job.id} failed:`, err.message);
+    console.error(`[JOB:failed] Job ${job.id} type=${job.type} printer=${job.printer_ip} error=${err.message}`);
   }
 }
 
@@ -486,7 +486,7 @@ function startListening() {
     .subscribe((status) => {
       console.log(`[PROXY] Realtime status: ${status}`);
       if (status === 'SUBSCRIBED') {
-        console.log('[PROXY] Listening for print jobs...');
+        console.log('[PROXY:ready] Listening for print jobs...');
         // Process any pending jobs that arrived while we were connecting
         processPendingJobs();
       }
@@ -510,7 +510,7 @@ async function cleanupOldJobs() {
 // Startup
 async function main() {
   console.log('========================================');
-  console.log('  Le Vantage Cafe - Print Proxy v2.1');
+  console.log('  Le Vantage Cafe - Print Proxy v3.0');
   console.log('========================================');
   console.log(`Supabase: ${SUPABASE_URL}`);
   console.log('');

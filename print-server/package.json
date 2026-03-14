@@ -1,14 +1,20 @@
 {
   "name": "levantage-print-proxy",
-  "version": "2.0.0",
-  "description": "Print proxy - listens to Supabase print_jobs and sends to thermal printers on LAN",
-  "main": "index.js",
+  "version": "3.0.0",
+  "description": "Le Vantage Cafe - Print Proxy with Desktop UI",
+  "main": "electron-main.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "electron": "electron .",
+    "build:win": "electron-builder --win portable --x64"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
   }
 }

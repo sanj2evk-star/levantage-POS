@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Le Vantage Print Proxy</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+      background: #0f1923;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Header ────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 20px 12px;
+      background: #1a2332;
+      border-bottom: 1px solid #2a3a4a;
+    }
+
+    .header-icon {
+      font-size: 24px;
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      flex: 1;
+    }
+
+    .header .version {
+      font-size: 11px;
+      color: #607d8b;
+      background: #1e2d3d;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* ── Status Section ────────────────────────── */
+    .status-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: #152030;
+      border-bottom: 1px solid #2a3a4a;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #f44336;
+      flex-shrink: 0;
+    }
+
+    .status-dot.active {
+      background: #00c853;
+      box-shadow: 0 0 8px rgba(0, 200, 83, 0.5);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.starting {
+      background: #ffc107;
+      animation: pulse 1s infinite;
+    }
+
+    .status-dot.error {
+      background: #f44336;
+      box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-text {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .status-text.active { color: #00c853; }
+    .status-text.starting { color: #ffc107; }
+    .status-text.error { color: #f44336; }
+    .status-text.stopped { color: #78909c; }
+
+    .uptime {
+      font-size: 12px;
+      color: #78909c;
+    }
+
+    /* ── Stats Bar ─────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      padding: 12px 20px;
+      background: #152030;
+      border-bottom: 1px solid #2a3a4a;
+    }
+
+    .stat-card {
+      flex: 1;
+      background: #1a2a3a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .stat-value.printed { color: #00c853; }
+    .stat-value.failed { color: #f44336; }
+
+    .stat-label {
+      font-size: 11px;
+      color: #78909c;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Controls ──────────────────────────────── */
+    .controls {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px;
+      background: #152030;
+      border-bottom: 1px solid #2a3a4a;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: 1px solid #2a3a4a;
+      border-radius: 6px;
+      background: #1a2a3a;
+      color: #b0bec5;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #243444;
+      color: #fff;
+      border-color: #3a5a7a;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    .btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn.start { border-color: #1b5e20; }
+    .btn.start:hover:not(:disabled) { background: #1b5e20; color: #fff; }
+    .btn.stop { border-color: #b71c1c; }
+    .btn.stop:hover:not(:disabled) { background: #b71c1c; color: #fff; }
+    .btn.restart { border-color: #e65100; }
+    .btn.restart:hover:not(:disabled) { background: #e65100; color: #fff; }
+    .btn.update { border-color: #0d47a1; }
+    .btn.update:hover:not(:disabled) { background: #0d47a1; color: #fff; }
+
+    /* ── Log Panel ─────────────────────────────── */
+    .log-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 0 20px;
+      background: #0f1923;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0 6px;
+    }
+
+    .log-header h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #78909c;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .clear-btn {
+      font-size: 11px;
+      color: #546e7a;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+
+    .clear-btn:hover { color: #90a4ae; }
+
+    .log-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: #0a1218;
+      border: 1px solid #1a2a3a;
+      border-radius: 6px;
+      padding: 8px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 11.5px;
+      line-height: 1.6;
+    }
+
+    .log-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .log-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .log-panel::-webkit-scrollbar-thumb {
+      background: #2a3a4a;
+      border-radius: 3px;
+    }
+
+    .log-line {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-line .ts {
+      color: #546e7a;
+    }
+
+    .log-line.info { color: #b0bec5; }
+    .log-line.error { color: #ef9a9a; }
+    .log-line.success { color: #81c784; }
+    .log-line.status { color: #64b5f6; }
+
+    /* ── Footer ────────────────────────────────── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: #1a2332;
+      border-top: 1px solid #2a3a4a;
+    }
+
+    .auto-start-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #78909c;
+    }
+
+    .auto-start-toggle input[type="checkbox"] {
+      accent-color: #00c853;
+    }
+
+    .footer-info {
+      font-size: 11px;
+      color: #455a64;
+    }
+
+    /* ── Toast ─────────────────────────────────── */
+    .toast {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-60px);
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      transition: transform 0.3s ease;
+      z-index: 100;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.success {
+      background: #1b5e20;
+      color: #c8e6c9;
+      border: 1px solid #2e7d32;
+    }
+
+    .toast.error {
+      background: #b71c1c;
+      color: #ffcdd2;
+      border: 1px solid #c62828;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <span class="header-icon">&#9749;</span>
+    <h1>Le Vantage Print Proxy</h1>
+    <span class="version" id="versionBadge">v-.-</span>
+  </div>
+
+  <!-- Status -->
+  <div class="status-section">
+    <div class="status-left">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-text stopped" id="statusText">Stopped</span>
+    </div>
+    <span class="uptime" id="uptimeText"></span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-value printed" id="printedCount">0</div>
+      <div class="stat-label">Printed Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value failed" id="failedCount">0</div>
+      <div class="stat-label">Failed Today</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn start" id="btnStart" onclick="api.startProxy()">&#9654; Start</button>
+    <button class="btn stop" id="btnStop" onclick="api.stopProxy()" disabled>&#9632; Stop</button>
+    <button class="btn restart" id="btnRestart" onclick="api.restartProxy()">&#8635; Restart</button>
+    <button class="btn update" id="btnUpdate" onclick="api.updateProxy()">&#8595; Update</button>
+  </div>
+
+  <!-- Logs -->
+  <div class="log-section">
+    <div class="log-header">
+      <h3>Activity Log</h3>
+      <button class="clear-btn" onclick="clearLogs()">Clear</button>
+    </div>
+    <div class="log-panel" id="logPanel"></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <label class="auto-start-toggle">
+      <input type="checkbox" id="autoStartCheck" onchange="api.setAutoStart(this.checked)">
+      Auto-start on boot
+    </label>
+    <span class="footer-info" id="footerInfo">Le Vantage Cafe</span>
+  </div>
+
+  <script>
+    // DOM refs
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const uptimeText = document.getElementById('uptimeText');
+    const printedCount = document.getElementById('printedCount');
+    const failedCount = document.getElementById('failedCount');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    const logPanel = document.getElementById('logPanel');
+    const versionBadge = document.getElementById('versionBadge');
+    const autoStartCheck = document.getElementById('autoStartCheck');
+    const toastEl = document.getElementById('toast');
+
+    let currentUptime = 0;
+    let uptimeInterval = null;
+
+    // ── Init ──────────────────────────────────────
+    async function init() {
+      const [status, stats, logs, version, autoStart] = await Promise.all([
+        api.getStatus(),
+        api.getStats(),
+        api.getLogs(),
+        api.getVersion(),
+        api.getAutoStart(),
+      ]);
+
+      updateStatus(status);
+      updateStats(stats);
+      versionBadge.textContent = 'v' + version;
+      autoStartCheck.checked = autoStart;
+
+      // Render existing logs
+      for (const entry of logs) {
+        appendLogLine(entry);
+      }
+      scrollToBottom();
+    }
+
+    init();
+
+    // ── Event Listeners ────────────────────────────
+    api.onStatusChange((data) => updateStatus(data.status));
+    api.onStatsUpdate((data) => updateStats(data));
+
+    api.onLogLine((entry) => {
+      appendLogLine(entry);
+      scrollToBottom();
+    });
+
+    api.onUpdateResult((data) => {
+      showToast(data.message, data.success ? 'success' : 'error');
+    });
+
+    // ── Status ────────────────────────────────────
+    function updateStatus(status) {
+      // Dot
+      statusDot.className = 'status-dot ' + status;
+
+      // Text
+      const labels = { active: 'Active', stopped: 'Stopped', starting: 'Starting...', error: 'Error' };
+      statusText.textContent = labels[status] || status;
+      statusText.className = 'status-text ' + status;
+
+      // Buttons
+      const isRunning = status === 'active' || status === 'starting';
+      btnStart.disabled = isRunning;
+      btnStop.disabled = !isRunning;
+
+      // Uptime
+      if (status === 'active') {
+        startUptimeCounter();
+      } else {
+        stopUptimeCounter();
+        uptimeText.textContent = '';
+      }
+    }
+
+    // ── Stats ─────────────────────────────────────
+    function updateStats(data) {
+      printedCount.textContent = data.printed;
+      failedCount.textContent = data.failed;
+      currentUptime = data.uptime;
+    }
+
+    // ── Uptime Counter ────────────────────────────
+    function startUptimeCounter() {
+      if (uptimeInterval) return;
+      updateUptimeDisplay();
+      uptimeInterval = setInterval(() => {
+        currentUptime++;
+        updateUptimeDisplay();
+      }, 1000);
+    }
+
+    function stopUptimeCounter() {
+      if (uptimeInterval) {
+        clearInterval(uptimeInterval);
+        uptimeInterval = null;
+      }
+    }
+
+    function updateUptimeDisplay() {
+      const h = Math.floor(currentUptime / 3600);
+      const m = Math.floor((currentUptime % 3600) / 60);
+      const s = currentUptime % 60;
+
+      let parts = [];
+      if (h > 0) parts.push(h + 'h');
+      if (m > 0 || h > 0) parts.push(m + 'm');
+      parts.push(s + 's');
+
+      uptimeText.textContent = 'Uptime: ' + parts.join(' ');
+    }
+
+    // ── Log Panel ─────────────────────────────────
+    function appendLogLine(entry) {
+      const div = document.createElement('div');
+
+      // Classify log line for coloring
+      let cls = 'info';
+      if (entry.level === 'error') cls = 'error';
+      else if (entry.message.includes('[JOB:printed]')) cls = 'success';
+      else if (entry.message.includes('[JOB:failed]')) cls = 'error';
+      else if (entry.message.includes('[PROXY:ready]') || entry.message.includes('[APP]')) cls = 'status';
+
+      div.className = 'log-line ' + cls;
+      div.innerHTML = '<span class="ts">' + entry.timestamp + '</span> ' + escapeHtml(entry.message);
+
+      logPanel.appendChild(div);
+
+      // Cap at 500 lines
+      while (logPanel.children.length > 500) {
+        logPanel.removeChild(logPanel.firstChild);
+      }
+    }
+
+    function scrollToBottom() {
+      logPanel.scrollTop = logPanel.scrollHeight;
+    }
+
+    function clearLogs() {
+      logPanel.innerHTML = '';
+      api.clearLogs();
+    }
+
+    function escapeHtml(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
+    }
+
+    // ── Toast ─────────────────────────────────────
+    let toastTimer = null;
+    function showToast(message, type) {
+      toastEl.textContent = message;
+      toastEl.className = 'toast ' + type + ' show';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.className = 'toast ' + type;
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

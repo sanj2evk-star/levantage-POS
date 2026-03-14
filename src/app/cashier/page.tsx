@@ -1126,7 +1126,7 @@ export default function CashierPage() {
                       {billedCount > 0 && <span className="text-amber-600 ml-1">({billedCount} billed)</span>}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2.5">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2.5">
                     {group.tables.map(table => {
                       const isOccupied = table.status === 'occupied'
                       const info = table.current_order_id ? tableOrderInfo.get(table.current_order_id) : null
@@ -1136,11 +1136,11 @@ export default function CashierPage() {
                       return (
                         <div
                           key={table.id}
-                          className={`relative p-2 rounded-xl text-center border-2 min-h-[85px] transition-all ${getTableCardStyle(table, info)}`}
+                          className={`relative p-2 rounded-xl text-center border-2 min-h-[85px] min-w-0 transition-all ${getTableCardStyle(table, info)}`}
                         >
                           {/* Print count badge (top-right) */}
                           {info && (info.billPrintCount > 0 || isPrinted) && (
-                            <div className={`absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                            <div className={`absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold z-10 ${
                               (info.billPrintCount || 0) > 1 ? 'bg-red-500 text-white' : 'bg-white text-gray-700 shadow-sm border'
                             }`}>
                               <Printer className="h-3 w-3" />
@@ -1168,48 +1168,48 @@ export default function CashierPage() {
                                   Paid
                                 </Badge>
                               ) : isPrinted ? (
-                                <div className="flex items-center justify-center gap-2 mt-0.5">
+                                <div className="flex items-center justify-center gap-1.5 mt-0.5">
                                   <button
                                     onClick={() => openTableBilling(table)}
-                                    className="flex-1 flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded-lg px-2 py-1.5 text-sm font-bold transition-colors active:scale-95"
+                                    className="flex-1 flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded-lg px-1.5 py-1.5 text-xs font-bold transition-colors active:scale-95"
                                   >
-                                    <Check className="h-4 w-4" /> Settle
+                                    <Check className="h-3.5 w-3.5 shrink-0" /> Settle
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); openTransferDialog(table) }}
-                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-1.5 transition-colors active:scale-95"
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-1.5 transition-colors active:scale-95 shrink-0"
                                     title="Transfer"
                                   >
-                                    <ArrowRightLeft className="h-4 w-4" />
+                                    <ArrowRightLeft className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
                               ) : (
-                                <div className="flex items-center justify-center gap-2 mt-0.5">
+                                <div className="flex items-center justify-center gap-1 mt-0.5">
                                   <button
                                     onClick={() => handleQuickPrint(table)}
                                     disabled={quickPrintingTableId === table.id}
-                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-2 transition-colors active:scale-95"
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-1.5 transition-colors active:scale-95 shrink-0"
                                     title="Print customer copy"
                                   >
                                     {quickPrintingTableId === table.id ? (
-                                      <div className="h-5 w-5 border-2 border-white/60 border-t-white rounded-full animate-spin" />
+                                      <div className="h-4 w-4 border-2 border-white/60 border-t-white rounded-full animate-spin" />
                                     ) : (
-                                      <Printer className="h-5 w-5" />
+                                      <Printer className="h-4 w-4" />
                                     )}
                                   </button>
                                   <button
                                     onClick={() => openTableBilling(table)}
-                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-2 transition-colors active:scale-95"
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-1.5 transition-colors active:scale-95 shrink-0"
                                     title="View bill"
                                   >
-                                    <Eye className="h-5 w-5" />
+                                    <Eye className="h-4 w-4" />
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); openTransferDialog(table) }}
-                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-2 transition-colors active:scale-95"
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-1.5 transition-colors active:scale-95 shrink-0"
                                     title="Transfer"
                                   >
-                                    <ArrowRightLeft className="h-5 w-5" />
+                                    <ArrowRightLeft className="h-4 w-4" />
                                   </button>
                                 </div>
                               )}

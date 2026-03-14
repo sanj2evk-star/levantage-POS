@@ -1290,6 +1290,12 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Order Items</p>
                   <span className="text-xs text-gray-400 font-medium">{activeItems.length} items</span>
                 </div>
+                {order.bill_print_count && order.bill_print_count > 0 && order.status !== 'completed' && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                    <Lock className="h-3 w-3 shrink-0" />
+                    <span>Items locked — bill already printed</span>
+                  </div>
+                )}
 
                 {/* Items list */}
                 <div className="space-y-0.5">
@@ -1306,7 +1312,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-2">
                         <span className="text-sm font-semibold text-gray-700 tabular-nums">₹{item.total_price.toFixed(0)}</span>
-                        {order.status !== 'completed' && (
+                        {order.status !== 'completed' && !(order.bill_print_count && order.bill_print_count > 0) && (
                           <button onClick={() => openCancelDialog(item.id, item.menu_item?.name || 'Item')}
                             className="h-6 w-6 flex items-center justify-center rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100">
                             <X className="h-3.5 w-3.5" />

@@ -29,6 +29,7 @@ import {
   Coffee,
   Flame,
   Trophy,
+  Gift,
 } from 'lucide-react'
 import {
   BarChart,
@@ -551,16 +552,30 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* ── Discounts ── */}
-          <div className="rounded-xl bg-white border border-gray-100 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          {/* ── NC & Discounts ── */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* NC (No Charge) */}
+            <div className="rounded-xl bg-white border border-gray-100 p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50">
+                  <Gift className="h-3.5 w-3.5 text-amber-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-500">NC</span>
+              </div>
+              <p className="text-xl font-bold text-gray-900">{fmt(data.ncTotal)}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">No charge</p>
+            </div>
+
+            {/* Discounts */}
+            <div className="rounded-xl bg-white border border-gray-100 p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50">
                   <Percent className="h-3.5 w-3.5 text-rose-600" />
                 </div>
                 <span className="text-xs font-medium text-gray-500">Discounts</span>
               </div>
               <p className="text-xl font-bold text-gray-900">{fmt(data.discounts)}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Total discounts</p>
             </div>
           </div>
 

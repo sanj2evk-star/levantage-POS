@@ -147,8 +147,9 @@ export default function CashierPage() {
   })
   const [recentBills, setRecentBills] = useState<RecentBill[]>([])
 
-  // Business day boundary
+  // Business day boundary — loaded once on mount, cached for session
   const [boundaryHour, setBoundaryHour] = useState(3)
+  const boundaryHourLoaded = useRef(false)
 
   // Manual day close state
   const [dayCloseDialogOpen, setDayCloseDialogOpen] = useState(false)
@@ -247,8 +248,8 @@ export default function CashierPage() {
     // Only show loading spinner on initial load, not background refreshes
     if (!isBackground) setLoadingLiveOrders(true)
     const supabase = createClient()
-    const bh = await loadDayBoundaryHour(supabase)
-    setBoundaryHour(bh)
+    // Use cached boundary hour — avoid querying settings table on every refresh
+    const bh = boundaryHour
     const businessDate = getCurrentBusinessDate(bh)
     const { start: dayStart } = getBusinessDayRange(businessDate, bh)
     const { data } = await supabase
@@ -294,8 +295,8 @@ export default function CashierPage() {
 
   const loadDaySummary = useCallback(async () => {
     const supabase = createClient()
-    const bh = await loadDayBoundaryHour(supabase)
-    setBoundaryHour(bh)
+    // Use cached boundary hour — avoid querying settings table on every refresh
+    const bh = boundaryHour
     const businessDate = getCurrentBusinessDate(bh)
     const { start: dayStart, end: dayEnd } = getBusinessDayRange(businessDate, bh)
 
@@ -368,13 +369,20 @@ export default function CashierPage() {
   }, [])
 
   const loadData = useCallback(async () => {
-    const [tablesResult] = await Promise.all([
+    // Load boundary hour once on mount — cached for the rest of the session
+    if (!boundaryHourLoaded.current) {
+      const supabase = createClient()
+      const bh = await loadDayBoundaryHour(supabase)
+      setBoundaryHour(bh)
+      boundaryHourLoaded.current = true
+    }
+    await Promise.all([
       loadTables(),
       loadWaiters(),
-      loadDaySummary(),
+      // NOTE: loadDaySummary deferred — only loads when Day Close tab is opened
     ])
     setLoading(false)
-  }, [loadTables, loadWaiters, loadDaySummary])
+  }, [loadTables, loadWaiters])
 
   // After tables load, fetch order info
   useEffect(() => {
@@ -403,19 +411,20 @@ export default function CashierPage() {
   const activeTabRef = useRef(activeTab)
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
 
+  // Shared debounced refresh — used by both realtime handlers and handleBillSettled
+  const debouncedRefresh = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      loadTables()
+      // Only load heavy queries when on the relevant tab
+      if (activeTabRef.current === 'live_orders') loadLiveOrders(true)
+      if (activeTabRef.current === 'day_close') loadDaySummary()
+    }, 2000)
+  }, [loadTables, loadLiveOrders, loadDaySummary])
+
   // Realtime subscriptions with smart notifications
   useEffect(() => {
     const supabase = createClient()
-
-    function debouncedRefresh() {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => {
-        loadTables()
-        // Only load heavy queries when on the relevant tab
-        if (activeTabRef.current === 'live_orders') loadLiveOrders(true)
-        if (activeTabRef.current === 'day_close') loadDaySummary()
-      }, 1000)
-    }
 
     function handleOrderChange(payload: any) {
       if (payload.eventType === 'INSERT' && payload.new) {
@@ -440,7 +449,8 @@ export default function CashierPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tables' }, debouncedRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handleOrderChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bills' }, debouncedRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedRefresh)
+      // NOTE: order_items removed — was firing on every KOT status change from kitchen,
+      // causing cascading reloads. orders + tables + bills cover all cashier-relevant events.
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
           setTimeout(() => {
@@ -449,18 +459,18 @@ export default function CashierPage() {
         }
       })
 
-    // Fallback: auto-refresh every 30 seconds
+    // Fallback: auto-refresh every 2 minutes (realtime is primary mechanism)
     const fallbackInterval = setInterval(() => {
       loadTables()
       if (activeTabRef.current === 'live_orders') loadLiveOrders(true)
-    }, 30000)
+    }, 120000)
 
     return () => {
       supabase.removeChannel(channel)
       clearInterval(fallbackInterval)
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [loadTables, loadDaySummary, loadLiveOrders])
+  }, [loadTables, loadDaySummary, loadLiveOrders, debouncedRefresh])
 
   // Unlock Web Audio API on first user interaction
   useEffect(() => {
@@ -542,9 +552,9 @@ export default function CashierPage() {
   }
 
   function handleBillSettled() {
-    loadTables()
-    loadDaySummary()
-    if (activeTab === 'live_orders') loadLiveOrders(true)
+    // Use debounced refresh to avoid duplicate loads — bill settlement also
+    // triggers realtime events on bills/orders/tables which would fire again
+    debouncedRefresh()
   }
 
   // Quick print customer preview from table card

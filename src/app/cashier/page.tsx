@@ -356,7 +356,7 @@ export default function CashierPage() {
       .from('orders')
       .select(`
         id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed, bill_print_count,
-        table:tables!table_id(number, section),
+        table:tables!table_id(number, section, current_order_id),
         items:order_items(
           id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status, created_at,
           menu_item:menu_items(name, is_veg)
@@ -385,6 +385,9 @@ export default function CashierPage() {
           seen.add(o.id)
           // Safety: skip orders whose bill is fully paid (order status should be 'completed' but wasn't updated)
           if (o.bill && o.bill.payment_status === 'paid') return false
+          // Skip orders that belong in the unsettled section:
+          // bill was printed AND table was reassigned to a different order
+          if (o.bill_print_count > 0 && o.table && o.table.current_order_id !== o.id) return false
           return true
         })
       setLiveOrders(processed as LiveOrder[])

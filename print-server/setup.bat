@@ -1,125 +1,167 @@
 @echo off
 title Le Vantage Print Proxy - Setup
-color 0E
+color 0A
 
 echo.
-echo ==========================================
-echo   Le Vantage Print Proxy - Setup
-echo ==========================================
+echo  ==========================================
+echo    Le Vantage Print Proxy v3.0 - Setup
+echo  ==========================================
 echo.
 
-:: Check if Node.js is installed - try common paths too
+:: ── Check Node.js ────────────────────────────────
 set NODE_FOUND=0
 node --version >nul 2>&1 && set NODE_FOUND=1
 
 if %NODE_FOUND%==0 (
-    :: Try common install paths manually
     if exist "C:\Program Files\nodejs\node.exe" (
         set "PATH=C:\Program Files\nodejs;%PATH%"
         set NODE_FOUND=1
-        echo Found Node.js at C:\Program Files\nodejs
     )
 )
 
 if %NODE_FOUND%==0 (
-    echo ==========================================
-    echo   ERROR: Node.js is not installed!
-    echo ==========================================
+    color 0C
+    echo  [ERROR] Node.js is not installed!
     echo.
-    echo   Please install Node.js first:
-    echo     1. Go to https://nodejs.org
-    echo     2. Download the LTS version
-    echo     3. Install it - click Next through everything
-    echo     4. RESTART your laptop
-    echo     5. Double-click this setup file again
+    echo  Please install Node.js first:
+    echo    1. Go to https://nodejs.org
+    echo    2. Download the LTS version
+    echo    3. Install it (click Next through everything)
+    echo    4. RESTART your laptop
+    echo    5. Run this setup again
     echo.
-    echo   Opening nodejs.org for you now...
+    echo  Opening nodejs.org...
     start https://nodejs.org
-    echo.
     pause
     exit /b 1
 )
 
-echo [OK] Node.js found:
-node --version
-echo.
+for /f "tokens=*" %%i in ('node -v') do set NODE_VER=%%i
+echo  [OK] Node.js %NODE_VER%
 
-:: Create install directory
+:: ── Setup directory ──────────────────────────────
 set INSTALL_DIR=%USERPROFILE%\LeVantage-PrintProxy
-echo Installing to: %INSTALL_DIR%
+echo  [..] Install path: %INSTALL_DIR%
 echo.
 
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+if not exist "%INSTALL_DIR%\ui" mkdir "%INSTALL_DIR%\ui"
 
-:: Download files from GitHub
-echo Downloading files from GitHub...
-echo   - index.js (print proxy)...
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/sanj2evk-star/levantage-POS/main/print-server/index.js' -OutFile '%INSTALL_DIR%\index.js'" 2>nul
-if not exist "%INSTALL_DIR%\index.js" (
-    echo   FAILED to download index.js - check internet connection
+:: ── Download all files from GitHub ───────────────
+echo  Downloading latest files from GitHub...
+set GH=https://raw.githubusercontent.com/sanj2evk-star/levantage-POS/main/print-server
+set DL=powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri
+
+%DL% '%GH%/index.js' -OutFile '%INSTALL_DIR%\index.js'" 2>nul
+echo    - index.js
+%DL% '%GH%/package.json' -OutFile '%INSTALL_DIR%\package.json'" 2>nul
+echo    - package.json
+%DL% '%GH%/electron-main.js' -OutFile '%INSTALL_DIR%\electron-main.js'" 2>nul
+echo    - electron-main.js
+%DL% '%GH%/preload.js' -OutFile '%INSTALL_DIR%\preload.js'" 2>nul
+echo    - preload.js
+%DL% '%GH%/ui/index.html' -OutFile '%INSTALL_DIR%\ui\index.html'" 2>nul
+echo    - ui/index.html
+%DL% '%GH%/electron-builder.yml' -OutFile '%INSTALL_DIR%\electron-builder.yml'" 2>nul
+echo    - electron-builder.yml
+%DL% '%GH%/start.bat' -OutFile '%INSTALL_DIR%\start.bat'" 2>nul
+echo    - start.bat (fallback CLI launcher)
+
+:: Verify critical file downloaded
+if not exist "%INSTALL_DIR%\electron-main.js" (
+    color 0C
+    echo.
+    echo  [ERROR] Download failed! Check your internet connection.
     pause
     exit /b 1
 )
-echo   - package.json...
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/sanj2evk-star/levantage-POS/main/print-server/package.json' -OutFile '%INSTALL_DIR%\package.json'" 2>nul
-echo   - start.bat...
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/sanj2evk-star/levantage-POS/main/print-server/start.bat' -OutFile '%INSTALL_DIR%\start.bat'" 2>nul
-echo   - start-hidden.vbs (background launcher)...
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/sanj2evk-star/levantage-POS/main/print-server/start-hidden.vbs' -OutFile '%INSTALL_DIR%\start-hidden.vbs'" 2>nul
-echo [OK] Files downloaded
+echo  [OK] All files downloaded
 echo.
 
-:: Create .env file if it doesn't exist
+:: ── Setup .env ───────────────────────────────────
 if not exist "%INSTALL_DIR%\.env" (
-    echo Creating .env file...
-    echo SUPABASE_URL=https://ivhmvhnrxiodpneflszu.supabase.co> "%INSTALL_DIR%\.env"
-    echo SUPABASE_KEY=PASTE_YOUR_ANON_KEY_HERE>> "%INSTALL_DIR%\.env"
+    color 0E
+    echo  ==========================================
+    echo    .env file not found - creating one
+    echo  ==========================================
     echo.
-    echo *** IMPORTANT: You need to edit the .env file! ***
-    echo    File: %INSTALL_DIR%\.env
-    echo    Replace PASTE_YOUR_ANON_KEY_HERE with your Supabase anon key
+    echo  SUPABASE_URL=https://ivhmvhnrxiodpneflszu.supabase.co> "%INSTALL_DIR%\.env"
+    echo  SUPABASE_KEY=PASTE_YOUR_ANON_KEY_HERE>> "%INSTALL_DIR%\.env"
+    echo  Opening .env in Notepad...
+    echo  Replace PASTE_YOUR_ANON_KEY_HERE with your actual Supabase anon key.
     echo.
+    start /wait notepad "%INSTALL_DIR%\.env"
+    color 0A
+    echo  [OK] .env saved
 ) else (
-    echo [OK] .env file already exists, keeping it
-    echo.
+    echo  [OK] .env already exists, keeping it
+)
+echo.
+
+:: ── Install npm dependencies ─────────────────────
+echo  Installing dependencies (this may take 1-2 minutes)...
+cd /d "%INSTALL_DIR%"
+call npm install >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    echo  [WARN] Retrying npm install...
+    call npm install
+)
+echo  [OK] Dependencies installed
+echo.
+
+:: ── Create run.bat launcher ──────────────────────
+echo @echo off> "%INSTALL_DIR%\run.bat"
+echo title Le Vantage Print Proxy>> "%INSTALL_DIR%\run.bat"
+echo cd /d "%INSTALL_DIR%">> "%INSTALL_DIR%\run.bat"
+echo npx electron .>> "%INSTALL_DIR%\run.bat"
+
+:: ── Desktop shortcut ─────────────────────────────
+echo  Creating desktop shortcut...
+set "DESKTOP=%USERPROFILE%\Desktop"
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%DESKTOP%\LeVantage Print Proxy.lnk'); $s.TargetPath = '%INSTALL_DIR%\run.bat'; $s.WorkingDirectory = '%INSTALL_DIR%'; $s.Description = 'Le Vantage Print Proxy'; $s.WindowStyle = 7; $s.Save()" 2>nul
+if %ERRORLEVEL% equ 0 (
+    echo  [OK] Desktop shortcut created
+) else (
+    echo  [WARN] Shortcut creation failed - run manually: %INSTALL_DIR%\run.bat
+)
+echo.
+
+:: ── Auto-start on boot (optional) ────────────────
+set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
+
+:: Remove old startup entries
+if exist "%STARTUP%\LeVantage-PrintProxy.lnk" del "%STARTUP%\LeVantage-PrintProxy.lnk"
+
+set /p AUTOSTART="  Enable auto-start on Windows boot? (Y/N): "
+if /i "%AUTOSTART%"=="Y" (
+    powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%STARTUP%\LeVantage Print Proxy.lnk'); $s.TargetPath = '%INSTALL_DIR%\run.bat'; $s.WorkingDirectory = '%INSTALL_DIR%'; $s.WindowStyle = 7; $s.Save()" 2>nul
+    echo  [OK] Auto-start enabled
+) else (
+    echo  [OK] Auto-start skipped (you can enable it later in the app)
 )
 
-:: Install npm dependencies
-echo Installing dependencies (this may take a minute)...
-cd /d "%INSTALL_DIR%"
-call npm install 2>&1
+:: ── Done ─────────────────────────────────────────
 echo.
-echo [OK] Dependencies installed
+echo  ==========================================
+echo    Setup Complete!
+echo  ==========================================
 echo.
-
-:: Remove old startup shortcut if exists
-set "STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
-if exist "%STARTUP_FOLDER%\LeVantage-PrintProxy.lnk" del "%STARTUP_FOLDER%\LeVantage-PrintProxy.lnk"
-
-:: Create auto-start with HIDDEN launcher (no window at all)
-echo Setting up auto-start (background mode)...
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%STARTUP_FOLDER%\LeVantage-PrintProxy.lnk'); $sc.TargetPath = 'wscript.exe'; $sc.Arguments = '"""%INSTALL_DIR%\start-hidden.vbs""" '; $sc.WorkingDirectory = '%INSTALL_DIR%'; $sc.Description = 'Le Vantage Print Proxy (Background)'; $sc.Save()" 2>nul
-echo [OK] Auto-start enabled (runs completely hidden)
+echo  How to use:
+echo    - Double-click "LeVantage Print Proxy" on Desktop
+echo    - App appears in system tray (near clock)
+echo    - Green icon = active, Red = stopped
+echo    - Right-click tray icon for quick controls
 echo.
 
-:: Create desktop shortcut - hidden version
-echo Creating desktop shortcut...
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%USERPROFILE%\Desktop\Start Print Proxy.lnk'); $sc.TargetPath = 'wscript.exe'; $sc.Arguments = '"""%INSTALL_DIR%\start-hidden.vbs""" '; $sc.WorkingDirectory = '%INSTALL_DIR%'; $sc.Description = 'Start Le Vantage Print Proxy'; $sc.Save()" 2>nul
-echo [OK] Desktop shortcut created
-echo.
+:: Ask to launch
+set /p LAUNCH="  Launch the app now? (Y/N): "
+if /i "%LAUNCH%"=="Y" (
+    echo.
+    echo  Starting...
+    cd /d "%INSTALL_DIR%"
+    start "" npx electron .
+)
 
-echo ==========================================
-echo   Setup Complete!
-echo ==========================================
 echo.
-echo   Next steps:
-echo     1. Edit .env file (add your Supabase key)
-echo        Opening the folder for you now...
-echo     2. Double-click "Start Print Proxy" on Desktop
-echo.
-
-:: Open the install folder so they can edit .env
-start "" "%INSTALL_DIR%"
-
-echo Press any key to close this window...
+echo  Press any key to close...
 pause >nul

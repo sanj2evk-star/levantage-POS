@@ -121,7 +121,7 @@ Write-Host ""
 # ── Install dependencies ───────────────────────
 Write-Host "  Installing dependencies (this takes 1-2 minutes)..." -ForegroundColor Cyan
 Set-Location $dir
-Start-Process -FilePath "npm" -ArgumentList "install" -WorkingDirectory $dir -Wait -NoNewWindow -PassThru -RedirectStandardError "$dir\npm-log.txt" | Out-Null
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm install 2>nul" -WorkingDirectory $dir -Wait -NoNewWindow
 Write-Host "  [OK] Dependencies installed" -ForegroundColor Green
 Write-Host ""
 

@@ -987,13 +987,44 @@ export default function CashierPage() {
   }
 
   async function performItemTransfer() {
-    if (!transferSourceTable?.current_order_id || !transferDestTable?.current_order_id || selectedItemIds.size === 0) return
+    if (!transferSourceTable?.current_order_id || !transferDestTable || selectedItemIds.size === 0) return
     setTransferring(true)
     const supabase = createClient()
     const sourceOrderId = transferSourceTable.current_order_id
-    const destOrderId = transferDestTable.current_order_id
+    let destOrderId = transferDestTable.current_order_id
 
     try {
+      // If destination is an available table, create a new order for it
+      if (transferDestTable.status === 'available' || !destOrderId) {
+        const { data: orderNum } = await supabase.rpc('generate_order_number')
+        const { data: { user } } = await supabase.auth.getUser()
+
+        // Get waiter from source order
+        const { data: srcOrder } = await supabase
+          .from('orders')
+          .select('waiter_id')
+          .eq('id', sourceOrderId)
+          .single()
+
+        const { data: newOrder, error: orderErr } = await supabase
+          .from('orders')
+          .insert({
+            table_id: transferDestTable.id,
+            order_number: orderNum || `ORD-${Date.now()}`,
+            order_type: 'dine_in',
+            status: 'preparing',
+            waiter_id: srcOrder?.waiter_id || null,
+          })
+          .select()
+          .single()
+
+        if (orderErr || !newOrder) throw new Error(orderErr?.message || 'Failed to create order')
+        destOrderId = newOrder.id
+
+        // Occupy the table
+        await supabase.from('tables').update({ status: 'occupied', current_order_id: destOrderId }).eq('id', transferDestTable.id)
+      }
+
       // Move selected items to destination order
       const itemIds = Array.from(selectedItemIds)
       await supabase
@@ -1032,8 +1063,8 @@ export default function CashierPage() {
       toast.success(`${selectedItemIds.size} item(s) moved to ${getTableDisplayName(transferDestTable)}`)
       setTransferDialogOpen(false)
       loadTables()
-    } catch {
-      toast.error('Item transfer failed')
+    } catch (err: any) {
+      toast.error(err?.message || 'Item transfer failed')
     } finally {
       setTransferring(false)
     }
@@ -1844,20 +1875,26 @@ export default function CashierPage() {
                     </div>
                   </div>
 
-                  {/* Destination table grid (occupied tables only, excluding source and billed) */}
+                  {/* Destination table grid — available + occupied (without bills), excluding source */}
                   {selectedItemIds.size > 0 && (
                     <div className="space-y-2">
                       <p className="text-sm text-gray-500">Move to:</p>
                       {(() => {
                         const destTables = tables.filter(t => {
-                          if (t.status !== 'occupied' || !t.current_order_id) return false
+                          // Exclude source table
                           if (transferSourceTable && t.id === transferSourceTable.id) return false
-                          const info = tableOrderInfo.get(t.current_order_id)
-                          if (info?.hasBill) return false
-                          return true
+                          // Allow available tables (will create a new order)
+                          if (t.status === 'available') return true
+                          // Allow occupied tables without a bill
+                          if (t.status === 'occupied' && t.current_order_id) {
+                            const info = tableOrderInfo.get(t.current_order_id)
+                            if (info?.hasBill) return false
+                            return true
+                          }
+                          return false
                         })
                         if (destTables.length === 0) {
-                          return <p className="text-center py-4 text-gray-400 text-sm">No other occupied tables without bills</p>
+                          return <p className="text-center py-4 text-gray-400 text-sm">No tables available</p>
                         }
                         return (
                           <div className="max-h-[20vh] overflow-y-auto">
@@ -1865,19 +1902,24 @@ export default function CashierPage() {
                               <div key={group.group} className="mb-2">
                                 <p className="text-xs font-semibold text-gray-500 mb-1">{group.label}</p>
                                 <div className="grid grid-cols-5 gap-2">
-                                  {group.tables.map(t => (
-                                    <button
-                                      key={t.id}
-                                      onClick={() => setTransferDestTable(t)}
-                                      className={`p-2 rounded-lg border-2 text-center font-bold text-base transition-all active:scale-95 ${
-                                        transferDestTable?.id === t.id
-                                          ? 'border-amber-500 bg-amber-50 text-amber-800'
-                                          : 'border-gray-200 bg-white hover:border-amber-400 text-gray-700'
-                                      }`}
-                                    >
-                                      {getTableDisplayName(t)}
-                                    </button>
-                                  ))}
+                                  {group.tables.map(t => {
+                                    const isAvail = t.status === 'available'
+                                    return (
+                                      <button
+                                        key={t.id}
+                                        onClick={() => setTransferDestTable(t)}
+                                        className={`p-2 rounded-lg border-2 text-center font-bold text-base transition-all active:scale-95 ${
+                                          transferDestTable?.id === t.id
+                                            ? 'border-amber-500 bg-amber-50 text-amber-800'
+                                            : isAvail
+                                              ? 'border-gray-200 bg-gray-50 hover:border-amber-400 text-gray-500'
+                                              : 'border-green-300 bg-green-50 hover:border-amber-400 text-green-700'
+                                        }`}
+                                      >
+                                        {getTableDisplayName(t)}
+                                      </button>
+                                    )
+                                  })}
                                 </div>
                               </div>
                             ))}

@@ -478,11 +478,13 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         .update({ status: 'completed' })
         .eq('id', order.id)
 
+      // Only free table if it still has this order (not if a new order has taken over)
       if (order.table_id) {
         await supabase
           .from('tables')
           .update({ status: 'available', current_order_id: null })
           .eq('id', order.table_id)
+          .eq('current_order_id', order.id)
       }
 
       printBill({
@@ -633,12 +635,13 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         .update({ status: 'completed' })
         .eq('id', order.id)
 
-      // Free the table
+      // Free the table only if it still has this order (not if a new order has taken over)
       if (order.table_id) {
         await supabase
           .from('tables')
           .update({ status: 'available', current_order_id: null })
           .eq('id', order.table_id)
+          .eq('current_order_id', order.id)
       }
 
       // Audit log
@@ -680,8 +683,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
     await supabase.from('orders').update({ table_id: newTable.id }).eq('id', order.id)
 
+    // Only free old table if it still has this order
     if (order.table_id) {
-      await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', order.table_id)
+      await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', order.table_id).eq('current_order_id', order.id)
     }
     await supabase.from('tables').update({ status: 'occupied', current_order_id: order.id }).eq('id', newTable.id)
 

@@ -172,6 +172,20 @@ export default function CashierPage() {
   const [kotTransferDestTable, setKotTransferDestTable] = useState<TableType | null>(null)
   const [kotTransferring, setKotTransferring] = useState(false)
 
+  // Unsettled orders (bill printed, table freed, awaiting settlement)
+  const [unsettledOrders, setUnsettledOrders] = useState<{
+    orderId: string
+    orderNumber: string
+    total: number
+    createdAt: string
+    tableNumber: number
+    tableSection: string
+    waiterName: string | null
+    billPrintCount: number
+    itemCount: number
+    tableId: string
+  }[]>([])
+
   // Debounce ref for realtime updates
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -258,6 +272,74 @@ export default function CashierPage() {
       setTableOrderInfo(infoMap)
     }
   }, [])
+
+  // Load unsettled orders (bill printed → table freed, awaiting settlement)
+  const loadUnsettledOrders = useCallback(async () => {
+    const supabase = createClient()
+    const bh = boundaryHour
+    const businessDate = getCurrentBusinessDate(bh)
+    const { start: dayStart } = getBusinessDayRange(businessDate, bh)
+
+    // Find orders that:
+    // 1. Have bill_print_count > 0 (bill was printed)
+    // 2. Status is NOT completed/cancelled
+    // 3. Were created today
+    // 4. Have a table_id but that table's current_order_id != this order (table was freed)
+    const { data } = await supabase
+      .from('orders')
+      .select(`
+        id, order_number, status, created_at, table_id, waiter_id, bill_print_count, service_charge_removed,
+        table:tables!table_id(id, number, section, current_order_id),
+        items:order_items(quantity, total_price, is_cancelled),
+        waiter:profiles!waiter_id(name),
+        bill:bills(id, payment_status, total)
+      `)
+      .gt('bill_print_count', 0)
+      .in('status', ['pending', 'preparing', 'ready', 'served'])
+      .gte('created_at', dayStart)
+      .order('created_at', { ascending: false })
+
+    if (data) {
+      const unsettled = data
+        .filter((o: any) => {
+          // Must have a table
+          if (!o.table) return false
+          // Table's current_order_id must NOT be this order (table was freed/reassigned)
+          if (o.table.current_order_id === o.id) return false
+          // Must not have a fully paid bill
+          const bill = Array.isArray(o.bill) ? o.bill[0] : o.bill
+          if (bill?.payment_status === 'paid') return false
+          return true
+        })
+        .map((o: any) => {
+          const activeItems = (o.items || []).filter((i: any) => !i.is_cancelled)
+          const bill = Array.isArray(o.bill) ? o.bill[0] : o.bill
+          let fullTotal: number
+          if (bill?.total) {
+            fullTotal = Number(bill.total)
+          } else {
+            const sub = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
+            const scRemoved = o.service_charge_removed ?? false
+            const sc = scRemoved ? 0 : Math.round(sub * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+            const gst = Math.round(sub * GST_PERCENT / 100 * 100) / 100
+            fullTotal = Math.round((sub + sc + gst) * 100) / 100
+          }
+          return {
+            orderId: o.id,
+            orderNumber: o.order_number,
+            total: fullTotal,
+            createdAt: o.created_at,
+            tableNumber: o.table.number,
+            tableSection: o.table.section,
+            waiterName: o.waiter?.name || null,
+            billPrintCount: o.bill_print_count || 0,
+            itemCount: activeItems.reduce((s: number, i: any) => s + i.quantity, 0),
+            tableId: o.table.id,
+          }
+        })
+      setUnsettledOrders(unsettled)
+    }
+  }, [boundaryHour])
 
   // Track if live orders have been loaded at least once
   const liveOrdersLoadedRef = useRef(false)
@@ -397,10 +479,11 @@ export default function CashierPage() {
     await Promise.all([
       loadTables(),
       loadWaiters(),
+      loadUnsettledOrders(),
       // NOTE: loadDaySummary deferred — only loads when Day Close tab is opened
     ])
     setLoading(false)
-  }, [loadTables, loadWaiters])
+  }, [loadTables, loadWaiters, loadUnsettledOrders])
 
   // After tables load, fetch order info
   useEffect(() => {
@@ -434,11 +517,12 @@ export default function CashierPage() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       loadTables()
+      loadUnsettledOrders()
       // Only load heavy queries when on the relevant tab
       if (activeTabRef.current === 'live_orders') loadLiveOrders(true)
       if (activeTabRef.current === 'day_close') loadDaySummary()
     }, 2000)
-  }, [loadTables, loadLiveOrders, loadDaySummary])
+  }, [loadTables, loadLiveOrders, loadDaySummary, loadUnsettledOrders])
 
   // Realtime subscriptions with smart notifications
   useEffect(() => {
@@ -480,6 +564,7 @@ export default function CashierPage() {
     // Fallback: auto-refresh every 2 minutes (realtime is primary mechanism)
     const fallbackInterval = setInterval(() => {
       loadTables()
+      loadUnsettledOrders()
       if (activeTabRef.current === 'live_orders') loadLiveOrders(true)
     }, 120000)
 
@@ -717,6 +802,37 @@ export default function CashierPage() {
     debouncedRefresh()
   }
 
+  // Open billing dialog for an unsettled (orphaned) order
+  async function openUnsettledBilling(orderId: string) {
+    const supabase = createClient()
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select(`
+        id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed, bill_print_count,
+        table:tables!table_id(number, section),
+        items:order_items(
+          id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
+          menu_item:menu_items(name, is_veg)
+        ),
+        bill:bills(id, bill_number, payment_mode, payment_status, total, subtotal,
+          gst_percent, gst_amount, service_charge, service_charge_removed,
+          discount_amount, discount_type, discount_reason)
+      `)
+      .eq('id', orderId)
+      .single()
+
+    if (orderData) {
+      const processed = {
+        ...orderData,
+        bill: Array.isArray(orderData.bill) ? orderData.bill[0] || null : orderData.bill,
+      } as unknown as OrderWithDetails
+      setBillingOrder(processed)
+      setBillingDialogOpen(true)
+    } else {
+      toast.error('Could not load order')
+    }
+  }
+
   // Quick print customer preview from table card
   async function handleQuickPrint(table: TableType) {
     if (!table.current_order_id) return
@@ -812,8 +928,23 @@ export default function CashierPage() {
         })
       }
 
+      // On FIRST print → free the table for reuse by captains
+      // Table becomes available in waiter app, but unsettled order still shows in cashier
+      if (currentPrintCount === 0 && orderData.order_type === 'dine_in') {
+        await supabase.from('tables')
+          .update({ status: 'available', current_order_id: null })
+          .eq('id', table.id)
+        // Mark order as served (it's ready for settlement)
+        await supabase.from('orders')
+          .update({ status: 'served' })
+          .eq('id', orderData.id)
+      }
+
       setPrintedTables(prev => new Set(prev).add(table.id))
-      toast.success(currentPrintCount >= 1 ? 'Bill reprinted (flagged)' : 'Customer copy printed')
+      toast.success(currentPrintCount >= 1 ? 'Bill reprinted (flagged)' : 'Customer copy printed — table freed')
+      // Refresh tables + unsettled list
+      loadTables()
+      loadUnsettledOrders()
     } catch {
       toast.error('Print failed — check printer')
     } finally {
@@ -930,8 +1061,8 @@ export default function CashierPage() {
     try {
       // Update order to point to new table
       await supabase.from('orders').update({ table_id: destTable.id }).eq('id', orderId)
-      // Free old table
-      await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', transferSourceTable.id)
+      // Free old table only if it still has this order
+      await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', transferSourceTable.id).eq('current_order_id', orderId)
       // Occupy new table
       await supabase.from('tables').update({ status: 'occupied', current_order_id: orderId }).eq('id', destTable.id)
 
@@ -1011,9 +1142,9 @@ export default function CashierPage() {
         .eq('is_cancelled', false)
 
       if (!remaining || remaining.length === 0) {
-        // No items left — cancel source order and free table
+        // No items left — cancel source order and free table (only if still linked)
         await supabase.from('orders').update({ status: 'cancelled' }).eq('id', sourceOrderId)
-        await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', transferSourceTable.id)
+        await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', transferSourceTable.id).eq('current_order_id', sourceOrderId)
       }
 
       // Audit log
@@ -1390,6 +1521,55 @@ export default function CashierPage() {
                 </div>
               )
             })}
+
+            {/* Unsettled Orders — bill printed, table freed, pending settlement */}
+            {unsettledOrders.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <h2 className="font-bold text-lg text-amber-800">Pending Settlement</h2>
+                  <Badge className="bg-amber-100 text-amber-700 border-0 text-sm">
+                    {unsettledOrders.length}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2.5">
+                  {unsettledOrders.map(uo => {
+                    const elapsedMin = Math.floor((Date.now() - new Date(uo.createdAt).getTime()) / 60000)
+                    return (
+                      <div
+                        key={uo.orderId}
+                        className="relative p-2 rounded-xl text-center border-2 min-h-[85px] min-w-0 transition-all bg-amber-600 border-amber-700 cursor-pointer hover:bg-amber-700 active:scale-[0.97]"
+                        onClick={() => openUnsettledBilling(uo.orderId)}
+                      >
+                        {/* Reprint badge */}
+                        {uo.billPrintCount > 1 && (
+                          <div className="absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold z-10 bg-red-500 text-white">
+                            <Printer className="h-3 w-3" />
+                            <span>{uo.billPrintCount}</span>
+                          </div>
+                        )}
+                        <p className="text-2xl font-bold text-white">
+                          {getTableDisplayName({ number: uo.tableNumber, section: uo.tableSection } as any)}
+                        </p>
+                        <div className="mt-0.5 space-y-0.5">
+                          <p className="text-lg font-bold text-white">
+                            ₹{uo.total.toLocaleString('en-IN')}
+                          </p>
+                          <p className="text-sm text-white/70 font-medium">
+                            {elapsedMin < 1 ? '<1m' : elapsedMin < 60 ? `${elapsedMin}m` : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`}
+                          </p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openUnsettledBilling(uo.orderId) }}
+                            className="w-full flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded-lg px-1.5 py-1.5 text-xs font-bold transition-colors active:scale-95"
+                          >
+                            <Check className="h-3.5 w-3.5 shrink-0" /> Settle
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -34,6 +34,7 @@ import {
   Check,
   Store,
   Lock,
+  ArrowRightLeft,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -48,6 +49,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 
 type CashierTab = 'tables' | 'live_orders' | 'day_close'
 type LiveOrderFilter = 'all' | 'dine_in' | 'takeaway'
@@ -153,6 +155,16 @@ export default function CashierPage() {
   const [dayClosePin, setDayClosePin] = useState('')
   const [dayClosing, setDayClosing] = useState(false)
   const [dayAlreadyClosed, setDayAlreadyClosed] = useState(false)
+
+  // Transfer dialog state
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false)
+  const [transferSourceTable, setTransferSourceTable] = useState<TableType | null>(null)
+  const [transferMode, setTransferMode] = useState<'table' | 'items'>('table')
+  const [transferring, setTransferring] = useState(false)
+  const [transferItems, setTransferItems] = useState<{ id: string; name: string; quantity: number; total_price: number }[]>([])
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
+  const [transferDestTable, setTransferDestTable] = useState<TableType | null>(null)
+  const [loadingTransferItems, setLoadingTransferItems] = useState(false)
 
   // Debounce ref for realtime updates
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -906,6 +918,127 @@ export default function CashierPage() {
     return 'text-white'
   }
 
+  // --- Transfer Functions ---
+  function openTransferDialog(table: TableType) {
+    setTransferSourceTable(table)
+    setTransferMode('table')
+    setTransferring(false)
+    setTransferItems([])
+    setSelectedItemIds(new Set())
+    setTransferDestTable(null)
+    setTransferDialogOpen(true)
+  }
+
+  async function loadTransferItems(table: TableType) {
+    if (!table.current_order_id) return
+    setLoadingTransferItems(true)
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('order_items')
+      .select('id, quantity, total_price, menu_item:menu_items(name)')
+      .eq('order_id', table.current_order_id)
+      .eq('is_cancelled', false)
+
+    if (data) {
+      setTransferItems(data.map((i: any) => ({
+        id: i.id,
+        name: i.menu_item?.name || 'Unknown',
+        quantity: i.quantity,
+        total_price: Number(i.total_price),
+      })))
+    }
+    setLoadingTransferItems(false)
+  }
+
+  async function performTableTransfer(destTable: TableType) {
+    if (!transferSourceTable?.current_order_id) return
+    setTransferring(true)
+    const supabase = createClient()
+    const orderId = transferSourceTable.current_order_id
+
+    try {
+      // Update order to point to new table
+      await supabase.from('orders').update({ table_id: destTable.id }).eq('id', orderId)
+      // Free old table
+      await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', transferSourceTable.id)
+      // Occupy new table
+      await supabase.from('tables').update({ status: 'occupied', current_order_id: orderId }).eq('id', destTable.id)
+
+      // Audit log
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase.from('audit_logs').insert({
+        action: 'table_transfer',
+        performed_by: user?.id || null,
+        details: {
+          order_id: orderId,
+          from_table: getTableDisplayName(transferSourceTable),
+          to_table: getTableDisplayName(destTable),
+        },
+      })
+
+      toast.success(`Moved to ${getTableDisplayName(destTable)}`)
+      setTransferDialogOpen(false)
+      loadTables()
+    } catch {
+      toast.error('Transfer failed')
+    } finally {
+      setTransferring(false)
+    }
+  }
+
+  async function performItemTransfer() {
+    if (!transferSourceTable?.current_order_id || !transferDestTable?.current_order_id || selectedItemIds.size === 0) return
+    setTransferring(true)
+    const supabase = createClient()
+    const sourceOrderId = transferSourceTable.current_order_id
+    const destOrderId = transferDestTable.current_order_id
+
+    try {
+      // Move selected items to destination order
+      const itemIds = Array.from(selectedItemIds)
+      await supabase
+        .from('order_items')
+        .update({ order_id: destOrderId })
+        .in('id', itemIds)
+
+      // Check if source order has remaining active items
+      const { data: remaining } = await supabase
+        .from('order_items')
+        .select('id')
+        .eq('order_id', sourceOrderId)
+        .eq('is_cancelled', false)
+
+      if (!remaining || remaining.length === 0) {
+        // No items left — cancel source order and free table
+        await supabase.from('orders').update({ status: 'cancelled' }).eq('id', sourceOrderId)
+        await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', transferSourceTable.id)
+      }
+
+      // Audit log
+      const movedNames = transferItems.filter(i => selectedItemIds.has(i.id)).map(i => `${i.quantity}x ${i.name}`)
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase.from('audit_logs').insert({
+        action: 'item_transfer',
+        performed_by: user?.id || null,
+        details: {
+          items: movedNames,
+          from_table: getTableDisplayName(transferSourceTable),
+          to_table: getTableDisplayName(transferDestTable),
+          source_order_id: sourceOrderId,
+          dest_order_id: destOrderId,
+        },
+      })
+
+      toast.success(`${selectedItemIds.size} item(s) moved to ${getTableDisplayName(transferDestTable)}`)
+      setTransferDialogOpen(false)
+      loadTables()
+    } catch {
+      toast.error('Item transfer failed')
+    } finally {
+      setTransferring(false)
+    }
+  }
+
   // Manual Day Close
   async function performDayClose() {
     if (!dayClosePin.trim()) {
@@ -1179,14 +1312,23 @@ export default function CashierPage() {
                                   Paid
                                 </Badge>
                               ) : isPrinted ? (
-                                <button
-                                  onClick={() => openQuickSettle(table)}
-                                  className="mt-0.5 w-full flex items-center justify-center gap-1.5 bg-white/30 hover:bg-white/50 text-white rounded-lg px-3 py-1.5 text-sm font-bold transition-colors active:scale-95"
-                                >
-                                  <Check className="h-5 w-5" /> Save
-                                </button>
+                                <div className="flex items-center justify-center gap-2 mt-0.5">
+                                  <button
+                                    onClick={() => openQuickSettle(table)}
+                                    className="flex-1 flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded-lg px-2 py-1.5 text-sm font-bold transition-colors active:scale-95"
+                                  >
+                                    <Check className="h-4 w-4" /> Save
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openTransferDialog(table) }}
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-1.5 transition-colors active:scale-95"
+                                    title="Transfer"
+                                  >
+                                    <ArrowRightLeft className="h-4 w-4" />
+                                  </button>
+                                </div>
                               ) : (
-                                <div className="flex items-center justify-center gap-3 mt-0.5">
+                                <div className="flex items-center justify-center gap-2 mt-0.5">
                                   <button
                                     onClick={() => handleQuickPrint(table)}
                                     disabled={quickPrintingTableId === table.id}
@@ -1205,6 +1347,13 @@ export default function CashierPage() {
                                     title="View bill"
                                   >
                                     <Eye className="h-5 w-5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openTransferDialog(table) }}
+                                    className="bg-white/20 hover:bg-white/40 text-white rounded-lg p-2 transition-colors active:scale-95"
+                                    title="Transfer"
+                                  >
+                                    <ArrowRightLeft className="h-5 w-5" />
                                   </button>
                                 </div>
                               )}
@@ -1567,6 +1716,198 @@ export default function CashierPage() {
           </div>
         )}
       </div>
+
+      {/* Transfer Dialog */}
+      <Dialog open={transferDialogOpen} onOpenChange={(o) => { if (!o) { setTransferDialogOpen(false); setTransferSourceTable(null) } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5 text-amber-700" />
+              Transfer {transferSourceTable && getTableDisplayName(transferSourceTable)}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Tab switcher */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setTransferMode('table')}
+              className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
+                transferMode === 'table' ? 'bg-white shadow-sm font-semibold' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Move Table
+            </button>
+            <button
+              onClick={() => {
+                if (!transferSourceTable) return
+                const info = transferSourceTable.current_order_id ? tableOrderInfo.get(transferSourceTable.current_order_id) : null
+                if (info?.hasBill) {
+                  toast.error('Cannot move items after bill is created')
+                  return
+                }
+                setTransferMode('items')
+                if (transferItems.length === 0) loadTransferItems(transferSourceTable)
+              }}
+              className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
+                transferMode === 'items' ? 'bg-white shadow-sm font-semibold' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Move Items
+            </button>
+          </div>
+
+          {/* Move Table mode */}
+          {transferMode === 'table' && (
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+              <p className="text-sm text-gray-500">Select destination table (available tables):</p>
+              {(() => {
+                const availableTables = tables.filter(t => t.status === 'available')
+                if (availableTables.length === 0) {
+                  return <p className="text-center py-6 text-gray-400 text-sm">No available tables</p>
+                }
+                return groupTablesByDisplayGroup(availableTables).map(group => (
+                  <div key={group.group}>
+                    <p className="text-xs font-semibold text-gray-500 mb-1.5">{group.label}</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {group.tables.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => performTableTransfer(t)}
+                          disabled={transferring}
+                          className="p-2.5 rounded-lg border-2 border-gray-200 bg-white hover:border-amber-400 hover:bg-amber-50 text-center font-bold text-lg transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {getTableDisplayName(t)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              })()}
+              {transferring && (
+                <div className="flex items-center justify-center py-3">
+                  <div className="h-5 w-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                  <span className="ml-2 text-sm text-gray-500">Transferring...</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Move Items mode */}
+          {transferMode === 'items' && (
+            <div className="space-y-3">
+              {loadingTransferItems ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="h-5 w-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : transferItems.length === 0 ? (
+                <p className="text-center py-6 text-gray-400 text-sm">No active items</p>
+              ) : (
+                <>
+                  {/* Item checkboxes */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm text-gray-500">Select items to move:</p>
+                      <button
+                        onClick={() => {
+                          if (selectedItemIds.size === transferItems.length) {
+                            setSelectedItemIds(new Set())
+                          } else {
+                            setSelectedItemIds(new Set(transferItems.map(i => i.id)))
+                          }
+                        }}
+                        className="text-xs text-amber-700 font-medium hover:underline"
+                      >
+                        {selectedItemIds.size === transferItems.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                    <div className="max-h-[25vh] overflow-y-auto border rounded-lg divide-y">
+                      {transferItems.map(item => (
+                        <label
+                          key={item.id}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedItemIds.has(item.id)}
+                            onCheckedChange={(checked) => {
+                              setSelectedItemIds(prev => {
+                                const next = new Set(prev)
+                                if (checked) next.add(item.id)
+                                else next.delete(item.id)
+                                return next
+                              })
+                            }}
+                          />
+                          <span className="flex-1 text-sm font-medium">{item.quantity}x {item.name}</span>
+                          <span className="text-sm text-gray-500">₹{item.total_price}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Destination table grid (occupied tables only, excluding source and billed) */}
+                  {selectedItemIds.size > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-500">Move to:</p>
+                      {(() => {
+                        const destTables = tables.filter(t => {
+                          if (t.status !== 'occupied' || !t.current_order_id) return false
+                          if (transferSourceTable && t.id === transferSourceTable.id) return false
+                          const info = tableOrderInfo.get(t.current_order_id)
+                          if (info?.hasBill) return false
+                          return true
+                        })
+                        if (destTables.length === 0) {
+                          return <p className="text-center py-4 text-gray-400 text-sm">No other occupied tables without bills</p>
+                        }
+                        return (
+                          <div className="max-h-[20vh] overflow-y-auto">
+                            {groupTablesByDisplayGroup(destTables).map(group => (
+                              <div key={group.group} className="mb-2">
+                                <p className="text-xs font-semibold text-gray-500 mb-1">{group.label}</p>
+                                <div className="grid grid-cols-5 gap-2">
+                                  {group.tables.map(t => (
+                                    <button
+                                      key={t.id}
+                                      onClick={() => setTransferDestTable(t)}
+                                      className={`p-2 rounded-lg border-2 text-center font-bold text-base transition-all active:scale-95 ${
+                                        transferDestTable?.id === t.id
+                                          ? 'border-amber-500 bg-amber-50 text-amber-800'
+                                          : 'border-gray-200 bg-white hover:border-amber-400 text-gray-700'
+                                      }`}
+                                    >
+                                      {getTableDisplayName(t)}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Confirm button */}
+                  {selectedItemIds.size > 0 && transferDestTable && (
+                    <Button
+                      className="w-full bg-amber-700 hover:bg-amber-800"
+                      onClick={performItemTransfer}
+                      disabled={transferring}
+                    >
+                      {transferring ? (
+                        <div className="h-4 w-4 border-2 border-white/60 border-t-white rounded-full animate-spin mr-2" />
+                      ) : (
+                        <ArrowRightLeft className="h-4 w-4 mr-2" />
+                      )}
+                      Move {selectedItemIds.size} Item{selectedItemIds.size > 1 ? 's' : ''} to {getTableDisplayName(transferDestTable)}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Settle Dialog */}
       <Dialog open={quickSettleOpen} onOpenChange={(o) => { if (!o) { setQuickSettleOpen(false); setQuickSettleTable(null) } }}>

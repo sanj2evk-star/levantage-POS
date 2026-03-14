@@ -280,11 +280,9 @@ export default function CashierPage() {
     const businessDate = getCurrentBusinessDate(bh)
     const { start: dayStart } = getBusinessDayRange(businessDate, bh)
 
-    // Find orders that:
-    // 1. Have bill_print_count > 0 (bill was printed)
-    // 2. Status is NOT completed/cancelled
-    // 3. Were created today
-    // 4. Have a table_id but that table's current_order_id != this order (table was freed)
+    // Find orders that have been printed (bill_print_count > 0) OR have a bill record,
+    // are not completed, and whose table has been reassigned to a new order.
+    // We fetch broadly and filter in JS for robustness.
     const { data } = await supabase
       .from('orders')
       .select(`
@@ -294,9 +292,9 @@ export default function CashierPage() {
         waiter:profiles!waiter_id(name),
         bill:bills(id, payment_status, total)
       `)
-      .gt('bill_print_count', 0)
       .in('status', ['pending', 'preparing', 'ready', 'served'])
       .gte('created_at', dayStart)
+      .not('table_id', 'is', null)
       .order('created_at', { ascending: false })
 
     if (data) {
@@ -304,10 +302,14 @@ export default function CashierPage() {
         .filter((o: any) => {
           // Must have a table
           if (!o.table) return false
-          // Table's current_order_id must NOT be this order (table was freed/reassigned)
+          // Table's current_order_id must NOT be this order (table was reassigned)
           if (o.table.current_order_id === o.id) return false
-          // Must not have a fully paid bill
+          // Must have been printed OR have a bill record
           const bill = Array.isArray(o.bill) ? o.bill[0] : o.bill
+          const billPrinted = (o.bill_print_count || 0) > 0
+          const hasBill = !!bill
+          if (!billPrinted && !hasBill) return false
+          // Must not have a fully paid bill
           if (bill?.payment_status === 'paid') return false
           return true
         })
@@ -385,9 +387,6 @@ export default function CashierPage() {
           seen.add(o.id)
           // Safety: skip orders whose bill is fully paid (order status should be 'completed' but wasn't updated)
           if (o.bill && o.bill.payment_status === 'paid') return false
-          // Skip orders that belong in the unsettled section:
-          // bill was printed AND table was reassigned to a different order
-          if (o.bill_print_count > 0 && o.table && o.table.current_order_id !== o.id) return false
           return true
         })
       setLiveOrders(processed as LiveOrder[])

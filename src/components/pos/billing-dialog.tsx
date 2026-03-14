@@ -83,6 +83,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   const [paymentMode, setPaymentMode] = useState<PaymentMode | ''>('')
   const [splitPayments, setSplitPayments] = useState<SplitPaymentEntry[]>([])
   const [settling, setSettling] = useState(false)
+
+  // Cash received / change calculation
+  const [cashReceived, setCashReceived] = useState('')
   const [existingBill, setExistingBill] = useState<Bill | null>(null)
 
   // Payment reference number
@@ -193,6 +196,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       setDiscountPinVerified(false)
       setDiscountPin('')
       setReferenceNumber('')
+      setCashReceived('')
       setNcReason('')
       setNcPin('')
       setPayLaterMode(false)
@@ -841,7 +845,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   }
 
   function addSplitPayment() {
-    setSplitPayments([...splitPayments, { mode: 'cash', amount: '', reference_number: '' }])
+    const currentTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+    const remaining = Math.round(total) - currentTotal
+    setSplitPayments([...splitPayments, { mode: 'cash', amount: remaining > 0 ? String(Math.round(remaining)) : '', reference_number: '' }])
   }
 
   function removeSplitPayment(index: number) {
@@ -1476,14 +1482,14 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                       onClick={() => {
                         if (pm.mode === 'nc') { setNcDialogOpen(true); setNcReason(''); setNcPin(''); return }
                         if (pm.mode === 'split') {
-                          setPaymentMode('split'); setReferenceNumber('')
+                          setPaymentMode('split'); setReferenceNumber(''); setCashReceived('')
                           if (splitPayments.length === 0) setSplitPayments([
                             { mode: 'cash', amount: '', reference_number: '' },
                             { mode: 'upi', amount: '', reference_number: '' },
                           ])
                           return
                         }
-                        setPaymentMode(pm.mode); setSplitPayments([]); setReferenceNumber('')
+                        setPaymentMode(pm.mode); setSplitPayments([]); setReferenceNumber(''); setCashReceived('')
                       }}
                       className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition-all text-sm font-medium ${
                         paymentMode === pm.mode
@@ -1497,57 +1503,147 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   ))}
                 </div>
 
+                {/* Cash received + change calculation */}
+                {paymentMode === 'cash' && (() => {
+                  const roundedTotal = Math.round(total)
+                  const received = parseFloat(cashReceived) || 0
+                  const change = received - roundedTotal
+                  return (
+                    <div className="bg-green-50 rounded-xl p-3 space-y-2.5 border border-green-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-green-800">Bill Amount</span>
+                        <span className="text-lg font-bold text-green-800">₹{roundedTotal}</span>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-green-700 mb-1 block">Cash Received</label>
+                        <Input type="number" placeholder="Enter amount received" autoFocus
+                          value={cashReceived} onChange={e => setCashReceived(e.target.value)}
+                          className="h-11 text-lg font-semibold bg-white border-green-300 focus-visible:ring-green-400" />
+                      </div>
+                      {received > 0 && (
+                        <div className={`flex items-center justify-between py-2 px-3 rounded-lg ${change >= 0 ? 'bg-green-100' : 'bg-red-50'}`}>
+                          <span className={`text-sm font-semibold ${change >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                            {change >= 0 ? 'Return Change' : 'Amount Short'}
+                          </span>
+                          <span className={`text-xl font-bold ${change >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                            ₹{Math.abs(change)}
+                          </span>
+                        </div>
+                      )}
+                      {/* Quick amount buttons */}
+                      <div className="flex gap-1.5 flex-wrap">
+                        {[roundedTotal, ...([50, 100, 200, 500, 1000, 2000].filter(v => v > roundedTotal).slice(0, 4))].map(amt => (
+                          <button key={amt} onClick={() => setCashReceived(String(amt))}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                              cashReceived === String(amt)
+                                ? 'bg-green-600 text-white border-green-600'
+                                : 'bg-white text-green-700 border-green-300 hover:bg-green-50'
+                            }`}>
+                            {amt === roundedTotal ? 'Exact' : `₹${amt}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* UPI/Card/Zomato ref */}
                 {(paymentMode === 'upi' || paymentMode === 'card' || paymentMode === 'zomato') && (
-                  <Input placeholder={`${paymentMode === 'upi' ? 'UPI' : paymentMode === 'zomato' ? 'Zomato order' : 'Card'} reference${requirePaymentRef ? ' *' : ''}`}
-                    value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-9" />
-                )}
-
-                {/* Split details */}
-                {paymentMode === 'split' && (
-                  <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-medium">Split Payments</span>
-                      <div className="flex gap-1.5">
-                        <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={() => {
-                          const half = Math.round(total / 2 * 100) / 100
-                          const other = Math.round((total - half) * 100) / 100
-                          setSplitPayments([
-                            { mode: 'cash', amount: String(half), reference_number: '' },
-                            { mode: 'upi', amount: String(other), reference_number: '' },
-                          ])
-                        }}>50/50</Button>
-                        <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={addSplitPayment}>+ Add</Button>
-                      </div>
-                    </div>
-                    {splitPayments.map((payment, index) => (
-                      <div key={index} className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <select value={payment.mode} onChange={e => updateSplitPayment(index, 'mode', e.target.value)}
-                            className="h-8 rounded-lg border border-gray-200 px-2 text-xs bg-white">
-                            <option value="cash">Cash</option><option value="upi">UPI</option>
-                            <option value="card">Card</option><option value="zomato">Zomato</option><option value="nc">NC</option>
-                          </select>
-                          <Input type="number" placeholder="Amount" value={payment.amount}
-                            onChange={e => updateSplitPayment(index, 'amount', e.target.value)} className="flex-1 h-8 text-xs" />
-                          <button onClick={() => removeSplitPayment(index)}
-                            className="h-7 w-7 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-100 border border-red-200">
-                            <X className="h-3.5 w-3.5" /></button>
-                        </div>
-                        {(payment.mode === 'upi' || payment.mode === 'card' || payment.mode === 'zomato') && (
-                          <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`} value={payment.reference_number}
-                            onChange={e => updateSplitPayment(index, 'reference_number', e.target.value)} className="h-7 text-xs" />
-                        )}
-                      </div>
-                    ))}
-                    <div className="flex justify-between text-xs pt-2 border-t border-gray-200">
-                      <span>Remaining</span>
-                      <span className={`font-semibold ${splitRemaining > 0.5 ? 'text-red-500' : 'text-green-500'}`}>
-                        ₹{splitRemaining.toFixed(2)}
+                  <div className="bg-blue-50 rounded-xl p-3 space-y-2 border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-blue-800">
+                        {paymentMode === 'upi' ? 'UPI' : paymentMode === 'zomato' ? 'Zomato' : 'Card'} Payment
                       </span>
+                      <span className="text-lg font-bold text-blue-800">₹{Math.round(total)}</span>
                     </div>
+                    <Input placeholder={`${paymentMode === 'upi' ? 'UPI' : paymentMode === 'zomato' ? 'Zomato order' : 'Card'} reference${requirePaymentRef ? ' *' : ''}`}
+                      value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-10 bg-white border-blue-300" />
                   </div>
                 )}
+
+                {/* Split Payment — proper step-by-step flow */}
+                {paymentMode === 'split' && (() => {
+                  const roundedTotal = Math.round(total)
+                  return (
+                    <div className="bg-purple-50 rounded-xl p-3 space-y-3 border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-purple-800">Split Payment</span>
+                        <span className="text-lg font-bold text-purple-800">₹{roundedTotal}</span>
+                      </div>
+
+                      {splitPayments.map((payment, index) => {
+                        const prevTotal = splitPayments.slice(0, index).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                        const remaining = Math.round(roundedTotal - prevTotal)
+                        return (
+                          <div key={index} className="bg-white rounded-lg p-2.5 border border-purple-100 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-purple-600 bg-purple-100 rounded-full w-5 h-5 flex items-center justify-center">{index + 1}</span>
+                                <span className="text-xs font-medium text-gray-600">Payment {index + 1}</span>
+                              </div>
+                              {splitPayments.length > 2 && (
+                                <button onClick={() => removeSplitPayment(index)}
+                                  className="h-6 w-6 flex items-center justify-center rounded-md text-red-400 hover:bg-red-50 hover:text-red-600">
+                                  <X className="h-3.5 w-3.5" /></button>
+                              )}
+                            </div>
+                            {/* Mode selection */}
+                            <div className="grid grid-cols-4 gap-1">
+                              {[
+                                { m: 'cash' as const, label: 'Cash', icon: Banknote },
+                                { m: 'upi' as const, label: 'UPI', icon: Smartphone },
+                                { m: 'card' as const, label: 'Card', icon: CreditCard },
+                                { m: 'zomato' as const, label: 'Zomato', icon: Store },
+                              ].map(opt => (
+                                <button key={opt.m} onClick={() => updateSplitPayment(index, 'mode', opt.m)}
+                                  className={`flex flex-col items-center gap-0.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all ${
+                                    payment.mode === opt.m
+                                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                      : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                                  }`}>
+                                  <opt.icon className="h-3.5 w-3.5" />
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            {/* Amount input */}
+                            <div className="flex items-center gap-2">
+                              <Input type="number" placeholder={remaining > 0 ? `Max ₹${remaining}` : 'Amount'}
+                                value={payment.amount}
+                                onChange={e => updateSplitPayment(index, 'amount', e.target.value)}
+                                className="flex-1 h-9 text-sm font-semibold" />
+                              {remaining > 0 && !payment.amount && (
+                                <button onClick={() => updateSplitPayment(index, 'amount', String(remaining))}
+                                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 whitespace-nowrap">
+                                  ₹{remaining}
+                                </button>
+                              )}
+                            </div>
+                            {/* Reference for UPI/Card/Zomato */}
+                            {(payment.mode === 'upi' || payment.mode === 'card' || payment.mode === 'zomato') && (
+                              <Input placeholder={`${payment.mode === 'upi' ? 'UPI' : payment.mode === 'zomato' ? 'Zomato' : 'Card'} ref${requirePaymentRef ? ' *' : ''}`}
+                                value={payment.reference_number}
+                                onChange={e => updateSplitPayment(index, 'reference_number', e.target.value)}
+                                className="h-8 text-xs" />
+                            )}
+                          </div>
+                        )
+                      })}
+
+                      {/* Add more + summary */}
+                      <div className="flex items-center justify-between">
+                        <Button variant="outline" size="sm" className="h-7 text-xs px-3 border-purple-300 text-purple-600 hover:bg-purple-50" onClick={addSplitPayment}>
+                          <Plus className="h-3 w-3 mr-1" /> Add Payment
+                        </Button>
+                        <div className={`text-sm font-bold px-3 py-1 rounded-lg ${
+                          splitRemaining > 0.5 ? 'bg-red-100 text-red-600' : splitRemaining < -0.5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                        }`}>
+                          {Math.abs(splitRemaining) <= 0.5 ? '✓ Balanced' : splitRemaining > 0 ? `₹${splitRemaining.toFixed(0)} remaining` : `₹${Math.abs(splitRemaining).toFixed(0)} over`}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
 
@@ -1580,7 +1676,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           <div className="px-4 py-3 border-t bg-gray-50/80 shrink-0 space-y-2.5">
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="h-10 flex-1 text-sm font-medium"
-                onClick={() => { setPayLaterMode(!payLaterMode); if (!payLaterMode) { setPaymentMode(''); setPartialAmount('') } }}>
+                onClick={() => { setPayLaterMode(!payLaterMode); if (!payLaterMode) { setPaymentMode(''); setPartialAmount(''); setCashReceived('') } }}>
                 <Clock className="h-4 w-4 mr-1.5" />{payLaterMode ? 'Full Pay' : 'Pay Later'}
               </Button>
               <Button variant="outline" size="sm" className="h-10 flex-1 text-sm font-medium" onClick={printPreviewBill} disabled={printing}>

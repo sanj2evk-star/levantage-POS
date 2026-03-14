@@ -121,9 +121,7 @@ Write-Host ""
 # ── Install dependencies ───────────────────────
 Write-Host "  Installing dependencies (this takes 1-2 minutes)..." -ForegroundColor Cyan
 Set-Location $dir
-$ErrorActionPreference = "Continue"
-cmd /c "npm install 2>&1"
-$ErrorActionPreference = "Stop"
+Start-Process -FilePath "npm" -ArgumentList "install" -WorkingDirectory $dir -Wait -NoNewWindow -PassThru -RedirectStandardError "$dir\npm-log.txt" | Out-Null
 Write-Host "  [OK] Dependencies installed" -ForegroundColor Green
 Write-Host ""
 

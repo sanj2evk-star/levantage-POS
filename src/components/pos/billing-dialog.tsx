@@ -135,10 +135,6 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   // Local items state to handle cancellation updates without stale data
   const [localItems, setLocalItems] = useState(order?.items || [])
 
-  // Partial payment state
-  const [payLaterMode, setPayLaterMode] = useState(false)
-  const [partialAmount, setPartialAmount] = useState('')
-
   // Collect balance state (for partial bills)
   const [collectBalanceMode, setCollectBalanceMode] = useState(false)
   const [collectPaymentMode, setCollectPaymentMode] = useState<PaymentMode | 'split' | ''>('')
@@ -199,8 +195,6 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       setCashReceived('')
       setNcReason('')
       setNcPin('')
-      setPayLaterMode(false)
-      setPartialAmount('')
       setCollectBalanceMode(false)
       setCollectPaymentMode('')
       setCollectReferenceNumber('')
@@ -348,11 +342,6 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
   async function settleBill() {
     if (!order) return
-
-    // Pay Later mode
-    if (payLaterMode) {
-      return settlePartialBill()
-    }
 
     if (!paymentMode) {
       toast.error('Please select a payment mode')
@@ -513,132 +502,6 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       onClose()
     } catch (err) {
       toast.error('Failed to settle bill')
-    } finally {
-      setSettling(false)
-    }
-  }
-
-  async function settlePartialBill() {
-    if (!order) return
-    const partialAmt = parseFloat(partialAmount) || 0
-    const selectedMode = paymentMode || 'cash'
-
-    if (partialAmt > total) {
-      toast.error('Partial amount cannot exceed total')
-      return
-    }
-
-    if (partialAmt > 0 && requirePaymentRef && (selectedMode === 'upi' || selectedMode === 'card' || selectedMode === 'zomato') && !referenceNumber.trim()) {
-      toast.error('Reference number is required for UPI/Card/Zomato payments')
-      return
-    }
-
-    if (needsDiscountAuth) {
-      setDiscountPinDialogOpen(true)
-      return
-    }
-
-    setSettling(true)
-    const supabase = createClient()
-
-    try {
-      const { data: billNum } = await supabase.rpc('generate_bill_number')
-
-      const { data: bill, error: billError } = await supabase
-        .from('bills')
-        .insert({
-          order_id: order.id,
-          subtotal,
-          gst_percent: GST_PERCENT,
-          gst_amount: gstAmount,
-          service_charge: serviceChargeOriginal,
-          service_charge_removed: serviceChargeRemoved,
-          discount_amount: discountAmount,
-          discount_type: discountType,
-          discount_reason: discountReason || null,
-          total,
-          payment_mode: partialAmt > 0 ? selectedMode as PaymentMode : null,
-          payment_status: 'partial',
-          bill_number: billNum || `BILL-${Date.now()}`,
-        })
-        .select()
-        .single()
-
-      if (billError || !bill) {
-        toast.error('Failed to create bill: ' + (billError?.message || 'Unknown error'))
-        return
-      }
-
-      // Create payment record only if partial amount > 0
-      if (partialAmt > 0) {
-        await supabase.from('payments').insert({
-          bill_id: bill.id,
-          mode: selectedMode,
-          amount: partialAmt,
-          reference_number: (selectedMode === 'upi' || selectedMode === 'card' || selectedMode === 'zomato') && referenceNumber.trim()
-            ? referenceNumber.trim() : null,
-        })
-      }
-
-      // Log partial payment
-      const { data: { user } } = await supabase.auth.getUser()
-      await supabase.from('audit_logs').insert({
-        action: 'partial_payment',
-        order_id: order.id,
-        bill_id: bill.id,
-        performed_by: user?.id || null,
-        details: {
-          bill_number: bill.bill_number,
-          total,
-          paid: partialAmt,
-          outstanding: total - partialAmt,
-          payment_mode: partialAmt > 0 ? selectedMode : 'none',
-        },
-      })
-
-      // For takeaway, complete the order but keep bill as partial
-      if (order.order_type === 'takeaway') {
-        await supabase.from('orders').update({ status: 'completed' }).eq('id', order.id)
-      }
-      // For dine-in, don't complete order or free table
-
-      // Print bill
-      printBill({
-        billNumber: bill.bill_number,
-        orderNumber: order.order_number,
-        tableName: order.table ? getTableDisplayName(order.table) : null,
-        orderType: order.order_type as 'dine_in' | 'takeaway',
-        items: activeItems.map(i => ({
-          name: i.menu_item?.name || 'Unknown',
-          quantity: i.quantity,
-          unitPrice: i.unit_price,
-        })),
-        subtotal,
-        gstPercent: GST_PERCENT,
-        gstAmount,
-        serviceCharge,
-        serviceChargeRemoved,
-        discountAmount,
-        discountType,
-        discountReason: discountReason || undefined,
-        total,
-        paymentMode: partialAmt > 0 ? selectedMode : null,
-        cashierName,
-        waiterName,
-      }).catch(() => {
-        toast.error('Bill print failed - check printer', { duration: 5000 })
-      })
-
-      if (partialAmt > 0 && selectedMode === 'cash') {
-        openCashDrawer().catch(() => {})
-      }
-
-      const outstanding = total - partialAmt
-      toast.success(`Bill created - Outstanding: ₹${outstanding.toFixed(2)}`)
-      onBillSettled()
-      onClose()
-    } catch (err) {
-      toast.error('Failed to create partial bill')
     } finally {
       setSettling(false)
     }
@@ -1466,7 +1329,6 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </details>
 
             {/* Payment Mode */}
-            {!payLaterMode && (
               <div className="space-y-2.5">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -1645,49 +1507,17 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   )
                 })()}
               </div>
-            )}
 
-            {/* Pay Later */}
-            {payLaterMode && (
-              <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 space-y-2">
-                <p className="text-xs font-medium text-amber-700 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Pay Later</p>
-                <Input type="number" placeholder="Amount paying now (0 = fully outstanding)"
-                  value={partialAmount} onChange={e => setPartialAmount(e.target.value)} className="h-9" />
-                {(parseFloat(partialAmount) || 0) > 0 && (
-                  <div className="space-y-1.5">
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {PAYMENT_MODES.map(pm => (
-                        <Button key={pm.value} variant={paymentMode === pm.value ? 'default' : 'outline'}
-                          size="sm" className="h-8 text-xs" onClick={() => setPaymentMode(pm.value as PaymentMode)}>{pm.label}</Button>
-                      ))}
-                    </div>
-                    {(paymentMode === 'upi' || paymentMode === 'card' || paymentMode === 'zomato') && (
-                      <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`}
-                        value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} className="h-8 text-sm" />
-                    )}
-                  </div>
-                )}
-                <p className="text-xs text-amber-600">Outstanding: ₹{(total - (parseFloat(partialAmount) || 0)).toFixed(2)}</p>
-              </div>
-            )}
           </div>
 
           {/* ── STICKY FOOTER ── */}
           <div className="px-4 py-3 border-t bg-gray-50/80 shrink-0 space-y-2.5">
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-10 flex-1 text-sm font-medium"
-                onClick={() => { setPayLaterMode(!payLaterMode); if (!payLaterMode) { setPaymentMode(''); setPartialAmount(''); setCashReceived('') } }}>
-                <Clock className="h-4 w-4 mr-1.5" />{payLaterMode ? 'Full Pay' : 'Pay Later'}
-              </Button>
-              <Button variant="outline" size="sm" className="h-10 flex-1 text-sm font-medium" onClick={printPreviewBill} disabled={printing}>
-                <Printer className="h-4 w-4 mr-1.5" />{printing ? '...' : 'Print'}
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" className="h-10 w-full text-sm font-medium" onClick={printPreviewBill} disabled={printing}>
+              <Printer className="h-4 w-4 mr-1.5" />{printing ? '...' : 'Print Preview'}
+            </Button>
             <Button className="w-full h-13 text-base font-bold bg-green-600 hover:bg-green-700 rounded-xl shadow-lg shadow-green-600/25 tracking-wide"
-              onClick={settleBill} disabled={settling || (!payLaterMode && !paymentMode)}>
-              {settling ? 'Settling...' : payLaterMode
-                ? `Create Bill — ₹${total.toFixed(2)}`
-                : `Settle — ₹${total.toFixed(2)}`}
+              onClick={settleBill} disabled={settling || !paymentMode}>
+              {settling ? 'Settling...' : `Settle — ₹${total.toFixed(2)}`}
             </Button>
           </div>
         </DialogContent>

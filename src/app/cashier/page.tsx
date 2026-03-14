@@ -989,12 +989,15 @@ export default function CashierPage() {
       return 'border-yellow-400 bg-yellow-50 opacity-80 cursor-default'
     }
     // occupied — dark filled cards for active tables
-    if (info?.hasBill) {
-      if (info.billStatus === 'paid') {
-        return 'border-emerald-600 bg-emerald-600 text-white'
-      }
+    if (info?.billStatus === 'paid') {
+      return 'border-emerald-600 bg-emerald-600 text-white'
+    }
+    // Bill printed or bill created (awaiting settlement) → amber
+    const wasPrinted = (info?.billPrintCount || 0) > 0 || printedTables.has(table.id)
+    if (wasPrinted || info?.hasBill) {
       return 'border-amber-600 bg-amber-600 text-white'
     }
+    // Running order → green
     return 'border-green-600 bg-green-600 text-white'
   }
 
@@ -1375,7 +1378,7 @@ export default function CashierPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3.5 h-3.5 rounded-sm bg-amber-600" />
-                <span>Billed</span>
+                <span>Printed / Settle</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3.5 h-3.5 rounded-sm bg-yellow-100 border border-yellow-400" />
@@ -1411,7 +1414,7 @@ export default function CashierPage() {
                       const isOccupied = table.status === 'occupied'
                       const info = table.current_order_id ? tableOrderInfo.get(table.current_order_id) : null
                       const elapsedMin = info ? Math.floor((Date.now() - new Date(info.createdAt).getTime()) / 60000) : null
-                      const isPrinted = printedTables.has(table.id)
+                      const isPrinted = printedTables.has(table.id) || (info?.billPrintCount || 0) > 0
 
                       return (
                         <div

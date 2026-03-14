@@ -58,6 +58,7 @@ interface TableOrderInfo {
   itemCount: number
   total: number
   createdAt: string
+  billPrintCount: number
 }
 
 function timeAgo(dateStr: string): string {
@@ -157,7 +158,7 @@ export default function WaiterPage() {
     const { data } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, order_type, table_id, notes, created_at,
+        id, order_number, status, order_type, table_id, notes, created_at, bill_print_count,
         items:order_items(*, menu_item:menu_items(name, is_veg))
       `)
       .eq('id', table.current_order_id)
@@ -173,6 +174,16 @@ export default function WaiterPage() {
     if (table.status === 'occupied' && table.current_order_id) {
       const order = await fetchActiveOrder(table)
       if (order && order.status !== 'completed') {
+        // If bill was already printed, treat as available for a new order
+        // (old order stays in cashier's pending settlement)
+        if ((order as any).bill_print_count > 0) {
+          setActiveOrder(null)
+          setAddingToOrder(null)
+          setSearchQuery('')
+          setActiveCategory('all')
+          setView('categories')
+          return
+        }
         setActiveOrder(order)
         setView('order_detail')
         return
@@ -452,7 +463,7 @@ export default function WaiterPage() {
       const supabase = createClient()
       const { data } = await supabase
         .from('orders')
-        .select('id, created_at, items:order_items(quantity, total_price, is_cancelled)')
+        .select('id, created_at, bill_print_count, items:order_items(quantity, total_price, is_cancelled)')
         .in('id', occupiedIds)
       if (data) {
         const infoMap = new Map<string, TableOrderInfo>()
@@ -462,6 +473,7 @@ export default function WaiterPage() {
             itemCount: activeItems.reduce((s: number, i: any) => s + i.quantity, 0),
             total: activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0),
             createdAt: order.created_at,
+            billPrintCount: order.bill_print_count || 0,
           })
         })
         setTableOrderInfo(infoMap)
@@ -699,8 +711,10 @@ export default function WaiterPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-2.5">
                   {group.tables.map(table => {
-                    const isOccupied = table.status === 'occupied'
                     const info = table.current_order_id ? tableOrderInfo.get(table.current_order_id) : null
+                    // Table is "effectively available" if bill was printed (captain can seat new party)
+                    const billPrinted = (info?.billPrintCount || 0) > 0
+                    const isOccupied = table.status === 'occupied' && !billPrinted
 
                     return (
                       <button
@@ -741,7 +755,7 @@ export default function WaiterPage() {
                           <p className={`text-xs mt-1 capitalize ${
                             table.status === 'reserved' ? 'text-yellow-700' : 'text-gray-400'
                           }`}>
-                            {table.status === 'available' ? '' : table.status}
+                            {table.status === 'available' || billPrinted ? '' : table.status}
                           </p>
                         )}
                       </button>

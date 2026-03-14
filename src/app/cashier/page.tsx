@@ -36,6 +36,8 @@ import {
   Lock,
   ArrowRightLeft,
   X,
+  ClipboardList,
+  ChevronRight,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -162,6 +164,14 @@ export default function CashierPage() {
   const [transferDestTable, setTransferDestTable] = useState<TableType | null>(null)
   const [loadingTransferItems, setLoadingTransferItems] = useState(false)
 
+  // KOT detail dialog
+  const [kotDetailOpen, setKotDetailOpen] = useState(false)
+  const [kotDetailOrder, setKotDetailOrder] = useState<LiveOrder | null>(null)
+  const [kotEntries, setKotEntries] = useState<{ id: string; kot_number: string; station: string; status: string; created_at: string }[]>([])
+  const [kotTransferBatchIdx, setKotTransferBatchIdx] = useState<number | null>(null)
+  const [kotTransferDestTable, setKotTransferDestTable] = useState<TableType | null>(null)
+  const [kotTransferring, setKotTransferring] = useState(false)
+
   // Debounce ref for realtime updates
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -266,7 +276,7 @@ export default function CashierPage() {
         id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed, bill_print_count,
         table:tables!table_id(number, section),
         items:order_items(
-          id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
+          id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status, created_at,
           menu_item:menu_items(name, is_veg)
         ),
         bill:bills(id, bill_number, payment_mode, payment_status, total, subtotal,
@@ -526,6 +536,148 @@ export default function CashierPage() {
   function openLiveOrderBilling(order: OrderWithDetails) {
     setBillingOrder(order)
     setBillingDialogOpen(true)
+  }
+
+  // KOT detail: open dialog and fetch KOT entries
+  async function openKotDetail(order: LiveOrder) {
+    setKotDetailOrder(order)
+    setKotDetailOpen(true)
+    setKotTransferBatchIdx(null)
+    setKotTransferDestTable(null)
+    setKotEntries([])
+
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('kot_entries')
+      .select('id, kot_number, station, status, created_at')
+      .eq('order_id', order.id)
+      .order('created_at', { ascending: true })
+
+    if (data) setKotEntries(data)
+  }
+
+  // Group order items into KOT batches by created_at proximity
+  function groupItemsByKOT(items: any[]) {
+    const active = items.filter((i: any) => !i.is_cancelled)
+    const sorted = [...active].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+    const batches: { items: any[]; firstTime: number; kotEntry?: typeof kotEntries[0] }[] = []
+
+    for (const item of sorted) {
+      const t = new Date(item.created_at).getTime()
+      const last = batches[batches.length - 1]
+      if (last && Math.abs(t - last.firstTime) < 60000) {
+        last.items.push(item)
+      } else {
+        batches.push({ items: [item], firstTime: t })
+      }
+    }
+
+    // Match batches to kot_entries by timestamp proximity
+    const usedEntries = new Set<string>()
+    for (const batch of batches) {
+      let bestMatch: typeof kotEntries[0] | undefined
+      let bestDiff = Infinity
+      for (const entry of kotEntries) {
+        if (usedEntries.has(entry.id)) continue
+        const diff = Math.abs(new Date(entry.created_at).getTime() - batch.firstTime)
+        if (diff < bestDiff && diff < 120000) {
+          bestDiff = diff
+          bestMatch = entry
+        }
+      }
+      if (bestMatch) {
+        batch.kotEntry = bestMatch
+        usedEntries.add(bestMatch.id)
+      }
+    }
+
+    return batches
+  }
+
+  // Transfer a KOT batch to another table
+  async function performKotBatchTransfer(batchItems: any[], destTable: TableType) {
+    if (!kotDetailOrder) return
+    setKotTransferring(true)
+    const supabase = createClient()
+    const sourceOrderId = kotDetailOrder.id
+
+    try {
+      let destOrderId = destTable.current_order_id
+
+      // If destination is available, create a new order
+      if (destTable.status === 'available' || !destOrderId) {
+        const { data: orderNum } = await supabase.rpc('generate_order_number')
+        const { data: srcOrder } = await supabase
+          .from('orders')
+          .select('waiter_id')
+          .eq('id', sourceOrderId)
+          .single()
+
+        const { data: newOrder, error: orderErr } = await supabase
+          .from('orders')
+          .insert({
+            table_id: destTable.id,
+            order_number: orderNum || `ORD-${Date.now()}`,
+            order_type: 'dine_in',
+            status: 'preparing',
+            waiter_id: srcOrder?.waiter_id || null,
+          })
+          .select()
+          .single()
+
+        if (orderErr || !newOrder) throw new Error(orderErr?.message || 'Failed to create order')
+        destOrderId = newOrder.id
+        await supabase.from('tables').update({ status: 'occupied', current_order_id: destOrderId }).eq('id', destTable.id)
+      }
+
+      // Move items to destination order
+      const itemIds = batchItems.map((i: any) => i.id)
+      await supabase.from('order_items').update({ order_id: destOrderId }).in('id', itemIds)
+
+      // Check if source order has remaining active items
+      const { data: remaining } = await supabase
+        .from('order_items')
+        .select('id')
+        .eq('order_id', sourceOrderId)
+        .eq('is_cancelled', false)
+
+      if (!remaining || remaining.length === 0) {
+        await supabase.from('orders').update({ status: 'cancelled' }).eq('id', sourceOrderId)
+        // Free source table only if it's still assigned to this order
+        const srcTable = tables.find(t => t.current_order_id === sourceOrderId)
+        if (srcTable) {
+          await supabase.from('tables').update({ status: 'available', current_order_id: null }).eq('id', srcTable.id)
+        }
+      }
+
+      // Audit log
+      const movedNames = batchItems.map((i: any) => `${i.quantity}x ${i.menu_item?.name || 'Unknown'}`)
+      const { data: { user } } = await supabase.auth.getUser()
+      const srcTableObj = tables.find(t => t.current_order_id === sourceOrderId)
+      await supabase.from('audit_logs').insert({
+        action: 'kot_transfer',
+        performed_by: user?.id || null,
+        details: {
+          items: movedNames,
+          from_table: srcTableObj ? getTableDisplayName(srcTableObj) : 'Unknown',
+          to_table: getTableDisplayName(destTable),
+          source_order_id: sourceOrderId,
+          dest_order_id: destOrderId,
+        },
+      })
+
+      toast.success(`KOT moved to ${getTableDisplayName(destTable)}`)
+      setKotDetailOpen(false)
+      setKotTransferBatchIdx(null)
+      setKotTransferDestTable(null)
+      loadTables()
+      loadLiveOrders()
+    } catch (err: any) {
+      toast.error(err?.message || 'KOT transfer failed')
+    } finally {
+      setKotTransferring(false)
+    }
   }
 
   async function openRecentBill(bill: RecentBill) {
@@ -1345,7 +1497,7 @@ export default function CashierPage() {
                   return (
                     <button
                       key={order.id}
-                      onClick={() => openLiveOrderBilling(order)}
+                      onClick={() => openKotDetail(order)}
                       className="w-full text-left bg-white rounded-xl p-4 border-2 border-gray-200 hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.98]"
                     >
                       {/* Top row: order number + badge + total */}
@@ -1858,6 +2010,261 @@ export default function CashierPage() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* KOT Detail Dialog */}
+      <Dialog open={kotDetailOpen} onOpenChange={(o) => { if (!o) { setKotDetailOpen(false); setKotDetailOrder(null); setKotTransferBatchIdx(null) } }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col !gap-0 !p-0">
+          {kotDetailOrder && (() => {
+            const batches = groupItemsByKOT(kotDetailOrder.items)
+            const activeItems = kotDetailOrder.items.filter((i: any) => !i.is_cancelled)
+            const orderTotal = (() => {
+              if (kotDetailOrder.bill?.total) return Number(kotDetailOrder.bill.total)
+              const sub = activeItems.reduce((sum: number, i: any) => sum + i.total_price, 0)
+              const scRemoved = (kotDetailOrder as any).service_charge_removed ?? false
+              const sc = scRemoved ? 0 : Math.round(sub * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+              const gst = Math.round(sub * GST_PERCENT / 100 * 100) / 100
+              return Math.round((sub + sc + gst) * 100) / 100
+            })()
+            const isDineIn = kotDetailOrder.order_type === 'dine_in'
+            const tableName = isDineIn && kotDetailOrder.table ? getTableDisplayName(kotDetailOrder.table) : null
+            const hasBill = !!kotDetailOrder.bill
+
+            return (
+              <>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b px-5 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                        <ClipboardList className="h-5 w-5 text-amber-700" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-lg">{kotDetailOrder.order_number}</h3>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${isDineIn ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-orange-200 text-orange-700 bg-orange-50'}`}
+                          >
+                            {isDineIn ? 'Dine In' : 'Takeaway'}
+                          </Badge>
+                          {hasBill && (
+                            <Badge className="text-xs bg-green-100 text-green-700 border-0">
+                              Bill Created
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-0.5">
+                          {tableName && <span className="font-medium text-gray-700">{tableName}</span>}
+                          {kotDetailOrder.waiterName && <span>· {kotDetailOrder.waiterName}</span>}
+                          <span>· {formatDistanceToNow(new Date(kotDetailOrder.created_at), { addSuffix: true })}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-amber-800">₹{orderTotal.toFixed(0)}</p>
+                      <p className="text-xs text-gray-500">{activeItems.reduce((s: number, i: any) => s + i.quantity, 0)} items · {batches.length} KOT{batches.length > 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KOT Batches */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {batches.map((batch, batchIdx) => {
+                    const batchTotal = batch.items.reduce((s: number, i: any) => s + Number(i.total_price), 0)
+                    const kotLabel = batch.kotEntry?.kot_number || `KOT ${batchIdx + 1}`
+                    const batchTime = new Date(batch.firstTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                    const isTransferOpen = kotTransferBatchIdx === batchIdx
+
+                    return (
+                      <div key={batchIdx} className="bg-white border rounded-xl overflow-hidden">
+                        {/* Batch header */}
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-white bg-amber-600 px-2 py-0.5 rounded-full">
+                              {kotLabel}
+                            </span>
+                            <span className="text-xs text-gray-500">{batchTime}</span>
+                            {batch.kotEntry && (
+                              <Badge variant="outline" className={`text-xs capitalize ${
+                                batch.kotEntry.status === 'ready' ? 'border-green-300 text-green-700' :
+                                batch.kotEntry.status === 'preparing' ? 'border-blue-300 text-blue-700' :
+                                batch.kotEntry.status === 'printed' ? 'border-gray-300 text-gray-600' :
+                                'border-yellow-300 text-yellow-700'
+                              }`}>
+                                {batch.kotEntry.status}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-gray-700">₹{batchTotal.toFixed(0)}</span>
+                            {!hasBill && batches.length > 1 && (
+                              <button
+                                onClick={() => {
+                                  if (isTransferOpen) {
+                                    setKotTransferBatchIdx(null)
+                                    setKotTransferDestTable(null)
+                                  } else {
+                                    setKotTransferBatchIdx(batchIdx)
+                                    setKotTransferDestTable(null)
+                                  }
+                                }}
+                                className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors flex items-center gap-1 ${
+                                  isTransferOpen
+                                    ? 'bg-amber-100 border-amber-300 text-amber-800'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:border-amber-300 hover:text-amber-700'
+                                }`}
+                              >
+                                <ArrowRightLeft className="h-3 w-3" />
+                                Transfer
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Batch items */}
+                        <div className="divide-y">
+                          {batch.items.map((item: any, idx: number) => {
+                            const kotStatus = item.kot_status || 'pending'
+                            const dotColor = kotStatus === 'ready' ? 'bg-green-500' :
+                              kotStatus === 'preparing' ? 'bg-blue-500' :
+                              kotStatus === 'served' ? 'bg-purple-500' :
+                              'bg-yellow-500'
+                            const isVeg = item.menu_item?.is_veg
+
+                            return (
+                              <div key={idx} className="flex items-center justify-between px-4 py-2.5">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                                  <div className={`w-3.5 h-3.5 rounded-sm border-2 shrink-0 ${isVeg ? 'border-green-600' : 'border-red-600'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full m-auto mt-[2px] ${isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-800 truncate">
+                                    {item.quantity}x {item.menu_item?.name}
+                                  </span>
+                                  {item.notes && <span className="text-xs text-gray-400 truncate">({item.notes})</span>}
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <span className={`text-xs capitalize font-medium ${
+                                    kotStatus === 'ready' ? 'text-green-600' :
+                                    kotStatus === 'preparing' ? 'text-blue-600' :
+                                    kotStatus === 'served' ? 'text-purple-600' :
+                                    'text-yellow-600'
+                                  }`}>{kotStatus}</span>
+                                  <span className="text-sm text-gray-600">₹{Number(item.total_price).toFixed(0)}</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        {/* Transfer destination picker (inline, below batch) */}
+                        {isTransferOpen && (
+                          <div className="bg-amber-50/50 border-t p-3 space-y-2">
+                            <p className="text-xs font-medium text-gray-600">Move this KOT to:</p>
+                            <div className="max-h-[25vh] overflow-y-auto">
+                              {(() => {
+                                const destTables = tables.filter(t => {
+                                  // Exclude current order's table
+                                  if (kotDetailOrder.table_id && t.id === kotDetailOrder.table_id) return false
+                                  if (t.status === 'available') return true
+                                  if (t.status === 'occupied' && t.current_order_id) {
+                                    const info = tableOrderInfo.get(t.current_order_id)
+                                    if (info?.hasBill) return false
+                                    return true
+                                  }
+                                  return false
+                                })
+                                if (destTables.length === 0) {
+                                  return <p className="text-center py-3 text-gray-400 text-xs">No tables available</p>
+                                }
+                                return groupTablesByDisplayGroup(destTables).map(group => (
+                                  <div key={group.group} className="mb-2">
+                                    <p className="text-xs font-semibold text-gray-500 mb-1">{group.label}</p>
+                                    <div className="grid grid-cols-6 gap-1.5">
+                                      {group.tables.map(t => {
+                                        const isAvail = t.status === 'available'
+                                        return (
+                                          <button
+                                            key={t.id}
+                                            onClick={() => setKotTransferDestTable(t)}
+                                            className={`p-1.5 rounded-lg border-2 text-center font-bold text-sm transition-all active:scale-95 ${
+                                              kotTransferDestTable?.id === t.id
+                                                ? 'border-amber-500 bg-amber-100 text-amber-800'
+                                                : isAvail
+                                                  ? 'border-gray-200 bg-white hover:border-amber-400 text-gray-500'
+                                                  : 'border-green-300 bg-green-50 hover:border-amber-400 text-green-700'
+                                            }`}
+                                          >
+                                            {getTableDisplayName(t)}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                ))
+                              })()}
+                            </div>
+                            {kotTransferDestTable && (
+                              <Button
+                                size="sm"
+                                className="w-full bg-amber-700 hover:bg-amber-800 text-sm"
+                                onClick={() => performKotBatchTransfer(batch.items, kotTransferDestTable)}
+                                disabled={kotTransferring}
+                              >
+                                {kotTransferring ? (
+                                  <div className="h-4 w-4 border-2 border-white/60 border-t-white rounded-full animate-spin mr-2" />
+                                ) : (
+                                  <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                Move KOT to {getTableDisplayName(kotTransferDestTable)}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {batches.length === 0 && (
+                    <div className="text-center py-10 text-gray-400">
+                      <ClipboardList className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                      <p>No items in this order</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer: Settle button */}
+                <div className="border-t bg-gray-50 px-5 py-3 flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setKotDetailOpen(false)
+                      openLiveOrderBilling(kotDetailOrder)
+                    }}
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Open Bill / Settle
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setKotDetailOpen(false)
+                      // Find the table for this order and open transfer dialog
+                      const tbl = tables.find(t => t.current_order_id === kotDetailOrder.id)
+                      if (tbl) openTransferDialog(tbl)
+                      else toast.error('Table not found for this order')
+                    }}
+                  >
+                    <ArrowRightLeft className="h-4 w-4 mr-1.5" />
+                    Transfer All
+                  </Button>
+                </div>
+              </>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 

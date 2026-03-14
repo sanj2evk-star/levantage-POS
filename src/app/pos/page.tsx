@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Category, MenuItem, CartItem, Table as TableType, StationType, Profile } from '@/types/database'
@@ -87,6 +87,10 @@ export default function POSPage() {
   // Adding items to existing order
   const [addingToOrder, setAddingToOrder] = useState<any>(null)
 
+  // Order placement guard — prevents double-submit
+  const [placing, setPlacing] = useState(false)
+  const placingRef = useRef(false)
+
   const loadData = useCallback(async () => {
     const supabase = createClient()
     const [catResult, itemResult, tableResult, waiterResult] = await Promise.all([
@@ -168,128 +172,140 @@ export default function POSPage() {
       return
     }
 
-    const supabase = createClient()
-    let orderId: string
-    let orderNumber: string
-    let tableNum: number | null = selectedTableObj?.number || null
-    let tableSec: string | null = selectedTableObj?.section || null
-    let currentOrderType = orderType
+    // Double-submit guard — ref check prevents race conditions
+    if (placingRef.current) return
+    placingRef.current = true
+    setPlacing(true)
 
-    if (addingToOrder) {
-      // Adding items to existing order
-      orderId = addingToOrder.id
-      orderNumber = addingToOrder.order_number
-      tableNum = addingToOrder.table?.number || null
-      tableSec = addingToOrder.table?.section || null
-      currentOrderType = addingToOrder.order_type
-    } else {
-      // Creating new order
-      if (orderType === 'dine_in' && !selectedTable) {
-        toast.error('Please select a table for dine-in orders')
-        setTableDialogOpen(true)
-        return
-      }
+    try {
+      const supabase = createClient()
+      let orderId: string
+      let orderNumber: string
+      let tableNum: number | null = selectedTableObj?.number || null
+      let tableSec: string | null = selectedTableObj?.section || null
+      let currentOrderType = orderType
 
-      const { data: orderNum } = await supabase.rpc('generate_order_number')
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          table_id: orderType === 'dine_in' ? selectedTable : null,
-          order_number: orderNum || `ORD-${Date.now()}`,
-          status: 'pending',
-          order_type: orderType,
-          waiter_id: profile?.id || null,
-          notes: orderNotes || null,
-        })
-        .select()
-        .single()
-
-      if (orderError || !order) {
-        toast.error('Failed to create order')
-        return
-      }
-      orderId = order.id
-      orderNumber = order.order_number
-    }
-
-    // Create order items
-    const orderItems = cart.map((item) => ({
-      order_id: orderId,
-      menu_item_id: item.menu_item.id,
-      variant_id: item.variant?.id || null,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_price: item.total_price,
-      notes: item.notes || null,
-      kot_status: 'pending' as const,
-      station: item.menu_item.station,
-    }))
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems)
-
-    if (itemsError) {
-      toast.error('Failed to add order items')
-      return
-    }
-
-    // Create KOT entries grouped by station
-    const stationGroups = new Map<StationType, typeof orderItems>()
-    orderItems.forEach((item) => {
-      const existing = stationGroups.get(item.station) || []
-      existing.push(item)
-      stationGroups.set(item.station, existing)
-    })
-
-    for (const [station, stationItems] of stationGroups) {
-      const { data: kotNum } = await supabase.rpc('generate_kot_number', { p_station: station })
-      const kotNumber = kotNum || `KOT-${Date.now()}`
-      await supabase.from('kot_entries').insert({
-        order_id: orderId,
-        station,
-        kot_number: kotNumber,
-        status: 'pending',
-      })
-
-      const printItems = stationItems.map(si => {
-        const cartItem = cart.find(c => c.menu_item.id === si.menu_item_id)
-        return {
-          name: cartItem?.menu_item.name || 'Unknown',
-          quantity: si.quantity,
-          variant: cartItem?.variant?.name,
-          notes: si.notes || undefined,
+      if (addingToOrder) {
+        // Adding items to existing order
+        orderId = addingToOrder.id
+        orderNumber = addingToOrder.order_number
+        tableNum = addingToOrder.table?.number || null
+        tableSec = addingToOrder.table?.section || null
+        currentOrderType = addingToOrder.order_type
+      } else {
+        // Creating new order
+        if (orderType === 'dine_in' && !selectedTable) {
+          toast.error('Please select a table for dine-in orders')
+          setTableDialogOpen(true)
+          return
         }
+
+        const { data: orderNum } = await supabase.rpc('generate_order_number')
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            table_id: orderType === 'dine_in' ? selectedTable : null,
+            order_number: orderNum || `ORD-${Date.now()}`,
+            status: 'pending',
+            order_type: orderType,
+            waiter_id: profile?.id || null,
+            notes: orderNotes || null,
+          })
+          .select()
+          .single()
+
+        if (orderError || !order) {
+          toast.error('Failed to create order')
+          return
+        }
+        orderId = order.id
+        orderNumber = order.order_number
+      }
+
+      // Create order items
+      const orderItems = cart.map((item) => ({
+        order_id: orderId,
+        menu_item_id: item.menu_item.id,
+        variant_id: item.variant?.id || null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        notes: item.notes || null,
+        kot_status: 'pending' as const,
+        station: item.menu_item.station,
+      }))
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems)
+
+      if (itemsError) {
+        toast.error('Failed to add order items')
+        return
+      }
+
+      // Create KOT entries grouped by station
+      const stationGroups = new Map<StationType, typeof orderItems>()
+      orderItems.forEach((item) => {
+        const existing = stationGroups.get(item.station) || []
+        existing.push(item)
+        stationGroups.set(item.station, existing)
       })
 
-      printKOT(
-        station,
-        kotNumber,
-        orderNumber,
-        tableNum,
-        tableSec,
-        currentOrderType as 'dine_in' | 'takeaway',
-        printItems,
-        orderNotes || undefined,
-        profile?.name || null,
-      ).catch(() => {
-        toast.error(`KOT print failed for ${station} - check printer`)
-      })
-    }
+      for (const [station, stationItems] of stationGroups) {
+        const { data: kotNum } = await supabase.rpc('generate_kot_number', { p_station: station })
+        const kotNumber = kotNum || `KOT-${Date.now()}`
+        await supabase.from('kot_entries').insert({
+          order_id: orderId,
+          station,
+          kot_number: kotNumber,
+          status: 'pending',
+        })
 
-    // Update table status if new dine-in order
-    if (!addingToOrder && orderType === 'dine_in' && selectedTable) {
-      await supabase
-        .from('tables')
-        .update({ status: 'occupied', current_order_id: orderId })
-        .eq('id', selectedTable)
-    }
+        const printItems = stationItems.map(si => {
+          const cartItem = cart.find(c => c.menu_item.id === si.menu_item_id)
+          return {
+            name: cartItem?.menu_item.name || 'Unknown',
+            quantity: si.quantity,
+            variant: cartItem?.variant?.name,
+            notes: si.notes || undefined,
+          }
+        })
 
-    const action = addingToOrder ? 'Items added to' : 'Order'
-    toast.success(`${action} ${orderNumber}!`)
-    setAddingToOrder(null)
-    clearCart()
-    loadData()
+        printKOT(
+          station,
+          kotNumber,
+          orderNumber,
+          tableNum,
+          tableSec,
+          currentOrderType as 'dine_in' | 'takeaway',
+          printItems,
+          orderNotes || undefined,
+          profile?.name || null,
+        ).catch(() => {
+          toast.error(`KOT print failed for ${station} - check printer`)
+        })
+      }
+
+      // Update table status if new dine-in order
+      if (!addingToOrder && orderType === 'dine_in' && selectedTable) {
+        await supabase
+          .from('tables')
+          .update({ status: 'occupied', current_order_id: orderId })
+          .eq('id', selectedTable)
+      }
+
+      const action = addingToOrder ? 'Items added to' : 'Order'
+      toast.success(`${action} ${orderNumber}!`)
+      setAddingToOrder(null)
+      clearCart()
+      loadData()
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to place order')
+    } finally {
+      placingRef.current = false
+      setPlacing(false)
+    }
   }
 
   // Filter items
@@ -635,8 +651,16 @@ export default function POSPage() {
             <Button
               className="w-full h-12 text-base bg-amber-700 hover:bg-amber-800"
               onClick={placeOrder}
+              disabled={placing}
             >
-              {addingToOrder ? `Add Items - ₹${subtotal.toFixed(2)}` : `Place Order - ₹${subtotal.toFixed(2)}`}
+              {placing ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Sending...
+                </span>
+              ) : (
+                addingToOrder ? `Add Items - ₹${subtotal.toFixed(2)}` : `Place Order - ₹${subtotal.toFixed(2)}`
+              )}
             </Button>
           </div>
         )}
@@ -683,8 +707,15 @@ export default function POSPage() {
                   <span>Subtotal</span>
                   <span className="font-bold">₹{subtotal.toFixed(2)}</span>
                 </div>
-                <Button className="w-full h-12 bg-amber-700 hover:bg-amber-800" onClick={placeOrder}>
-                  Place Order - ₹{subtotal.toFixed(2)}
+                <Button className="w-full h-12 bg-amber-700 hover:bg-amber-800" onClick={placeOrder} disabled={placing}>
+                  {placing ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Sending...
+                    </span>
+                  ) : (
+                    `Place Order - ₹${subtotal.toFixed(2)}`
+                  )}
                 </Button>
               </div>
             </SheetContent>

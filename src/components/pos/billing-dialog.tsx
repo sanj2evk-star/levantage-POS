@@ -76,7 +76,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     return () => clearInterval(timer)
   }, [open])
 
-  const [serviceChargeRemoved, setServiceChargeRemoved] = useState(false)
+  const [serviceChargeRemoved, setServiceChargeRemoved] = useState(order?.service_charge_removed ?? false)
   const [discountType, setDiscountType] = useState<DiscountType>('none')
   const [discountValue, setDiscountValue] = useState('')
   const [discountReason, setDiscountReason] = useState('')
@@ -182,7 +182,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   // Reset state when order changes
   useEffect(() => {
     if (order) {
-      setServiceChargeRemoved(false)
+      setServiceChargeRemoved(order?.service_charge_removed ?? false)
       setDiscountType('none')
       setDiscountValue('')
       setDiscountReason('')
@@ -1021,10 +1021,15 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   }
 
   // Service charge removal with PIN
-  function handleScRemoveClick() {
+  async function handleScRemoveClick() {
     if (serviceChargeRemoved) {
       // Re-adding service charge → no PIN needed
       setServiceChargeRemoved(false)
+      // Persist to orders table
+      if (order?.id) {
+        const supabase = createClient()
+        await supabase.from('orders').update({ service_charge_removed: false }).eq('id', order.id)
+      }
     } else {
       // Removing service charge → require PIN
       setScPin('')
@@ -1056,6 +1061,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     })
 
     setServiceChargeRemoved(true)
+    // Persist to orders table
+    if (order?.id) {
+      await supabase.from('orders').update({ service_charge_removed: true }).eq('id', order.id)
+    }
     setScPinDialogOpen(false)
     setScPinVerifying(false)
     setScPin('')
@@ -1168,8 +1177,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   ) : (
                     <>
                       <Label className="text-sm font-medium">Payment Mode</Label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[...PAYMENT_MODES, { value: 'split', label: 'Split' }].map(pm => (
+                      <div className="grid grid-cols-3 gap-2">
+                        {[...PAYMENT_MODES.filter(pm => pm.value !== 'nc'), { value: 'split', label: 'Split' }].map(pm => (
                           <Button key={pm.value} variant={collectPaymentMode === pm.value ? 'default' : 'outline'}
                             size="sm" onClick={() => {
                               if (pm.value === 'split') {
@@ -1195,7 +1204,17 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                         <div className="bg-white rounded-lg p-2.5 space-y-2 border">
                           <div className="flex justify-between items-center">
                             <span className="text-xs font-medium">Split Payments</span>
-                            <Button variant="outline" size="sm" className="h-6 text-xs" onClick={addCollectSplit}>+ Add</Button>
+                            <div className="flex gap-1.5">
+                              <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={() => {
+                                const half = Math.round(outstanding / 2 * 100) / 100
+                                const other = Math.round((outstanding - half) * 100) / 100
+                                setCollectSplitPayments([
+                                  { mode: 'cash', amount: String(half), reference_number: '' },
+                                  { mode: 'upi', amount: String(other), reference_number: '' },
+                                ])
+                              }}>50/50</Button>
+                              <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={addCollectSplit}>+ Add</Button>
+                            </div>
                           </div>
                           {collectSplitPayments.map((sp, idx) => (
                             <div key={idx} className="space-y-1">
@@ -1208,8 +1227,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                                 <Input type="number" placeholder="Amount" value={sp.amount}
                                   onChange={e => updateCollectSplit(idx, 'amount', e.target.value)} className="flex-1 h-8 text-xs" />
                                 <button onClick={() => removeCollectSplit(idx)}
-                                  className="h-6 w-6 flex items-center justify-center rounded text-red-400 hover:bg-red-50">
-                                  <X className="h-3 w-3" /></button>
+                                  className="h-7 w-7 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-100 border border-red-200">
+                                  <X className="h-3.5 w-3.5" /></button>
                               </div>
                               {(sp.mode === 'upi' || sp.mode === 'card' || sp.mode === 'zomato') && (
                                 <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`} value={sp.reference_number}
@@ -1301,7 +1320,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-md w-[95vw] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden">
+        <DialogContent className="max-w-lg w-[95vw] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden">
           {/* ── HEADER ── */}
           <div className="px-4 pt-4 pb-3 border-b bg-white shrink-0">
             <div className="flex items-center justify-between mb-2 pr-8">
@@ -1378,14 +1397,14 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 <span className="flex items-center gap-2">
                   Service Charge ({SERVICE_CHARGE_PERCENT}%)
                   <button
-                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors ${
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
                       serviceChargeRemoved
-                        ? 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
-                        : 'bg-red-50 text-red-500 hover:bg-red-100 border border-red-200'
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
+                        : 'bg-red-100 text-red-600 hover:bg-red-200 border border-red-300'
                     }`}
                     onClick={handleScRemoveClick}
                   >
-                    {serviceChargeRemoved ? '+ Add' : '✕ Remove'}
+                    {serviceChargeRemoved ? '+ Add SC' : '✕ Remove SC'}
                   </button>
                 </span>
                 <span className={`tabular-nums ${serviceChargeRemoved ? 'line-through text-gray-300' : ''}`}>
@@ -1444,7 +1463,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             {!payLaterMode && (
               <div className="space-y-2.5">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {[
                     { mode: 'cash' as const, icon: Banknote, label: 'Cash' },
                     { mode: 'upi' as const, icon: Smartphone, label: 'UPI' },
@@ -1466,7 +1485,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                         }
                         setPaymentMode(pm.mode); setSplitPayments([]); setReferenceNumber('')
                       }}
-                      className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition-all text-xs font-medium ${
+                      className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition-all text-sm font-medium ${
                         paymentMode === pm.mode
                           ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-200'
                           : 'border-gray-150 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
@@ -1489,7 +1508,17 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   <div className="bg-gray-50 rounded-xl p-3 space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-medium">Split Payments</span>
-                      <Button variant="outline" size="sm" className="h-6 text-xs" onClick={addSplitPayment}>+ Add</Button>
+                      <div className="flex gap-1.5">
+                        <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={() => {
+                          const half = Math.round(total / 2 * 100) / 100
+                          const other = Math.round((total - half) * 100) / 100
+                          setSplitPayments([
+                            { mode: 'cash', amount: String(half), reference_number: '' },
+                            { mode: 'upi', amount: String(other), reference_number: '' },
+                          ])
+                        }}>50/50</Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={addSplitPayment}>+ Add</Button>
+                      </div>
                     </div>
                     {splitPayments.map((payment, index) => (
                       <div key={index} className="space-y-1">
@@ -1502,8 +1531,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                           <Input type="number" placeholder="Amount" value={payment.amount}
                             onChange={e => updateSplitPayment(index, 'amount', e.target.value)} className="flex-1 h-8 text-xs" />
                           <button onClick={() => removeSplitPayment(index)}
-                            className="h-6 w-6 flex items-center justify-center rounded text-red-400 hover:bg-red-50">
-                            <X className="h-3 w-3" /></button>
+                            className="h-7 w-7 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-100 border border-red-200">
+                            <X className="h-3.5 w-3.5" /></button>
                         </div>
                         {(payment.mode === 'upi' || payment.mode === 'card' || payment.mode === 'zomato') && (
                           <Input placeholder={`Ref #${requirePaymentRef ? ' *' : ''}`} value={payment.reference_number}

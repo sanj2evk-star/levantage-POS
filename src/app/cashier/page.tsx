@@ -242,7 +242,7 @@ export default function CashierPage() {
     const { data } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, order_type, created_at, table_id, waiter_id, notes,
+        id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed,
         table:tables!table_id(number, section),
         items:order_items(
           id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
@@ -468,7 +468,7 @@ export default function CashierPage() {
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, order_type, created_at, table_id, waiter_id, notes,
+        id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed,
         table:tables!table_id(number, section),
         items:order_items(
           id, quantity, unit_price, total_price, notes, station, is_cancelled, kot_status,
@@ -544,7 +544,7 @@ export default function CashierPage() {
       const { data: orderData } = await supabase
         .from('orders')
         .select(`
-          id, order_number, order_type, waiter_id,
+          id, order_number, order_type, waiter_id, service_charge_removed,
           table:tables!table_id(number, section),
           items:order_items(id, quantity, unit_price, total_price, is_cancelled, menu_item:menu_items(name, is_veg)),
           bill:bills(id, total, subtotal, gst_amount, service_charge, service_charge_removed, discount_amount, discount_type, discount_reason),
@@ -572,10 +572,13 @@ export default function CashierPage() {
         discReason = existBill.discount_reason || ''
         tot = Number(existBill.total)
       } else {
+        const orderScRemoved = (orderData as any).service_charge_removed ?? false
         subtotal = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
         sc = Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+        scRemoved = orderScRemoved
         gstAmt = Math.round(subtotal * GST_PERCENT / 100 * 100) / 100
-        tot = Math.round((subtotal + sc + gstAmt) * 100) / 100
+        const effectiveSC = scRemoved ? 0 : sc
+        tot = Math.round((subtotal + effectiveSC + gstAmt) * 100) / 100
       }
 
       await printBill({
@@ -682,7 +685,7 @@ export default function CashierPage() {
       const { data: orderData } = await supabase
         .from('orders')
         .select(`
-          id, order_number, order_type, waiter_id,
+          id, order_number, order_type, waiter_id, service_charge_removed,
           table:tables!table_id(number, section),
           items:order_items(id, quantity, unit_price, total_price, is_cancelled, menu_item:menu_items(name, is_veg)),
           bill:bills(id, bill_number, payment_status, total, subtotal, gst_percent, gst_amount, service_charge, service_charge_removed, discount_amount, discount_type, discount_reason),
@@ -719,10 +722,13 @@ export default function CashierPage() {
           payment_status: 'paid',
         }).eq('id', billId)
       } else {
+        const orderScRemoved = (orderData as any).service_charge_removed ?? false
         finalSubtotal = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
         finalServiceCharge = Math.round(finalSubtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+        finalServiceChargeRemoved = orderScRemoved
         finalGstAmount = Math.round(finalSubtotal * GST_PERCENT / 100 * 100) / 100
-        finalTotal = Math.round((finalSubtotal + finalServiceCharge + finalGstAmount) * 100) / 100
+        const effectiveSC = finalServiceChargeRemoved ? 0 : finalServiceCharge
+        finalTotal = Math.round((finalSubtotal + effectiveSC + finalGstAmount) * 100) / 100
 
         const { data: billNum } = await supabase.rpc('generate_bill_number')
         const { data: newBill, error: billError } = await supabase
@@ -733,7 +739,7 @@ export default function CashierPage() {
             gst_percent: GST_PERCENT,
             gst_amount: finalGstAmount,
             service_charge: finalServiceCharge,
-            service_charge_removed: false,
+            service_charge_removed: finalServiceChargeRemoved,
             discount_amount: 0,
             discount_type: 'none',
             total: finalTotal,
@@ -1564,7 +1570,7 @@ export default function CashierPage() {
 
       {/* Quick Settle Dialog */}
       <Dialog open={quickSettleOpen} onOpenChange={(o) => { if (!o) { setQuickSettleOpen(false); setQuickSettleTable(null) } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5 text-amber-700" />

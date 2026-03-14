@@ -3,7 +3,7 @@ export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'comple
 export type OrderType = 'dine_in' | 'takeaway'
 export type TableStatus = 'available' | 'occupied' | 'reserved'
 export type TableSection = 'coffee' | 'ground_floor' | 'ground_box' | 'first_floor' | 'first_box'
-export type PaymentMode = 'cash' | 'upi' | 'card' | 'split' | 'nc'
+export type PaymentMode = 'cash' | 'upi' | 'card' | 'zomato' | 'split' | 'nc'
 export type PaymentStatus = 'pending' | 'paid' | 'partial'
 export type DiscountType = 'percent' | 'flat' | 'none'
 export type StationType = 'kitchen' | 'cafe' | 'mocktail' | 'juice_bar' | 'billing'
@@ -79,6 +79,7 @@ export interface Order {
   order_type: OrderType
   waiter_id: string | null
   notes: string | null
+  service_charge_removed?: boolean
   created_at: string
   updated_at: string
   // Joined data

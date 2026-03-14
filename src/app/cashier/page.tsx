@@ -139,6 +139,9 @@ export default function CashierPage() {
   const [recentBills, setRecentBills] = useState<RecentBill[]>([])
   const [billSearchQuery, setBillSearchQuery] = useState('')
 
+  // Refresh button state
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
   // Business day boundary — loaded once on mount, cached for session
   const [boundaryHour, setBoundaryHour] = useState(3)
   const boundaryHourLoaded = useRef(false)
@@ -1069,8 +1072,17 @@ export default function CashierPage() {
           >
             {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-gray-400" />}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => { loadData() }}>
-            <RefreshCw className="h-4 w-4" />
+          <Button variant="ghost" size="sm" onClick={async () => {
+            setIsRefreshing(true)
+            try {
+              await loadData()
+              if (activeTab === 'live_orders') await loadLiveOrders()
+              if (activeTab === 'day_close') await loadDaySummary()
+            } finally {
+              setIsRefreshing(false)
+            }
+          }}>
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
           <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-4 w-4" />

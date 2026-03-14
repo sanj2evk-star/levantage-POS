@@ -978,7 +978,11 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
     return (
       <>
-        <Dialog open={open} onOpenChange={onClose}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+          // Prevent dismiss when reprint or refund dialog is open
+          if (!isOpen && (reprintDialogOpen || refundDialogOpen)) return
+          if (!isOpen) onClose()
+        }}>
           <DialogContent className="max-w-lg max-h-[85vh] !grid-rows-[auto_1fr] overflow-hidden">
             <DialogHeader>
               <div className="flex items-center justify-between pr-8">
@@ -1217,7 +1221,12 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onClose}>
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        // Prevent main dialog from closing when a sub-dialog is open
+        // (base-ui treats portaled sub-dialog clicks as "outside" the main dialog)
+        if (!isOpen && (ncDialogOpen || cancelDialogOpen || discountPinDialogOpen || scPinDialogOpen || transferDialogOpen || reassignDialogOpen)) return
+        if (!isOpen) onClose()
+      }}>
         <DialogContent className="!w-[92vw] !max-w-[1400px] !h-[56vw] !max-h-[85vh] !grid-rows-none !flex !flex-col !gap-0 !p-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
           {/* ── HEADER ── */}
           <div className="px-8 py-3 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 shrink-0">

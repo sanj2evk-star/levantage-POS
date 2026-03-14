@@ -2409,8 +2409,12 @@ export default function CashierPage() {
                     variant="outline"
                     className="flex-1"
                     onClick={() => {
+                      const orderRef = kotDetailOrder
                       setKotDetailOpen(false)
-                      openLiveOrderBilling(kotDetailOrder)
+                      // Delay billing dialog open to avoid dialog transition conflicts
+                      setTimeout(() => {
+                        if (orderRef) openLiveOrderBilling(orderRef)
+                      }, 150)
                     }}
                   >
                     <Receipt className="h-4 w-4 mr-2" />
@@ -2419,11 +2423,14 @@ export default function CashierPage() {
                   <Button
                     variant="outline"
                     onClick={() => {
+                      const orderRef = kotDetailOrder
                       setKotDetailOpen(false)
-                      // Find the table for this order and open transfer dialog
-                      const tbl = tables.find(t => t.current_order_id === kotDetailOrder.id)
-                      if (tbl) openTransferDialog(tbl)
-                      else toast.error('Table not found for this order')
+                      // Delay to avoid dialog transition conflicts
+                      setTimeout(() => {
+                        const tbl = tables.find(t => t.current_order_id === orderRef?.id)
+                        if (tbl) openTransferDialog(tbl)
+                        else toast.error('Table not found for this order')
+                      }, 150)
                     }}
                   >
                     <ArrowRightLeft className="h-4 w-4 mr-1.5" />

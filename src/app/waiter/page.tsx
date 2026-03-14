@@ -97,6 +97,10 @@ export default function WaiterPage() {
   // Hamburger menu
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  // Order placement guard — prevents double-submit
+  const [placing, setPlacing] = useState(false)
+  const placingRef = useRef(false)
+
   // Track which cart items have note input open
   const [noteOpenIndices, setNoteOpenIndices] = useState<Set<number>>(new Set())
 
@@ -257,112 +261,125 @@ export default function WaiterPage() {
       return
     }
 
-    const supabase = createClient()
-    let orderId: string
-    let orderNumber: string
-    let tableNum = selectedTable?.number || null
-    let tableSec = selectedTable?.section || null
-    let currentOrderType = orderType
+    // Double-submit guard — ref check prevents race conditions
+    if (placingRef.current) return
+    placingRef.current = true
+    setPlacing(true)
 
-    if (addingToOrder) {
-      orderId = addingToOrder.id
-      orderNumber = addingToOrder.order_number
-      currentOrderType = addingToOrder.order_type as 'dine_in' | 'takeaway'
-    } else {
-      const { data: orderNum } = await supabase.rpc('generate_order_number')
+    try {
+      const supabase = createClient()
+      let orderId: string
+      let orderNumber: string
+      let tableNum = selectedTable?.number || null
+      let tableSec = selectedTable?.section || null
+      let currentOrderType = orderType
 
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          table_id: selectedTable?.id || null,
-          order_number: orderNum || `ORD-${Date.now()}`,
-          status: 'pending',
-          order_type: orderType,
-          waiter_id: profile?.id || null,
-        })
-        .select()
-        .single()
+      if (addingToOrder) {
+        orderId = addingToOrder.id
+        orderNumber = addingToOrder.order_number
+        currentOrderType = addingToOrder.order_type as 'dine_in' | 'takeaway'
+      } else {
+        const { data: orderNum } = await supabase.rpc('generate_order_number')
 
-      if (orderError || !order) {
-        toast.error('Failed to create order')
-        return
-      }
-      orderId = order.id
-      orderNumber = order.order_number
-    }
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            table_id: selectedTable?.id || null,
+            order_number: orderNum || `ORD-${Date.now()}`,
+            status: 'pending',
+            order_type: orderType,
+            waiter_id: profile?.id || null,
+          })
+          .select()
+          .single()
 
-    const orderItems = cart.map(item => ({
-      order_id: orderId,
-      menu_item_id: item.menu_item.id,
-      variant_id: item.variant?.id || null,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_price: item.total_price,
-      notes: item.notes || null,
-      kot_status: 'pending' as const,
-      station: item.menu_item.station,
-    }))
-
-    await supabase.from('order_items').insert(orderItems)
-
-    // Create KOT entries per station
-    const stationGroups = new Map<StationType, typeof orderItems>()
-    orderItems.forEach(item => {
-      const existing = stationGroups.get(item.station) || []
-      existing.push(item)
-      stationGroups.set(item.station, existing)
-    })
-
-    for (const [station, stationItems] of stationGroups) {
-      const { data: kotNum } = await supabase.rpc('generate_kot_number', { p_station: station })
-      const kotNumber = kotNum || `KOT-${Date.now()}`
-      await supabase.from('kot_entries').insert({
-        order_id: orderId,
-        station,
-        kot_number: kotNumber,
-        status: 'pending',
-      })
-
-      const printItems = stationItems.map(si => {
-        const cartItem = cart.find(c => c.menu_item.id === si.menu_item_id)
-        return {
-          name: cartItem?.menu_item.name || 'Unknown',
-          quantity: si.quantity,
-          variant: cartItem?.variant?.name,
-          notes: si.notes || undefined,
+        if (orderError || !order) {
+          toast.error('Failed to create order')
+          return
         }
+        orderId = order.id
+        orderNumber = order.order_number
+      }
+
+      const orderItems = cart.map(item => ({
+        order_id: orderId,
+        menu_item_id: item.menu_item.id,
+        variant_id: item.variant?.id || null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        notes: item.notes || null,
+        kot_status: 'pending' as const,
+        station: item.menu_item.station,
+      }))
+
+      await supabase.from('order_items').insert(orderItems)
+
+      // Create KOT entries per station
+      const stationGroups = new Map<StationType, typeof orderItems>()
+      orderItems.forEach(item => {
+        const existing = stationGroups.get(item.station) || []
+        existing.push(item)
+        stationGroups.set(item.station, existing)
       })
 
-      printKOT(
-        station,
-        kotNumber,
-        orderNumber,
-        tableNum,
-        tableSec,
-        currentOrderType as 'dine_in' | 'takeaway',
-        printItems,
-        undefined,
-        profile?.name || null,
-      ).catch(() => {
-        toast.error(`KOT print failed for ${station}`)
-      })
-    }
+      for (const [station, stationItems] of stationGroups) {
+        const { data: kotNum } = await supabase.rpc('generate_kot_number', { p_station: station })
+        const kotNumber = kotNum || `KOT-${Date.now()}`
+        await supabase.from('kot_entries').insert({
+          order_id: orderId,
+          station,
+          kot_number: kotNumber,
+          status: 'pending',
+        })
 
-    if (!addingToOrder && selectedTable) {
-      await supabase
-        .from('tables')
-        .update({ status: 'occupied', current_order_id: orderId })
-        .eq('id', selectedTable.id)
-    }
+        const printItems = stationItems.map(si => {
+          const cartItem = cart.find(c => c.menu_item.id === si.menu_item_id)
+          return {
+            name: cartItem?.menu_item.name || 'Unknown',
+            quantity: si.quantity,
+            variant: cartItem?.variant?.name,
+            notes: si.notes || undefined,
+          }
+        })
 
-    const action = addingToOrder ? 'Items added to' : 'Order'
-    toast.success(`${action} ${orderNumber} sent to kitchen!`)
-    setCart([])
-    setAddingToOrder(null)
-    setActiveOrder(null)
-    setView('tables')
-    setSelectedTable(null)
-    loadData()
+        printKOT(
+          station,
+          kotNumber,
+          orderNumber,
+          tableNum,
+          tableSec,
+          currentOrderType as 'dine_in' | 'takeaway',
+          printItems,
+          undefined,
+          profile?.name || null,
+        ).catch(() => {
+          toast.error(`KOT print failed for ${station}`)
+        })
+      }
+
+      if (!addingToOrder && selectedTable) {
+        await supabase
+          .from('tables')
+          .update({ status: 'occupied', current_order_id: orderId })
+          .eq('id', selectedTable.id)
+      }
+
+      const action = addingToOrder ? 'Items added to' : 'Order'
+      toast.success(`${action} ${orderNumber} sent to kitchen!`)
+      setConfirmDialogOpen(false)
+      setCart([])
+      setAddingToOrder(null)
+      setActiveOrder(null)
+      setView('tables')
+      setSelectedTable(null)
+      loadData()
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to place order')
+    } finally {
+      placingRef.current = false
+      setPlacing(false)
+    }
   }
 
   // Table transfer
@@ -585,7 +602,7 @@ export default function WaiterPage() {
 
   // ======== CONFIRM DIALOG (shared) ========
   const confirmDialog = (
-    <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+    <Dialog open={confirmDialogOpen} onOpenChange={(open) => { if (!placing) setConfirmDialogOpen(open) }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Confirm Order</DialogTitle>
@@ -618,14 +635,22 @@ export default function WaiterPage() {
             </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 h-12" onClick={() => setConfirmDialogOpen(false)}>
+            <Button variant="outline" className="flex-1 h-12" onClick={() => setConfirmDialogOpen(false)} disabled={placing}>
               Back
             </Button>
-            <Button className="flex-1 h-12 bg-amber-700 hover:bg-amber-800 font-bold" onClick={() => {
-              setConfirmDialogOpen(false)
-              placeOrder()
-            }}>
-              Confirm
+            <Button
+              className="flex-1 h-12 bg-amber-700 hover:bg-amber-800 font-bold"
+              onClick={placeOrder}
+              disabled={placing}
+            >
+              {placing ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Sending...
+                </span>
+              ) : (
+                'Confirm'
+              )}
             </Button>
           </div>
         </div>

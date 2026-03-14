@@ -230,9 +230,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
   let discountAmount = 0
   if (discountType === 'percent' && discountValue) {
-    discountAmount = Math.round(subtotal * parseFloat(discountValue) / 100 * 100) / 100
-  } else if (discountType === 'flat' && discountValue) {
-    discountAmount = parseFloat(discountValue) || 0
+    // Cap discount at 15%
+    const cappedPercent = Math.min(parseFloat(discountValue) || 0, 15)
+    discountAmount = Math.round(subtotal * cappedPercent / 100 * 100) / 100
   }
   discountAmount = Math.min(discountAmount, subtotal)
 
@@ -249,13 +249,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     ? getTableDisplayName(order.table)
     : 'Takeaway'
 
-  // Check if discount exceeds cashier threshold
-  const effectiveDiscountPercent = discountType === 'percent'
-    ? (parseFloat(discountValue) || 0)
-    : subtotal > 0 ? (discountAmount / subtotal) * 100 : 0
-  const needsDiscountAuth = userProfile?.role === 'cashier'
-    && discountType !== 'none'
-    && effectiveDiscountPercent > discountMaxPercent
+  // Discount is always password-protected
+  const effectiveDiscountPercent = parseFloat(discountValue) || 0
+  const needsDiscountAuth = discountType !== 'none'
+    && effectiveDiscountPercent > 0
     && !discountPinVerified
 
   async function verifyPassword(password: string): Promise<boolean> {
@@ -286,15 +283,16 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     await supabase.from('audit_logs').insert({
-      action: 'discount_override',
+      action: 'discount_applied',
       order_id: order?.id || null,
       performed_by: user?.id || null,
       details: {
-        discount_type: discountType,
+        discount_type: 'percent',
         discount_value: discountValue,
         discount_reason: discountReason,
         effective_percent: effectiveDiscountPercent.toFixed(1),
-        threshold: discountMaxPercent,
+        subtotal,
+        discount_amount: discountAmount,
       },
     })
 
@@ -1370,25 +1368,43 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   <div className="px-4 pb-3 space-y-2 border-t border-gray-100 pt-2.5">
                     <div className="flex gap-2">
                       <Button variant={discountType === 'none' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1 rounded-lg"
-                        onClick={() => { setDiscountType('none'); setDiscountValue('') }}>None</Button>
+                        onClick={() => { setDiscountType('none'); setDiscountValue(''); setDiscountPinVerified(false) }}>None</Button>
                       <Button variant={discountType === 'percent' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1 rounded-lg"
                         onClick={() => setDiscountType('percent')}>% Percent</Button>
-                      <Button variant={discountType === 'flat' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1 rounded-lg"
-                        onClick={() => setDiscountType('flat')}>₹ Flat</Button>
                     </div>
-                    {discountType !== 'none' && (
-                      <div className="flex gap-2">
-                        <Input type="number" placeholder={discountType === 'percent' ? 'Enter %' : '₹ amount'}
-                          value={discountValue} onChange={e => { setDiscountValue(e.target.value); setDiscountPinVerified(false) }}
-                          className="h-8 text-sm flex-1 rounded-lg" />
-                        <Input placeholder="Reason" value={discountReason}
-                          onChange={e => setDiscountReason(e.target.value)} className="h-8 text-sm flex-1 rounded-lg" />
+                    {discountType === 'percent' && (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input type="number" placeholder="Enter % (max 15)" min="0" max="15" step="1"
+                            value={discountValue} onChange={e => {
+                              const v = parseFloat(e.target.value)
+                              if (v > 15) { setDiscountValue('15'); } else { setDiscountValue(e.target.value); }
+                              setDiscountPinVerified(false)
+                            }}
+                            className="h-8 text-sm flex-1 rounded-lg" />
+                          <Input placeholder="Reason" value={discountReason}
+                            onChange={e => setDiscountReason(e.target.value)} className="h-8 text-sm flex-1 rounded-lg" />
+                        </div>
+                        {/* Quick percent buttons */}
+                        <div className="flex gap-1.5">
+                          {[5, 10, 15].map(p => (
+                            <button key={p} onClick={() => { setDiscountValue(String(p)); setDiscountPinVerified(false) }}
+                              className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                                discountValue === String(p) ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300'
+                              }`}>{p}%</button>
+                          ))}
+                        </div>
+                        {needsDiscountAuth && (
+                          <p className="text-xs text-amber-600 flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-lg">
+                            <Lock className="h-3.5 w-3.5 shrink-0" />PIN required to apply discount
+                          </p>
+                        )}
+                        {discountPinVerified && (
+                          <p className="text-xs text-emerald-600 flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg">
+                            <Check className="h-3.5 w-3.5 shrink-0" />Discount authorized
+                          </p>
+                        )}
                       </div>
-                    )}
-                    {needsDiscountAuth && (
-                      <p className="text-xs text-amber-600 flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-lg">
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />PIN required — {effectiveDiscountPercent.toFixed(0)}% exceeds {discountMaxPercent}% limit
-                      </p>
                     )}
                   </div>
                 </details>

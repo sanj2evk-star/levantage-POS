@@ -100,11 +100,11 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   const [discountPinVerifying, setDiscountPinVerifying] = useState(false)
   const [userProfile, setUserProfile] = useState<{ role: string; name: string } | null>(null)
 
-  // NC (No Charge) state
-  const [ncDialogOpen, setNcDialogOpen] = useState(false)
+  // NC (No Charge) state — inline authorization (no sub-dialog)
   const [ncReason, setNcReason] = useState('')
   const [ncPin, setNcPin] = useState('')
   const [ncVerifying, setNcVerifying] = useState(false)
+  const [ncAuthorized, setNcAuthorized] = useState(false)
 
   // Cancel item state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
@@ -195,6 +195,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       setCashReceived('')
       setNcReason('')
       setNcPin('')
+      setNcAuthorized(false)
       setCollectBalanceMode(false)
       setCollectPaymentMode('')
       setCollectReferenceNumber('')
@@ -838,13 +839,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       return
     }
 
-    // Set NC as payment mode and close dialog
-    setPaymentMode('nc')
-    setSplitPayments([])
-    setReferenceNumber('')
-    setNcDialogOpen(false)
+    // Mark NC as authorized — settle button will now work
+    setNcAuthorized(true)
     setNcVerifying(false)
-    toast.success('NC authorized')
+    toast.success('NC authorized — press Settle to complete')
   }
 
   function openReprintDialog() {
@@ -1224,7 +1222,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       <Dialog open={open} onOpenChange={(isOpen) => {
         // Prevent main dialog from closing when a sub-dialog is open
         // (base-ui treats portaled sub-dialog clicks as "outside" the main dialog)
-        if (!isOpen && (ncDialogOpen || cancelDialogOpen || discountPinDialogOpen || scPinDialogOpen || transferDialogOpen || reassignDialogOpen)) return
+        if (!isOpen && (cancelDialogOpen || discountPinDialogOpen || scPinDialogOpen || transferDialogOpen || reassignDialogOpen)) return
         if (!isOpen) onClose()
       }}>
         <DialogContent className="!w-[92vw] !max-w-[1400px] !h-[56vw] !max-h-[85vh] !grid-rows-none !flex !flex-col !gap-0 !p-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
@@ -1448,7 +1446,11 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                   ].map(pm => (
                     <button key={pm.mode}
                       onClick={() => {
-                        if (pm.mode === 'nc') { setNcDialogOpen(true); setNcReason(''); setNcPin(''); return }
+                        if (pm.mode === 'nc') {
+                          setPaymentMode('nc'); setSplitPayments([]); setReferenceNumber(''); setCashReceived('')
+                          setNcReason(''); setNcPin(''); setNcAuthorized(false)
+                          return
+                        }
                         if (pm.mode === 'split') {
                           setPaymentMode('split'); setReferenceNumber(''); setCashReceived('')
                           if (splitPayments.length === 0) setSplitPayments([
@@ -1458,6 +1460,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                           return
                         }
                         setPaymentMode(pm.mode); setSplitPayments([]); setReferenceNumber(''); setCashReceived('')
+                        setNcAuthorized(false)
                       }}
                       className={`flex flex-col items-center gap-1.5 py-3.5 rounded-xl border-2 transition-all text-sm font-semibold ${
                         paymentMode === pm.mode
@@ -1609,13 +1612,61 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                     </div>
                   )
                 })()}
+
+                {/* NC (No Charge) inline authorization */}
+                {paymentMode === 'nc' && (
+                  <div className="bg-amber-50 rounded-xl p-4 space-y-3 border border-amber-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-amber-800">No Charge (NC)</span>
+                      <span className="text-xl font-bold text-amber-800">₹{total.toFixed(2)}</span>
+                    </div>
+                    {ncAuthorized ? (
+                      <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-emerald-100 border border-emerald-200">
+                        <Check className="h-4 w-4 text-emerald-600" />
+                        <span className="text-sm font-semibold text-emerald-700">NC Authorized</span>
+                        <span className="text-xs text-emerald-600 ml-auto">Reason: {ncReason}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="text-xs font-semibold text-amber-700 mb-1.5 block uppercase tracking-wider">Reason for NC *</label>
+                          <Textarea
+                            placeholder="e.g., Owner's guest, Staff meal, Customer complaint..."
+                            value={ncReason}
+                            onChange={(e) => setNcReason(e.target.value)}
+                            rows={2}
+                            className="bg-white border-amber-300 focus-visible:ring-amber-400 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-amber-700 mb-1.5 block uppercase tracking-wider">Security PIN</label>
+                          <Input
+                            type="password"
+                            placeholder="Enter PIN"
+                            value={ncPin}
+                            onChange={(e) => setNcPin(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && confirmNcPayment()}
+                            className="h-11 bg-white border-amber-300 focus-visible:ring-amber-400 rounded-lg"
+                          />
+                        </div>
+                        <button
+                          onClick={confirmNcPayment}
+                          disabled={ncVerifying || !ncReason.trim()}
+                          className="w-full h-10 rounded-lg text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-amber-600 hover:bg-amber-700 text-white"
+                        >
+                          {ncVerifying ? 'Verifying...' : 'Authorize NC'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Settle button pinned at bottom */}
               <div className="px-8 py-3 border-t border-gray-100 bg-white shrink-0">
                 <button
                   onClick={settleBill}
-                  disabled={settling || !paymentMode}
+                  disabled={settling || !paymentMode || (paymentMode === 'nc' && !ncAuthorized)}
                   className="w-full h-13 rounded-xl text-lg font-bold tracking-wide transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-lg shadow-green-600/30 active:scale-[0.98]"
                 >
                   {settling ? 'Settling...' : `Settle — ₹${total.toFixed(2)}`}
@@ -1784,55 +1835,6 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           </div>
         </DialogContent>
       </Dialog>
-      {/* NC (No Charge) Authorization Dialog */}
-      <Dialog open={ncDialogOpen} onOpenChange={setNcDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5 text-amber-600" />
-              No Charge (NC)
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Mark order <strong>{order?.order_number}</strong> as complimentary (₹{total.toFixed(2)}).
-            </p>
-            <div className="space-y-2">
-              <Label>Reason for NC *</Label>
-              <Textarea
-                placeholder="e.g., Owner's guest, Staff meal, Customer complaint resolution..."
-                value={ncReason}
-                onChange={(e) => setNcReason(e.target.value)}
-                rows={2}
-                autoFocus
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Security PIN</Label>
-              <Input
-                type="password"
-                placeholder="Enter PIN"
-                value={ncPin}
-                onChange={(e) => setNcPin(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && confirmNcPayment()}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setNcDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={confirmNcPayment}
-                disabled={ncVerifying || !ncReason.trim()}
-              >
-                {ncVerifying ? 'Verifying...' : 'Authorize NC'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Service Charge Removal PIN Dialog */}
       <Dialog open={scPinDialogOpen} onOpenChange={setScPinDialogOpen}>
         <DialogContent className="max-w-sm">

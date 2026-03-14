@@ -1216,16 +1216,16 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-5xl w-[96vw] max-h-[94vh] flex flex-col gap-0 p-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
+        <DialogContent className="w-[92vw] max-w-[1400px] h-[56vw] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
           {/* ── HEADER ── */}
-          <div className="px-6 pt-5 pb-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 shrink-0">
+          <div className="px-8 py-3 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 shrink-0">
             <div className="flex items-center justify-between pr-8">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-amber-600 text-white flex items-center justify-center text-lg font-bold shadow-md shadow-amber-200">
+                <div className="h-11 w-11 rounded-xl bg-amber-600 text-white flex items-center justify-center text-base font-bold shadow-md shadow-amber-200">
                   {tableName.replace(/[^A-Z0-9]/gi, '').slice(0, 3)}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 tracking-tight">{tableName}</h2>
+                  <h2 className="text-lg font-bold text-gray-900 tracking-tight">{tableName}</h2>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-gray-500 font-mono">{order.order_number}</span>
                     <span className="text-gray-300">·</span>
@@ -1274,8 +1274,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           {/* ── SIDE-BY-SIDE BODY ── */}
           <div className="flex-1 flex min-h-0 overflow-hidden bg-gray-50/30">
             {/* LEFT PANEL — Bill Items & Charges */}
-            <div className="w-[42%] border-r border-gray-200 overflow-y-auto bg-white">
-              <div className="px-5 py-4 space-y-4">
+            <div className="w-[40%] border-r border-gray-200 overflow-y-auto bg-white">
+              <div className="px-6 py-4 space-y-3">
                 {/* Items section header */}
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Order Items</p>
@@ -1283,19 +1283,19 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 </div>
 
                 {/* Items list */}
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {activeItems.map(item => (
-                    <div key={item.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                    <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors group">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={`h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 ${item.menu_item?.is_veg ? 'border-green-500' : 'border-red-500'}`}>
-                          <span className={`h-2 w-2 rounded-full ${item.menu_item?.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <div className={`h-4.5 w-4.5 rounded border-2 flex items-center justify-center shrink-0 ${item.menu_item?.is_veg ? 'border-green-500' : 'border-red-500'}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${item.menu_item?.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{item.menu_item?.name}</p>
-                          <p className="text-xs text-gray-400">Qty: {item.quantity} × ₹{item.unit_price.toFixed(0)}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-800">{item.menu_item?.name}</p>
+                          <p className="text-[11px] text-gray-400">{item.quantity} × ₹{item.unit_price.toFixed(0)}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
                         <span className="text-sm font-semibold text-gray-700 tabular-nums">₹{item.total_price.toFixed(0)}</span>
                         {order.status !== 'completed' && (
                           <button onClick={() => openCancelDialog(item.id, item.menu_item?.name || 'Item')}
@@ -1307,7 +1307,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                     </div>
                   ))}
                   {localItems.filter(i => i.is_cancelled).map(item => (
-                    <div key={item.id} className="flex justify-between py-1.5 px-3 text-xs text-gray-400 line-through">
+                    <div key={item.id} className="flex justify-between py-1 px-3 text-xs text-gray-400 line-through">
                       <span>{item.quantity}× {item.menu_item?.name}</span>
                       <span>₹{item.total_price.toFixed(0)}</span>
                     </div>
@@ -1318,14 +1318,14 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 <div className="border-t border-dashed border-gray-200" />
 
                 {/* Charges breakdown */}
-                <div className="space-y-2.5 px-1">
+                <div className="space-y-2 px-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Subtotal</span>
                     <span className="font-medium text-gray-700 tabular-nums">₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm items-center">
-                    <span className="flex items-center gap-2.5 text-gray-500">
-                      Service Charge ({SERVICE_CHARGE_PERCENT}%)
+                    <span className="flex items-center gap-2 text-gray-500">
+                      SC ({SERVICE_CHARGE_PERCENT}%)
                       <button
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-all ${
                           serviceChargeRemoved
@@ -1354,20 +1354,20 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 </div>
 
                 {/* Grand Total */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl px-4 py-3 border border-amber-200">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl px-4 py-2.5 border border-amber-200">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-800 text-base">Grand Total</span>
+                    <span className="font-bold text-gray-800">Grand Total</span>
                     <span className="font-black text-2xl text-amber-700 tabular-nums">₹{total.toFixed(2)}</span>
                   </div>
                 </div>
 
                 {/* Discount Toggle */}
                 <details className="group rounded-xl border border-gray-200 bg-white overflow-hidden">
-                  <summary className="flex items-center justify-between cursor-pointer px-4 py-3 text-sm text-gray-500 hover:bg-gray-50 transition-colors select-none">
-                    <span className="flex items-center gap-2 font-medium"><Percent className="h-4 w-4 text-gray-400" /> Discount</span>
+                  <summary className="flex items-center justify-between cursor-pointer px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors select-none">
+                    <span className="flex items-center gap-2 font-medium"><Percent className="h-3.5 w-3.5 text-gray-400" /> Discount</span>
                     <span className="text-xs text-gray-400 group-open:rotate-90 transition-transform">▸</span>
                   </summary>
-                  <div className="px-4 pb-3.5 space-y-2.5 border-t border-gray-100 pt-3">
+                  <div className="px-4 pb-3 space-y-2 border-t border-gray-100 pt-2.5">
                     <div className="flex gap-2">
                       <Button variant={discountType === 'none' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1 rounded-lg"
                         onClick={() => { setDiscountType('none'); setDiscountValue('') }}>None</Button>
@@ -1380,14 +1380,14 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                       <div className="flex gap-2">
                         <Input type="number" placeholder={discountType === 'percent' ? 'Enter %' : '₹ amount'}
                           value={discountValue} onChange={e => { setDiscountValue(e.target.value); setDiscountPinVerified(false) }}
-                          className="h-9 text-sm flex-1 rounded-lg" />
-                        <Input placeholder="Reason (optional)" value={discountReason}
-                          onChange={e => setDiscountReason(e.target.value)} className="h-9 text-sm flex-1 rounded-lg" />
+                          className="h-8 text-sm flex-1 rounded-lg" />
+                        <Input placeholder="Reason" value={discountReason}
+                          onChange={e => setDiscountReason(e.target.value)} className="h-8 text-sm flex-1 rounded-lg" />
                       </div>
                     )}
                     {needsDiscountAuth && (
-                      <p className="text-xs text-amber-600 flex items-center gap-1.5 bg-amber-50 px-3 py-2 rounded-lg">
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />PIN required — discount {effectiveDiscountPercent.toFixed(0)}% exceeds {discountMaxPercent}% limit
+                      <p className="text-xs text-amber-600 flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-lg">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />PIN required — {effectiveDiscountPercent.toFixed(0)}% exceeds {discountMaxPercent}% limit
                       </p>
                     )}
                   </div>
@@ -1395,27 +1395,27 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
                 {/* Print Preview */}
                 <button onClick={printPreviewBill} disabled={printing}
-                  className="w-full flex items-center justify-center gap-2 h-11 rounded-xl border-2 border-dashed border-gray-300 text-gray-500 font-medium text-sm hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50/50 transition-all disabled:opacity-50">
+                  className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border-2 border-dashed border-gray-300 text-gray-500 font-medium text-sm hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50/50 transition-all disabled:opacity-50">
                   <Printer className="h-4 w-4" />
-                  {printing ? 'Printing...' : 'Print Preview Bill'}
+                  {printing ? 'Printing...' : 'Print Preview'}
                 </button>
               </div>
             </div>
 
             {/* RIGHT PANEL — Payment & Settlement */}
-            <div className="w-[58%] flex flex-col min-h-0 bg-white">
-              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            <div className="w-[60%] flex flex-col min-h-0 bg-white">
+              <div className="flex-1 overflow-y-auto px-8 py-4 space-y-4">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Select Payment</p>
 
-                {/* Payment method grid */}
-                <div className="grid grid-cols-3 gap-2.5">
+                {/* Payment method grid — 6 across on wide dialog */}
+                <div className="grid grid-cols-6 gap-2.5">
                   {[
-                    { mode: 'cash' as const, icon: Banknote, label: 'Cash', color: 'green' },
-                    { mode: 'upi' as const, icon: Smartphone, label: 'UPI', color: 'blue' },
-                    { mode: 'card' as const, icon: CreditCard, label: 'Card', color: 'indigo' },
-                    { mode: 'zomato' as const, icon: Store, label: 'Zomato', color: 'red' },
-                    { mode: 'split' as const, icon: Split, label: 'Split', color: 'purple' },
-                    { mode: 'nc' as const, icon: Gift, label: 'NC', color: 'amber' },
+                    { mode: 'cash' as const, icon: Banknote, label: 'Cash' },
+                    { mode: 'upi' as const, icon: Smartphone, label: 'UPI' },
+                    { mode: 'card' as const, icon: CreditCard, label: 'Card' },
+                    { mode: 'zomato' as const, icon: Store, label: 'Zomato' },
+                    { mode: 'split' as const, icon: Split, label: 'Split' },
+                    { mode: 'nc' as const, icon: Gift, label: 'NC' },
                   ].map(pm => (
                     <button key={pm.mode}
                       onClick={() => {
@@ -1430,9 +1430,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                         }
                         setPaymentMode(pm.mode); setSplitPayments([]); setReferenceNumber(''); setCashReceived('')
                       }}
-                      className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all text-sm font-semibold ${
+                      className={`flex flex-col items-center gap-1.5 py-3.5 rounded-xl border-2 transition-all text-sm font-semibold ${
                         paymentMode === pm.mode
-                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-100 scale-[1.02]'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-100 scale-[1.03]'
                           : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm'
                       }`}
                     >
@@ -1583,11 +1583,11 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
               </div>
 
               {/* Settle button pinned at bottom */}
-              <div className="px-6 py-4 border-t border-gray-100 bg-white shrink-0">
+              <div className="px-8 py-3 border-t border-gray-100 bg-white shrink-0">
                 <button
                   onClick={settleBill}
                   disabled={settling || !paymentMode}
-                  className="w-full h-14 rounded-xl text-lg font-bold tracking-wide transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-lg shadow-green-600/30 active:scale-[0.98]"
+                  className="w-full h-13 rounded-xl text-lg font-bold tracking-wide transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-lg shadow-green-600/30 active:scale-[0.98]"
                 >
                   {settling ? 'Settling...' : `Settle — ₹${total.toFixed(2)}`}
                 </button>

@@ -928,23 +928,8 @@ export default function CashierPage() {
         })
       }
 
-      // On FIRST print → free the table for reuse by captains
-      // Table becomes available in waiter app, but unsettled order still shows in cashier
-      if (currentPrintCount === 0 && orderData.order_type === 'dine_in') {
-        await supabase.from('tables')
-          .update({ status: 'available', current_order_id: null })
-          .eq('id', table.id)
-        // Mark order as served (it's ready for settlement)
-        await supabase.from('orders')
-          .update({ status: 'served' })
-          .eq('id', orderData.id)
-      }
-
       setPrintedTables(prev => new Set(prev).add(table.id))
-      toast.success(currentPrintCount >= 1 ? 'Bill reprinted (flagged)' : 'Customer copy printed — table freed')
-      // Refresh tables + unsettled list
-      loadTables()
-      loadUnsettledOrders()
+      toast.success(currentPrintCount >= 1 ? 'Bill reprinted (flagged)' : 'Customer copy printed')
     } catch {
       toast.error('Print failed — check printer')
     } finally {

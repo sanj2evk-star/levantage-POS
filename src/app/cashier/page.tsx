@@ -280,9 +280,8 @@ export default function CashierPage() {
     const businessDate = getCurrentBusinessDate(bh)
     const { start: dayStart } = getBusinessDayRange(businessDate, bh)
 
-    // Find orders that have been printed (bill_print_count > 0) OR have a bill record,
-    // are not completed, and whose table has been reassigned to a new order.
-    // We fetch broadly and filter in JS for robustness.
+    // Find orders where bill was printed (bill_print_count > 0),
+    // not completed, and table was reassigned to a new order.
     const { data } = await supabase
       .from('orders')
       .select(`
@@ -292,9 +291,9 @@ export default function CashierPage() {
         waiter:profiles!waiter_id(name),
         bill:bills(id, payment_status, total)
       `)
+      .gt('bill_print_count', 0)
       .in('status', ['pending', 'preparing', 'ready', 'served'])
       .gte('created_at', dayStart)
-      .not('table_id', 'is', null)
       .order('created_at', { ascending: false })
 
     if (data) {

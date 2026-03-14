@@ -37,6 +37,7 @@ import {
   LayoutGrid,
   Clock,
   MessageSquare,
+  ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -62,10 +63,10 @@ interface TableOrderInfo {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins} min`
+  if (mins < 1) return 'now'
+  if (mins < 60) return `${mins}m`
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs} hr ${mins % 60} min`
+  if (hrs < 24) return `${hrs}h ${mins % 60}m`
   return `${Math.floor(hrs / 24)}d`
 }
 
@@ -461,9 +462,9 @@ export default function WaiterPage() {
   if (isLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b px-4 py-3 flex items-center gap-2">
-          <Coffee className="h-5 w-5 text-amber-700" />
-          <span className="font-semibold">Captain</span>
+        <header className="bg-amber-700 text-white px-4 py-3.5 flex items-center gap-2">
+          <Coffee className="h-5 w-5" />
+          <span className="font-semibold text-base">Captain</span>
         </header>
         <div className="p-4 space-y-6">
           {[1, 2, 3].map(i => (
@@ -471,7 +472,7 @@ export default function WaiterPage() {
               <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
               <div className="grid grid-cols-3 gap-3">
                 {[1, 2, 3, 4, 5, 6].map(j => (
-                  <div key={j} className="h-20 bg-gray-200 rounded-xl animate-pulse" />
+                  <div key={j} className="h-24 bg-gray-200 rounded-xl animate-pulse" />
                 ))}
               </div>
             </div>
@@ -483,92 +484,102 @@ export default function WaiterPage() {
 
   // ======== CART FOOTER (shared between categories + menu views) ========
   const cartFooter = cart.length > 0 && (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-20">
-      <Sheet>
-        <SheetTrigger
-          render={<Button className="w-full h-12 bg-amber-700 hover:bg-amber-800 justify-between" />}
-        >
-          <span className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            {itemCount} items
-          </span>
-          <span>₹{subtotal.toFixed(2)} →</span>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[70vh]">
-          <SheetHeader>
-            <SheetTitle>
-              {addingToOrder
-                ? `Add to ${addingToOrder.order_number}`
-                : selectedTable ? getTableDisplayName(selectedTable) : 'Takeaway'} - {itemCount} items
-            </SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 space-y-3 overflow-y-auto max-h-[40vh]">
-            {cart.map((item, index) => (
-              <div key={index} className="bg-gray-50 rounded-lg p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.menu_item.name}</p>
-                    <p className="text-xs text-gray-500">₹{item.unit_price}</p>
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-20 pb-[env(safe-area-inset-bottom)]">
+      <div className="p-3">
+        <Sheet>
+          <SheetTrigger
+            render={<Button className="w-full h-14 bg-amber-700 hover:bg-amber-800 justify-between text-base rounded-xl" />}
+          >
+            <span className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              <span className="font-bold">{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
+            </span>
+            <span className="flex items-center gap-1 font-bold">
+              ₹{Math.round(subtotal)} <ChevronRight className="h-4 w-4" />
+            </span>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[75vh] rounded-t-2xl">
+            <SheetHeader>
+              <SheetTitle className="text-lg">
+                {addingToOrder
+                  ? `Add to ${addingToOrder.order_number}`
+                  : selectedTable ? getTableDisplayName(selectedTable) : 'Takeaway'} — {itemCount} items
+              </SheetTitle>
+            </SheetHeader>
+            <div className="mt-3 space-y-2 overflow-y-auto flex-1" style={{ maxHeight: 'calc(75vh - 200px)' }}>
+              {cart.map((item, index) => (
+                <div key={index} className="bg-gray-50 rounded-xl p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold leading-tight">{item.menu_item.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">₹{item.unit_price} each</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => updateQuantity(index, -1)}
+                        className="h-8 w-8 rounded-lg border border-gray-300 bg-white flex items-center justify-center active:scale-95"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="text-sm font-bold w-7 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(index, 1)}
+                        className="h-8 w-8 rounded-lg border border-gray-300 bg-white flex items-center justify-center active:scale-95"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-sm font-bold w-14 text-right shrink-0">₹{Math.round(item.total_price)}</p>
+                    <button
+                      onClick={() => removeFromCart(index)}
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 shrink-0 active:scale-95"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="h-7 w-7"
-                      onClick={() => updateQuantity(index, -1)}>
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="text-sm font-semibold w-6 text-center">{item.quantity}</span>
-                    <Button variant="outline" size="icon" className="h-7 w-7"
-                      onClick={() => updateQuantity(index, 1)}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <p className="text-sm font-semibold">₹{item.total_price}</p>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400"
-                    onClick={() => removeFromCart(index)}>
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                  {/* Item note */}
+                  {(item.notes || noteOpenIndices.has(index)) ? (
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <MessageSquare className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+                      <Input
+                        autoFocus={noteOpenIndices.has(index)}
+                        value={item.notes}
+                        onChange={(e) => updateNote(index, e.target.value)}
+                        onBlur={() => {
+                          if (!item.notes.trim()) {
+                            updateNote(index, '')
+                            setNoteOpenIndices(prev => { const next = new Set(prev); next.delete(index); return next })
+                          }
+                        }}
+                        placeholder="e.g., no onion, extra spicy..."
+                        className="h-8 text-xs bg-white flex-1"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setNoteOpenIndices(prev => new Set(prev).add(index))}
+                      className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-amber-700"
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      Add note
+                    </button>
+                  )}
                 </div>
-                {/* Item note */}
-                {(item.notes || noteOpenIndices.has(index)) ? (
-                  <div className="mt-2 flex items-center gap-1">
-                    <MessageSquare className="h-3 w-3 text-amber-600 flex-shrink-0" />
-                    <Input
-                      autoFocus={noteOpenIndices.has(index)}
-                      value={item.notes}
-                      onChange={(e) => updateNote(index, e.target.value)}
-                      onBlur={() => {
-                        if (!item.notes.trim()) {
-                          updateNote(index, '')
-                          setNoteOpenIndices(prev => { const next = new Set(prev); next.delete(index); return next })
-                        }
-                      }}
-                      placeholder="e.g., no onion, extra spicy..."
-                      className="h-7 text-xs bg-white flex-1"
-                    />
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setNoteOpenIndices(prev => new Set(prev).add(index))}
-                    className="mt-1.5 flex items-center gap-1 text-[11px] text-gray-400 hover:text-amber-700"
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                    Add note
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-4 border-t space-y-3">
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total</span>
-              <span>₹{subtotal.toFixed(2)}</span>
+              ))}
             </div>
-            <Button className="w-full h-12 bg-amber-700 hover:bg-amber-800 text-base"
-              onClick={handlePlaceOrder}>
-              {addingToOrder ? `Add Items - ₹${subtotal.toFixed(2)}` : 'Send to Kitchen'}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+            <div className="mt-3 pt-3 border-t space-y-3">
+              <div className="flex justify-between text-lg font-bold">
+                <span>Total</span>
+                <span className="text-amber-700">₹{Math.round(subtotal)}</span>
+              </div>
+              <Button className="w-full h-14 bg-amber-700 hover:bg-amber-800 text-base font-bold rounded-xl"
+                onClick={handlePlaceOrder}>
+                {addingToOrder ? `Add Items — ₹${Math.round(subtotal)}` : 'Send to Kitchen'}
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
     </div>
   )
 
@@ -585,32 +596,32 @@ export default function WaiterPage() {
               ? `Add ${itemCount} items to ${addingToOrder.order_number}?`
               : `Place order for ${selectedTable ? getTableDisplayName(selectedTable) : 'Takeaway'}?`}
           </p>
-          <div className="bg-gray-50 rounded-lg p-3 space-y-1 max-h-48 overflow-y-auto">
+          <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 max-h-52 overflow-y-auto">
             {cart.map((item, i) => (
               <div key={i}>
                 <div className="flex justify-between text-sm">
-                  <span>{item.quantity}x {item.menu_item.name}</span>
-                  <span>₹{item.total_price}</span>
+                  <span className="flex-1 mr-2">{item.quantity}x {item.menu_item.name}</span>
+                  <span className="font-medium shrink-0">₹{Math.round(item.total_price)}</span>
                 </div>
                 {item.notes?.trim() && (
-                  <p className="text-[11px] text-amber-600 ml-4 flex items-center gap-1">
-                    <MessageSquare className="h-2.5 w-2.5" />
+                  <p className="text-xs text-amber-600 ml-4 flex items-center gap-1 mt-0.5">
+                    <MessageSquare className="h-2.5 w-2.5 shrink-0" />
                     {item.notes.trim()}
                   </p>
                 )}
               </div>
             ))}
             <Separator className="my-2" />
-            <div className="flex justify-between font-bold">
+            <div className="flex justify-between font-bold text-base">
               <span>Total</span>
-              <span>₹{subtotal.toFixed(2)}</span>
+              <span>₹{Math.round(subtotal)}</span>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setConfirmDialogOpen(false)}>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1 h-12" onClick={() => setConfirmDialogOpen(false)}>
               Back
             </Button>
-            <Button className="flex-1 bg-amber-700 hover:bg-amber-800" onClick={() => {
+            <Button className="flex-1 h-12 bg-amber-700 hover:bg-amber-800 font-bold" onClick={() => {
               setConfirmDialogOpen(false)
               placeOrder()
             }}>
@@ -629,36 +640,39 @@ export default function WaiterPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <header className="bg-amber-700 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+        <header className="bg-amber-700 text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <button onClick={() => setDrawerOpen(true)} className="p-1">
+            <button onClick={() => setDrawerOpen(true)} className="p-1.5 -ml-1 rounded-lg hover:bg-amber-600 active:scale-95">
               <Menu className="h-5 w-5" />
             </button>
             <div>
-              <p className="font-semibold text-sm">All Tables</p>
-              <p className="text-[10px] text-amber-100">{occupiedCount} occupied / {tables.length} total</p>
+              <p className="font-bold text-base leading-tight">Tables</p>
+              <p className="text-xs text-amber-200 mt-0.5">{occupiedCount} occupied / {tables.length} total</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {profile?.name && (
+              <span className="text-xs text-amber-200 mr-1">{profile.name}</span>
+            )}
             {(profile?.role === 'admin' || profile?.role === 'manager') && (
               <a href="/admin">
-                <Button variant="ghost" size="sm" className="text-white hover:bg-amber-800">Admin</Button>
+                <Button variant="ghost" size="sm" className="text-white hover:bg-amber-600 text-xs">Admin</Button>
               </a>
             )}
           </div>
         </header>
 
         {/* Table grid */}
-        <div className="p-4 space-y-6 pb-24">
+        <div className="p-3 space-y-5 pb-24">
           {groupTablesByDisplayGroup(tables).map(group => {
             const sectionOccupied = group.tables.filter(t => t.status === 'occupied').length
             return (
               <div key={group.group}>
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="font-semibold text-gray-700">{group.label}</h2>
-                  <span className="text-xs text-gray-400">{sectionOccupied}/{group.tables.length}</span>
+                <div className="flex items-center gap-2 mb-2.5 px-1">
+                  <h2 className="font-bold text-sm text-gray-700">{group.label}</h2>
+                  <span className="text-xs text-gray-400 font-medium">{sectionOccupied}/{group.tables.length}</span>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-2.5">
                   {group.tables.map(table => {
                     const isOccupied = table.status === 'occupied'
                     const info = table.current_order_id ? tableOrderInfo.get(table.current_order_id) : null
@@ -667,31 +681,43 @@ export default function WaiterPage() {
                       <button
                         key={table.id}
                         onClick={() => selectTable(table)}
-                        className={`relative p-2 rounded-lg text-center border-2 transition-all active:scale-95 min-h-[68px] ${
+                        className={`relative p-3 rounded-xl text-center border-2 transition-all active:scale-95 min-h-[88px] flex flex-col items-center justify-center ${
                           isOccupied
-                            ? 'border-red-300 bg-red-50'
+                            ? 'border-transparent bg-amber-700 text-white shadow-sm'
                             : table.status === 'reserved'
                             ? 'border-yellow-300 bg-yellow-50'
                             : 'border-gray-200 bg-white'
                         }`}
                       >
-                        {/* Timer badge for occupied */}
-                        {isOccupied && info?.createdAt && (
-                          <span className="absolute top-1 right-1 text-[9px] text-gray-400 flex items-center gap-0.5">
-                            <Clock className="h-2.5 w-2.5" />
-                            {timeAgo(info.createdAt)}
-                          </span>
-                        )}
-                        <p className={`text-sm font-bold ${isOccupied ? 'text-red-700' : 'text-gray-400'}`}>
+                        <p className={`text-xl font-bold leading-none ${
+                          isOccupied ? 'text-white' : 'text-gray-400'
+                        }`}>
                           {getTableDisplayName(table)}
                         </p>
                         {isOccupied && info ? (
-                          <div className="mt-0.5">
-                            <p className="text-xs font-semibold text-red-600">₹{info.total}</p>
-                            <p className="text-[10px] text-gray-500">{info.itemCount} items</p>
+                          <div className="mt-1.5 w-full">
+                            <p className="text-base font-bold text-white leading-none">
+                              ₹{Math.round(info.total).toLocaleString('en-IN')}
+                            </p>
+                            <div className="flex items-center justify-center gap-1.5 mt-1 text-amber-200">
+                              <span className="text-[11px]">{info.itemCount} items</span>
+                              {info.createdAt && (
+                                <>
+                                  <span className="text-amber-400">·</span>
+                                  <span className="text-[11px] flex items-center gap-0.5">
+                                    <Clock className="h-2.5 w-2.5" />
+                                    {timeAgo(info.createdAt)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         ) : (
-                          <p className="text-[10px] text-gray-400 mt-0.5 capitalize">{table.status}</p>
+                          <p className={`text-xs mt-1 capitalize ${
+                            table.status === 'reserved' ? 'text-yellow-700' : 'text-gray-400'
+                          }`}>
+                            {table.status === 'available' ? '' : table.status}
+                          </p>
                         )}
                       </button>
                     )
@@ -705,9 +731,10 @@ export default function WaiterPage() {
         {/* FAB for takeaway */}
         <button
           onClick={startTakeaway}
-          className="fixed bottom-6 right-6 z-20 h-14 w-14 rounded-full bg-amber-700 text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform hover:bg-amber-800"
+          className="fixed bottom-6 right-4 z-20 h-14 px-5 rounded-full bg-amber-700 text-white shadow-lg flex items-center gap-2 active:scale-95 transition-transform hover:bg-amber-800 pb-[env(safe-area-inset-bottom)]"
         >
-          <Plus className="h-7 w-7" />
+          <Plus className="h-5 w-5" />
+          <span className="font-bold text-sm">Takeaway</span>
         </button>
 
         {/* Hamburger drawer */}
@@ -717,11 +744,11 @@ export default function WaiterPage() {
               {/* Profile section */}
               <div className="px-2">
                 <div className="flex items-center gap-3 mb-1">
-                  <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <div className="h-11 w-11 rounded-full bg-amber-100 flex items-center justify-center">
                     <Coffee className="h-5 w-5 text-amber-700" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">{profile?.name || 'Captain'}</p>
+                    <p className="font-bold text-base">{profile?.name || 'Captain'}</p>
                     <p className="text-xs text-gray-400 capitalize">{profile?.role}</p>
                   </div>
                 </div>
@@ -733,7 +760,7 @@ export default function WaiterPage() {
               <div className="space-y-1">
                 <button
                   onClick={startTakeaway}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-100 text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-gray-100 text-left transition-colors active:scale-[0.98]"
                 >
                   <UtensilsCrossed className="h-5 w-5 text-gray-500" />
                   <span className="text-sm font-medium">New Takeaway</span>
@@ -741,7 +768,7 @@ export default function WaiterPage() {
 
                 <button
                   onClick={() => { setDrawerOpen(false) }}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-100 text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-gray-100 text-left transition-colors active:scale-[0.98]"
                 >
                   <LayoutGrid className="h-5 w-5 text-gray-500" />
                   <span className="text-sm font-medium">All Tables</span>
@@ -753,7 +780,7 @@ export default function WaiterPage() {
               <div>
                 <button
                   onClick={() => { setDrawerOpen(false); signOut() }}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-red-50 text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-red-50 text-left transition-colors active:scale-[0.98]"
                 >
                   <LogOut className="h-5 w-5 text-red-500" />
                   <span className="text-sm font-medium text-red-600">Logout</span>
@@ -769,18 +796,31 @@ export default function WaiterPage() {
   // ======== ORDER DETAIL VIEW (occupied table) ========
   if (view === 'order_detail' && activeOrder) {
     const activeItems = activeOrder.items.filter(i => !i.is_cancelled)
+    const cancelledItems = activeOrder.items.filter(i => i.is_cancelled)
     const orderTotal = activeItems.reduce((sum, i) => sum + i.total_price, 0)
 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-          <Button variant="ghost" size="icon" onClick={() => { setView('tables'); setActiveOrder(null) }}>
+        <header className="bg-white border-b px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
+          <button
+            onClick={() => { setView('tables'); setActiveOrder(null) }}
+            className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 active:scale-95"
+          >
             <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <p className="font-semibold">{selectedTable ? getTableDisplayName(selectedTable) : 'Table'} - {activeOrder.order_number}</p>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-gray-500 capitalize">{activeOrder.status}</p>
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-base leading-tight truncate">
+              {selectedTable ? getTableDisplayName(selectedTable) : 'Table'} — {activeOrder.order_number}
+            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
+                activeOrder.status === 'ready' ? 'bg-green-100 text-green-700' :
+                activeOrder.status === 'preparing' ? 'bg-blue-100 text-blue-700' :
+                activeOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {activeOrder.status}
+              </span>
               {activeOrder.created_at && (
                 <span className="text-xs text-gray-400 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -793,26 +833,37 @@ export default function WaiterPage() {
 
         <div className="flex-1 p-4 space-y-4">
           {/* Current items */}
-          <div className="bg-white rounded-xl p-4 space-y-3">
-            <h3 className="font-semibold text-sm text-gray-500 uppercase">Current Items</h3>
+          <div className="bg-white rounded-xl p-4 space-y-2.5">
+            <h3 className="font-bold text-xs text-gray-400 uppercase tracking-wide">Current Items</h3>
             {activeItems.map(item => (
-              <div key={item.id} className="flex justify-between items-center text-sm">
-                <span className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${item.menu_item?.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
-                  {item.quantity}x {item.menu_item?.name}
+              <div key={item.id} className="flex justify-between items-start py-1">
+                <span className="flex items-start gap-2 flex-1 min-w-0 mr-2">
+                  <span className={`h-3 w-3 rounded-sm border mt-0.5 flex items-center justify-center shrink-0 ${
+                    item.menu_item?.is_veg ? 'border-green-600' : 'border-red-600'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      item.menu_item?.is_veg ? 'bg-green-600' : 'bg-red-600'
+                    }`} />
+                  </span>
+                  <span className="text-sm leading-snug">{item.quantity}x {item.menu_item?.name}</span>
                 </span>
-                <span className="font-medium">₹{item.total_price}</span>
+                <span className="text-sm font-semibold shrink-0">₹{Math.round(item.total_price)}</span>
               </div>
             ))}
-            {activeOrder.items.filter(i => i.is_cancelled).map(item => (
-              <div key={item.id} className="flex justify-between text-xs text-gray-400 line-through">
-                <span>{item.quantity}x {item.menu_item?.name}</span>
-                <span>₹{item.total_price}</span>
-              </div>
-            ))}
-            <div className="pt-2 border-t flex justify-between font-bold">
-              <span>Total</span>
-              <span className="text-amber-700">₹{orderTotal}</span>
+            {cancelledItems.length > 0 && (
+              <>
+                <Separator />
+                {cancelledItems.map(item => (
+                  <div key={item.id} className="flex justify-between text-xs text-gray-400 line-through py-0.5">
+                    <span>{item.quantity}x {item.menu_item?.name}</span>
+                    <span>₹{Math.round(item.total_price)}</span>
+                  </div>
+                ))}
+              </>
+            )}
+            <div className="pt-3 border-t flex justify-between items-center">
+              <span className="font-bold text-base">Total</span>
+              <span className="font-bold text-lg text-amber-700">₹{Math.round(orderTotal).toLocaleString('en-IN')}</span>
             </div>
           </div>
 
@@ -820,7 +871,7 @@ export default function WaiterPage() {
           <div className="space-y-3">
             {activeOrder.status !== 'completed' && (
               <Button
-                className="w-full h-12 bg-amber-700 hover:bg-amber-800 text-base"
+                className="w-full h-14 bg-amber-700 hover:bg-amber-800 text-base font-bold rounded-xl"
                 onClick={startAddItems}
               >
                 <Plus className="h-5 w-5 mr-2" />
@@ -830,7 +881,7 @@ export default function WaiterPage() {
 
             <Button
               variant="outline"
-              className="w-full h-12"
+              className="w-full h-12 rounded-xl"
               onClick={() => setTransferDialogOpen(true)}
             >
               <ArrowRightLeft className="h-5 w-5 mr-2" />
@@ -855,7 +906,7 @@ export default function WaiterPage() {
                         key={table.id}
                         onClick={() => transferTable(table)}
                         disabled={transferring}
-                        className="p-2 rounded-lg text-center border-2 border-green-300 bg-green-50 hover:border-amber-400 hover:bg-amber-50 transition-all"
+                        className="p-2.5 rounded-xl text-center border-2 border-green-300 bg-green-50 hover:border-amber-400 hover:bg-amber-50 transition-all active:scale-95"
                       >
                         <p className="text-sm font-bold">{getTableDisplayName(table)}</p>
                       </button>
@@ -878,28 +929,31 @@ export default function WaiterPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-          <Button variant="ghost" size="icon" onClick={() => {
-            if (addingToOrder) {
-              setView('order_detail')
-            } else {
-              setView('tables')
-              setCart([])
-            }
-          }}>
+        <header className="bg-white border-b px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
+          <button
+            onClick={() => {
+              if (addingToOrder) {
+                setView('order_detail')
+              } else {
+                setView('tables')
+                setCart([])
+              }
+            }}
+            className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 active:scale-95"
+          >
             <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <p className="font-semibold">
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-base leading-tight truncate">
               {addingToOrder
                 ? `Add to ${addingToOrder.order_number}`
                 : selectedTable ? getTableDisplayName(selectedTable) : 'Takeaway'}
             </p>
             {addingToOrder && (
-              <p className="text-xs text-amber-600">Adding items to existing order</p>
+              <p className="text-xs text-amber-600 font-medium mt-0.5">Adding items to existing order</p>
             )}
             {!addingToOrder && (
-              <p className="text-xs text-gray-400">Select a category</p>
+              <p className="text-xs text-gray-400 mt-0.5">Select a category</p>
             )}
           </div>
         </header>
@@ -918,22 +972,22 @@ export default function WaiterPage() {
                   setView('menu')
                 }
               }}
-              className="pl-9 pr-8"
+              className="pl-9 pr-8 h-11 rounded-xl"
             />
           </div>
         </div>
 
         {/* Category cards */}
-        <div className="flex-1 p-4 pb-24">
+        <div className="flex-1 p-4 pb-28">
           <div className="grid grid-cols-2 gap-3">
             {/* All Items card */}
             <button
               onClick={() => selectCategory('all')}
-              className="bg-amber-700 text-white rounded-xl p-4 text-left shadow-sm active:scale-95 transition-transform"
+              className="bg-amber-700 text-white rounded-xl p-4 text-left shadow-sm active:scale-95 transition-transform min-h-[96px]"
             >
               <LayoutGrid className="h-6 w-6 mb-2 opacity-80" />
-              <h3 className="font-semibold text-base">All Items</h3>
-              <p className="text-xs text-amber-100 mt-1">{menuItems.length} items</p>
+              <h3 className="font-bold text-base">All Items</h3>
+              <p className="text-xs text-amber-200 mt-1">{menuItems.length} items</p>
             </button>
 
             {/* Category cards */}
@@ -944,10 +998,10 @@ export default function WaiterPage() {
                 <button
                   key={cat.id}
                   onClick={() => selectCategory(cat.id)}
-                  className="bg-white rounded-xl p-4 text-left shadow-sm border border-gray-100 active:scale-95 transition-transform hover:border-amber-200"
+                  className="bg-white rounded-xl p-4 text-left shadow-sm border border-gray-100 active:scale-95 transition-transform hover:border-amber-200 min-h-[96px]"
                 >
                   <UtensilsCrossed className="h-5 w-5 mb-2 text-amber-700" />
-                  <h3 className="font-semibold text-sm line-clamp-2">{cat.name}</h3>
+                  <h3 className="font-semibold text-sm leading-snug line-clamp-2">{cat.name}</h3>
                   <p className="text-xs text-gray-400 mt-1">{count} items</p>
                 </button>
               )
@@ -970,37 +1024,40 @@ export default function WaiterPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-        <Button variant="ghost" size="icon" onClick={() => {
-          setView('categories')
-          setSearchQuery('')
-        }}>
+      <header className="bg-white border-b px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
+        <button
+          onClick={() => {
+            setView('categories')
+            setSearchQuery('')
+          }}
+          className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 active:scale-95"
+        >
           <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <p className="font-semibold">
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-base leading-tight truncate">
             {addingToOrder
               ? `Add to ${addingToOrder.order_number}`
-              : selectedTable ? `Table ${selectedTable.number}` : 'Takeaway'}
+              : selectedTable ? getTableDisplayName(selectedTable) : 'Takeaway'}
           </p>
-          <p className="text-xs text-gray-400">{activeCategoryName}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{activeCategoryName}</p>
         </div>
       </header>
 
       {/* Search */}
-      <div className="px-4 py-2 bg-white border-b">
+      <div className="px-4 py-2.5 bg-white border-b">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-8"
+            className="pl-9 pr-8 h-10 rounded-xl"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-0.5"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1009,11 +1066,11 @@ export default function WaiterPage() {
       </div>
 
       {/* Category chips for quick switching */}
-      <div className="px-4 py-2 bg-white border-b flex gap-2 overflow-x-auto">
+      <div className="px-3 py-2.5 bg-white border-b flex gap-2 overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setActiveCategory('all')}
-          className={`flex-shrink-0 px-3 py-1 rounded-full text-sm ${
-            activeCategory === 'all' ? 'bg-amber-700 text-white' : 'bg-gray-100'
+          className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            activeCategory === 'all' ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-600'
           }`}
         >
           All
@@ -1022,8 +1079,8 @@ export default function WaiterPage() {
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`flex-shrink-0 px-3 py-1 rounded-full text-sm ${
-              activeCategory === cat.id ? 'bg-amber-700 text-white' : 'bg-gray-100'
+            className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeCategory === cat.id ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
             {cat.name}
@@ -1032,11 +1089,11 @@ export default function WaiterPage() {
       </div>
 
       {/* Items */}
-      <div className="flex-1 p-4 pb-24">
+      <div className="flex-1 p-3 pb-28">
         {filteredItems.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            <Search className="h-10 w-10 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No items found</p>
+          <div className="text-center py-16 text-gray-400">
+            <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm font-medium">No items found</p>
             {searchQuery && (
               <Button variant="ghost" size="sm" className="mt-2" onClick={() => setSearchQuery('')}>
                 Clear search
@@ -1044,37 +1101,37 @@ export default function WaiterPage() {
             )}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
           {filteredItems.map(item => {
             const inCart = cart.find(c => c.menu_item.id === item.id)
             return (
               <button
                 key={item.id}
                 onClick={() => addToCart(item)}
-                className={`bg-white rounded-xl p-3 text-left shadow-sm border active:scale-95 transition-transform ${
-                  inCart ? 'border-amber-300 ring-1 ring-amber-200' : ''
+                className={`bg-white rounded-xl p-3 text-left shadow-sm border-2 active:scale-95 transition-all min-h-[90px] ${
+                  inCart ? 'border-amber-400 bg-amber-50/50' : 'border-transparent'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-1.5">
                   <span className="flex items-center gap-1">
                     {item.is_veg ? (
-                      <span className="flex h-3 w-3 items-center justify-center rounded-sm border border-green-600">
+                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-green-600">
                         <span className="h-1.5 w-1.5 rounded-full bg-green-600" />
                       </span>
                     ) : (
-                      <span className="flex h-3 w-3 items-center justify-center rounded-sm border border-red-600">
+                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-red-600">
                         <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
                       </span>
                     )}
                   </span>
                   {inCart && (
-                    <span className="text-[10px] bg-amber-700 text-white px-1.5 py-0.5 rounded-full font-semibold">
+                    <span className="text-xs bg-amber-700 text-white min-w-[22px] h-[22px] flex items-center justify-center rounded-full font-bold">
                       {inCart.quantity}
                     </span>
                   )}
                 </div>
-                <h3 className="font-medium text-sm line-clamp-2">{item.name}</h3>
-                <p className="text-amber-700 font-bold text-sm mt-1">₹{item.price}</p>
+                <h3 className="font-medium text-sm leading-snug line-clamp-2">{item.name}</h3>
+                <p className="text-amber-700 font-bold text-sm mt-1.5">₹{Math.round(item.price)}</p>
               </button>
             )
           })}

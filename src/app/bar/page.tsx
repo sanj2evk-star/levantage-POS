@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import { createClient } from '@/lib/supabase/client'
 import { KOTEntry, OrderItem, Order } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,9 @@ import {
   VolumeX,
   Bell,
   LogOut,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -45,10 +49,15 @@ export default function BarPage() {
     return true
   })
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default')
+  const [mounted, setMounted] = useState(false)
   const prevPendingCountRef = useRef(0)
   const ringChannelRef = useRef<RealtimeChannel | null>(null)
   const readyAlertChannelRef = useRef<RealtimeChannel | null>(null)
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
+
+  // Prevent hydration mismatch for theme
+  useEffect(() => setMounted(true), [])
 
   // Check auth session - redirect to bar login if not authenticated
   useEffect(() => {
@@ -139,7 +148,6 @@ export default function BarPage() {
 
       for (const [, group] of orderKotGroups) {
         if (group.length <= 1) continue
-        // Sort KOTs by created_at ascending
         const sorted = [...group].sort((a, b) =>
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         )
@@ -150,7 +158,6 @@ export default function BarPage() {
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         )
 
-        // Assign each item to the KOT created closest before it
         for (let idx = 0; idx < sorted.length; idx++) {
           const kotTime = new Date(sorted[idx].created_at).getTime()
           const nextKotTime = idx + 1 < sorted.length
@@ -166,7 +173,6 @@ export default function BarPage() {
 
       const pendingCount = allKots.filter(k => k.status === 'pending').length
 
-      // Play sound and notify if new pending KOTs arrived
       if (pendingCount > prevPendingCountRef.current && prevPendingCountRef.current > 0) {
         const newCount = pendingCount - prevPendingCountRef.current
         if (soundEnabled) {
@@ -219,7 +225,6 @@ export default function BarPage() {
       .update({ status: 'ready' })
       .eq('id', kotId)
 
-    // Also update order items
     if (kot) {
       const itemIds = kot.order.items
         .filter(i => i.station === kot.station && !i.is_cancelled)
@@ -232,7 +237,6 @@ export default function BarPage() {
           .in('id', itemIds)
       }
 
-      // Send broadcast alert to waiter apps
       const tableName = kot.order.table
         ? getTableDisplayName(kot.order.table)
         : 'Takeaway'
@@ -280,13 +284,27 @@ export default function BarPage() {
     router.replace('/bar/login')
   }
 
+  function cycleTheme() {
+    if (theme === 'dark') setTheme('light')
+    else if (theme === 'light') setTheme('system')
+    else setTheme('dark')
+  }
+
+  const ThemeIcon = mounted
+    ? theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor
+    : Monitor
+
+  const themeLabel = mounted
+    ? theme === 'dark' ? 'Dark mode' : theme === 'light' ? 'Light mode' : 'Auto (system)'
+    : 'Loading...'
+
   // Split KOTs into pending and ready
   const pendingKots = kots.filter(k => k.status === 'pending')
   const readyKots = kots.filter(k => k.status === 'ready')
 
   if (!authenticated || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-900">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
       </div>
     )
@@ -294,11 +312,11 @@ export default function BarPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white p-4">
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4">
         <div className="text-center">
-          <p className="text-red-400 text-lg mb-2">Failed to load orders</p>
-          <p className="text-gray-400 text-sm mb-4">{error}</p>
-          <Button onClick={loadKOTs} className="bg-purple-600 hover:bg-purple-700">
+          <p className="text-red-600 dark:text-red-400 text-lg mb-2">Failed to load orders</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{error}</p>
+          <Button onClick={loadKOTs} className="bg-purple-600 hover:bg-purple-700 text-white">
             Retry
           </Button>
         </div>
@@ -315,38 +333,38 @@ export default function BarPage() {
         key={kot.id}
         className={`border-2 ${
           isReady
-            ? 'border-green-600 bg-green-950/30'
-            : 'border-gray-600 bg-gray-800'
+            ? 'border-green-600 bg-green-50 dark:bg-green-950/30'
+            : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'
         }`}
       >
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg text-white">
+              <CardTitle className="text-lg text-gray-900 dark:text-white">
                 {kot.kot_number}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 {kot.order.table ? (
-                  <Badge className="bg-blue-600">
+                  <Badge className="bg-blue-600 text-white">
                     {getTableDisplayName(kot.order.table)}
                   </Badge>
                 ) : (
-                  <Badge className="bg-purple-600">Takeaway</Badge>
+                  <Badge className="bg-purple-600 text-white">Takeaway</Badge>
                 )}
                 {kot.order.waiter && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     {kot.order.waiter.name}
                   </span>
                 )}
               </div>
             </div>
             <div className="text-right">
-              <div className="flex items-center gap-1 text-gray-400">
+              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                 <Clock className="h-3.5 w-3.5" />
                 <span className="text-sm">{timeAgo}</span>
               </div>
               {isReady && (
-                <Badge className="bg-green-600 mt-1">ready</Badge>
+                <Badge className="bg-green-600 text-white mt-1">ready</Badge>
               )}
             </div>
           </div>
@@ -354,22 +372,22 @@ export default function BarPage() {
         <CardContent>
           <div className="space-y-2 mb-4">
             {stationItems.map(item => (
-              <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-gray-700 last:border-0">
+              <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-0">
                 <div className="flex items-center gap-2">
-                  <span className={`text-xl font-bold ${isReady ? 'text-green-400' : 'text-purple-400'}`}>
+                  <span className={`text-xl font-bold ${isReady ? 'text-green-600 dark:text-green-400' : 'text-purple-600 dark:text-purple-400'}`}>
                     {item.quantity}x
                   </span>
-                  <span className="text-white text-base">{item.menu_item?.name}</span>
+                  <span className="text-gray-900 dark:text-white text-base">{item.menu_item?.name}</span>
                 </div>
                 {item.notes && (
-                  <span className="text-xs text-yellow-400 italic">{item.notes}</span>
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400 italic">{item.notes}</span>
                 )}
               </div>
             ))}
           </div>
 
           {kot.order.notes && (
-            <p className="text-sm text-yellow-400 italic mb-3 bg-yellow-950/50 p-2 rounded">
+            <p className="text-sm text-yellow-700 dark:text-yellow-400 italic mb-3 bg-yellow-50 dark:bg-yellow-950/50 p-2 rounded">
               Note: {kot.order.notes}
             </p>
           )}
@@ -377,7 +395,7 @@ export default function BarPage() {
           <div className="flex gap-2">
             {!isReady && (
               <Button
-                className="flex-1 bg-green-600 hover:bg-green-700 py-3 text-base"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 text-base"
                 onClick={() => markReady(kot.id)}
               >
                 <CheckCircle2 className="h-5 w-5 mr-2" />
@@ -386,7 +404,7 @@ export default function BarPage() {
             )}
             {kot.order.waiter && (
               <Button
-                className={`bg-orange-600 hover:bg-orange-700 py-3 px-4 ${isReady ? 'flex-1 text-base' : ''}`}
+                className={`bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 ${isReady ? 'flex-1 text-base' : ''}`}
                 onClick={() => ringCaptain(kot)}
                 title={`Ring ${kot.order.waiter.name}`}
               >
@@ -401,23 +419,32 @@ export default function BarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Wine className="h-6 w-6 text-purple-400" />
+          <Wine className="h-6 w-6 text-purple-600 dark:text-purple-400" />
           <h1 className="font-bold text-lg">Bar Display</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-purple-600">{pendingKots.length} pending</Badge>
+          <Badge className="bg-purple-600 text-white">{pendingKots.length} pending</Badge>
           {readyKots.length > 0 && (
-            <Badge className="bg-green-600">{readyKots.length} ready</Badge>
+            <Badge className="bg-green-600 text-white">{readyKots.length} ready</Badge>
           )}
           {notifPermission === 'denied' && (
-            <span className="text-xs text-red-400" title="Browser notifications are blocked. Enable in browser settings.">
+            <span className="text-xs text-red-500 dark:text-red-400" title="Browser notifications are blocked. Enable in browser settings.">
               Notifications off
             </span>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={cycleTheme}
+            className="text-gray-600 dark:text-gray-300"
+            title={themeLabel}
+          >
+            <ThemeIcon className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -429,15 +456,15 @@ export default function BarPage() {
                 return next
               })
             }}
-            className="text-gray-300"
+            className="text-gray-600 dark:text-gray-300"
             title={soundEnabled ? 'Mute notifications' : 'Enable notifications'}
           >
             {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={loadKOTs} className="text-gray-300">
+          <Button variant="ghost" size="icon" onClick={loadKOTs} className="text-gray-600 dark:text-gray-300">
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleSignOut} className="text-gray-400 hover:text-red-400" title="Sign out">
+          <Button variant="ghost" size="icon" onClick={handleSignOut} className="text-gray-400 hover:text-red-500 dark:hover:text-red-400" title="Sign out">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
@@ -447,7 +474,7 @@ export default function BarPage() {
       <main className="p-4 space-y-6">
         {/* Empty state */}
         {pendingKots.length === 0 && readyKots.length === 0 && (
-          <div className="text-center py-24 text-gray-500">
+          <div className="text-center py-24 text-gray-400 dark:text-gray-500">
             <Wine className="h-16 w-16 mx-auto mb-4 opacity-30" />
             <p className="text-xl">No pending orders</p>
             <p className="text-sm mt-1">New orders will appear here automatically</p>
@@ -457,7 +484,7 @@ export default function BarPage() {
         {/* Pending Section */}
         {pendingKots.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
               Pending ({pendingKots.length})
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -469,7 +496,7 @@ export default function BarPage() {
         {/* Ready Section */}
         {readyKots.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-green-400 uppercase tracking-wider mb-3">
+            <h2 className="text-sm font-semibold text-green-600 dark:text-green-400 uppercase tracking-wider mb-3">
               Ready ({readyKots.length})
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

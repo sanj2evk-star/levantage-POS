@@ -38,9 +38,13 @@ import {
   Clock,
   MessageSquare,
   ChevronRight,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { toast } from 'sonner'
+import { STATIONS } from '@/lib/constants'
+import { playFoodReadySound, unlockAudio } from '@/lib/utils/notification-sound'
 
 type View = 'tables' | 'categories' | 'menu' | 'order_detail'
 
@@ -99,6 +103,15 @@ export default function WaiterPage() {
   // Hamburger menu
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  // Sound alerts for order ready
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('waiter-sound') !== '0'
+    }
+    return true
+  })
+  const soundEnabledRef = useRef(soundEnabled)
+
   // Order placement guard — prevents double-submit
   const [placing, setPlacing] = useState(false)
   const placingRef = useRef(false)
@@ -144,6 +157,88 @@ export default function WaiterPage() {
       supabase.removeChannel(channel)
     }
   }, [loadData])
+
+  // Keep soundEnabledRef in sync
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled
+  }, [soundEnabled])
+
+  // Unlock Web Audio API on first user interaction
+  useEffect(() => {
+    function unlock() {
+      unlockAudio()
+      document.removeEventListener('click', unlock)
+    }
+    document.addEventListener('click', unlock)
+    return () => document.removeEventListener('click', unlock)
+  }, [])
+
+  // Request notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  // Realtime: listen for KOT ready alerts (all stations)
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('waiter-kot-ready')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'kot_entries' },
+        async (payload) => {
+          const newRow = payload.new as { id: string; status: string; station: string; order_id: string }
+          if (newRow.status !== 'ready') return
+
+          // Fetch order + table info for the toast
+          const { data: kot } = await supabase
+            .from('kot_entries')
+            .select(`
+              kot_number,
+              station,
+              order:orders!order_id(
+                order_number,
+                table:tables!table_id(number, section)
+              )
+            `)
+            .eq('id', newRow.id)
+            .single()
+
+          const tableName = (kot?.order as any)?.table
+            ? getTableDisplayName((kot?.order as any).table)
+            : 'Takeaway'
+          const stationLabel = STATIONS.find(s => s.value === (kot?.station || newRow.station))?.label || 'Order'
+          const orderNum = (kot?.order as any)?.order_number || ''
+
+          // Play sound
+          if (soundEnabledRef.current) {
+            playFoodReadySound()
+          }
+
+          // Prominent toast
+          toast.success(
+            `${stationLabel} ready! ${tableName} - ${orderNum}`,
+            { duration: 8000 }
+          )
+
+          // Browser notification when tab is in background
+          if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification(`${stationLabel} Ready!`, {
+              body: `${tableName} - ${orderNum}`,
+              icon: '/icons/icon-192.png',
+              tag: `kot-ready-${newRow.id}`,
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   // Tick every 60s to update elapsed times
   useEffect(() => {
@@ -825,6 +920,28 @@ export default function WaiterPage() {
                   <LayoutGrid className="h-5 w-5 text-gray-500 dark:text-neutral-400" />
                   <span className="text-sm font-medium">All Tables</span>
                 </button>
+              </div>
+
+              <Separator />
+
+              {/* Sound toggle */}
+              <div className="px-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600 dark:text-neutral-400">Order Ready Alerts</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setSoundEnabled(prev => {
+                      const next = !prev
+                      localStorage.setItem('waiter-sound', next ? '1' : '0')
+                      if (next) unlockAudio()
+                      return next
+                    })
+                  }}
+                  className={soundEnabled ? 'text-green-600' : 'text-gray-400'}
+                >
+                  {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                </Button>
               </div>
 
               <Separator />

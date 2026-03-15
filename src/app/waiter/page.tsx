@@ -240,6 +240,36 @@ export default function WaiterPage() {
     }
   }, [])
 
+  // Realtime: listen for ring alerts from bar/kitchen
+  useEffect(() => {
+    if (!profile?.id) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel('waiter-ring')
+      .on('broadcast', { event: 'ring' }, ({ payload }) => {
+        if (payload.waiter_id !== profile.id) return
+        if (soundEnabledRef.current) {
+          playFoodReadySound()
+        }
+        toast.warning(
+          `Bar is calling you! ${payload.table_name} - ${payload.kot_number}`,
+          { duration: 10000 }
+        )
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+          new Notification('Bar is calling you!', {
+            body: `${payload.table_name} - ${payload.kot_number}`,
+            icon: '/icons/icon-192.png',
+            tag: `ring-${payload.kot_number}`,
+          })
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [profile?.id])
+
   // Tick every 60s to update elapsed times
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 60000)

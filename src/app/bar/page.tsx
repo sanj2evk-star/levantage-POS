@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Volume2,
   VolumeX,
+  Bell,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -22,6 +23,7 @@ import { getTableDisplayName } from '@/lib/utils/table-display'
 interface KOTWithDetails extends KOTEntry {
   order: Order & {
     table: { number: number; section: string } | null
+    waiter: { full_name: string } | null
     items: (OrderItem & {
       menu_item: { name: string; station: string }
     })[]
@@ -68,8 +70,9 @@ export default function BarPage() {
       .select(`
         id, order_id, station, kot_number, status, created_at,
         order:orders!order_id(
-          id, order_number, order_type, notes,
+          id, order_number, order_type, notes, waiter_id,
           table:tables!table_id(number, section),
+          waiter:profiles!waiter_id(full_name),
           items:order_items(
             id, quantity, notes, station, is_cancelled,
             menu_item:menu_items(name, station)
@@ -152,6 +155,24 @@ export default function BarPage() {
     loadKOTs()
   }
 
+  async function ringCaptain(kot: KOTWithDetails) {
+    const supabase = createClient()
+    const tableName = kot.order.table
+      ? getTableDisplayName(kot.order.table)
+      : 'Takeaway'
+    await supabase.channel('waiter-ring').send({
+      type: 'broadcast',
+      event: 'ring',
+      payload: {
+        waiter_id: (kot.order as any).waiter_id,
+        waiter_name: kot.order.waiter?.full_name,
+        table_name: tableName,
+        kot_number: kot.kot_number,
+      },
+    })
+    toast.success(`Ringed ${kot.order.waiter?.full_name || 'captain'}!`)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-900">
@@ -230,6 +251,11 @@ export default function BarPage() {
                           ) : (
                             <Badge className="bg-purple-600">Takeaway</Badge>
                           )}
+                          {kot.order.waiter && (
+                            <span className="text-xs text-gray-400">
+                              {kot.order.waiter.full_name}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -266,13 +292,24 @@ export default function BarPage() {
                       </p>
                     )}
 
-                    <Button
-                      className="w-full bg-green-600 hover:bg-green-700 py-3 text-base"
-                      onClick={() => markReady(kot.id)}
-                    >
-                      <CheckCircle2 className="h-5 w-5 mr-2" />
-                      Ready
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-green-600 hover:bg-green-700 py-3 text-base"
+                        onClick={() => markReady(kot.id)}
+                      >
+                        <CheckCircle2 className="h-5 w-5 mr-2" />
+                        Ready
+                      </Button>
+                      {kot.order.waiter && (
+                        <Button
+                          className="bg-orange-600 hover:bg-orange-700 py-3 px-4"
+                          onClick={() => ringCaptain(kot)}
+                          title={`Ring ${kot.order.waiter.full_name}`}
+                        >
+                          <Bell className="h-5 w-5" />
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               )

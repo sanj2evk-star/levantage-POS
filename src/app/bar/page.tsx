@@ -77,7 +77,7 @@ export default function BarPage() {
         )
       `)
       .eq('station', 'mocktail')
-      .in('status', ['pending', 'preparing'])
+      .eq('status', 'pending')
       .order('created_at', { ascending: true })
 
     if (data) {
@@ -126,16 +126,16 @@ export default function BarPage() {
     }
   }, [loadKOTs])
 
-  async function updateKOTStatus(kotId: string, newStatus: 'preparing' | 'ready') {
+  async function markReady(kotId: string) {
     const supabase = createClient()
     await supabase
       .from('kot_entries')
-      .update({ status: newStatus })
+      .update({ status: 'ready' })
       .eq('id', kotId)
 
-    // If ready, also update order items
+    // Also update order items
     const kot = kots.find(k => k.id === kotId)
-    if (kot && newStatus === 'ready') {
+    if (kot) {
       const itemIds = kot.order.items
         .filter(i => i.station === kot.station && !i.is_cancelled)
         .map(i => i.id)
@@ -148,7 +148,7 @@ export default function BarPage() {
       }
     }
 
-    toast.success(newStatus === 'preparing' ? 'Started preparing' : 'Marked as ready!')
+    toast.success('Marked as ready!')
     loadKOTs()
   }
 
@@ -214,11 +214,7 @@ export default function BarPage() {
               return (
                 <Card
                   key={kot.id}
-                  className={`border-2 ${
-                    kot.status === 'preparing'
-                      ? 'border-yellow-500 bg-yellow-950/30'
-                      : 'border-gray-600 bg-gray-800'
-                  }`}
+                  className="border-2 border-gray-600 bg-gray-800"
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -241,9 +237,7 @@ export default function BarPage() {
                           <Clock className="h-3.5 w-3.5" />
                           <span className="text-sm">{timeAgo}</span>
                         </div>
-                        <Badge className={
-                          kot.status === 'preparing' ? 'bg-yellow-600 mt-1' : 'bg-gray-600 mt-1'
-                        }>
+                        <Badge className="bg-gray-600 mt-1">
                           {kot.status}
                         </Badge>
                       </div>
@@ -272,25 +266,13 @@ export default function BarPage() {
                       </p>
                     )}
 
-                    <div className="flex gap-2">
-                      {kot.status === 'pending' && (
-                        <Button
-                          className="flex-1 bg-yellow-600 hover:bg-yellow-700 py-3 text-base"
-                          onClick={() => updateKOTStatus(kot.id, 'preparing')}
-                        >
-                          Start Preparing
-                        </Button>
-                      )}
-                      {kot.status === 'preparing' && (
-                        <Button
-                          className="flex-1 bg-green-600 hover:bg-green-700 py-3 text-base"
-                          onClick={() => updateKOTStatus(kot.id, 'ready')}
-                        >
-                          <CheckCircle2 className="h-5 w-5 mr-2" />
-                          Order Ready
-                        </Button>
-                      )}
-                    </div>
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700 py-3 text-base"
+                      onClick={() => markReady(kot.id)}
+                    >
+                      <CheckCircle2 className="h-5 w-5 mr-2" />
+                      Ready
+                    </Button>
                   </CardContent>
                 </Card>
               )

@@ -1281,102 +1281,140 @@ export default function CashierPage() {
   return (
     <div className="min-h-screen bg-[#FBF9F6] dark:bg-neutral-800 flex flex-col">
       {/* Header */}
-      <header className="bg-white dark:bg-neutral-800 border-b dark:border-neutral-600 px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <Coffee className="h-6 w-6 text-amber-700" />
-          <span className="font-bold text-xl text-gray-900 dark:text-neutral-100">Cashier</span>
-          {profile?.name && <span className="text-base text-gray-600 dark:text-neutral-400 font-medium">({profile.name})</span>}
-        </div>
+      <header className="bg-white dark:bg-neutral-800 border-b dark:border-neutral-600 px-3 sm:px-6 py-2 sm:py-3.5 sticky top-0 z-10">
+        {/* Row 1: Logo + Actions */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Coffee className="h-5 w-5 sm:h-6 sm:w-6 text-amber-700" />
+            <span className="font-bold text-lg sm:text-xl text-gray-900 dark:text-neutral-100">Cashier</span>
+            {profile?.name && <span className="hidden sm:inline text-base text-gray-600 dark:text-neutral-400 font-medium">({profile.name})</span>}
+          </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1">
-          {[
-            { key: 'tables' as CashierTab, label: 'Tables' },
-            { key: 'live_orders' as CashierTab, label: 'Live Orders' },
-            { key: 'day_close' as CashierTab, label: 'Day Close' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-2 text-base rounded-md transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-white dark:bg-neutral-600 shadow-sm font-semibold dark:text-neutral-100'
-                  : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
-              }`}
+          {/* Desktop: Tabs inline */}
+          <div className="hidden md:flex items-center gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1">
+            {[
+              { key: 'tables' as CashierTab, label: 'Tables' },
+              { key: 'live_orders' as CashierTab, label: 'Live Orders' },
+              { key: 'day_close' as CashierTab, label: 'Day Close' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-5 py-2 text-base rounded-md transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-white dark:bg-neutral-600 shadow-sm font-semibold dark:text-neutral-100'
+                    : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop: Status Badges */}
+          <div className="hidden md:flex items-center gap-2">
+            {statusCounts.foodReady > 0 && (
+              <Badge className="bg-green-100 text-green-700 border border-green-200 text-sm px-2.5 py-0.5">
+                <UtensilsCrossed className="h-3.5 w-3.5 mr-1" />
+                {statusCounts.foodReady} Ready
+              </Badge>
+            )}
+            {statusCounts.toSettle > 0 && (
+              <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-sm px-2.5 py-0.5">
+                <Receipt className="h-3.5 w-3.5 mr-1" />
+                {statusCounts.toSettle} To Settle
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <a href="/pos">
+              <Button size="sm" className="bg-amber-700 hover:bg-amber-800 text-sm">
+                <Plus className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">New Order</span>
+              </Button>
+            </a>
+            {(profile?.role === 'admin' || profile?.role === 'manager') && (
+              <a href="/admin" className="hidden sm:inline">
+                <Button variant="ghost" size="sm">Admin</Button>
+              </a>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setSoundEnabled(prev => {
+                  const next = !prev
+                  localStorage.setItem('cashier-sound', next ? '1' : '0')
+                  if (next) unlockAudio()
+                  return next
+                })
+              }}
+              title={soundEnabled ? 'Mute notifications' : 'Unmute notifications'}
             >
-              {tab.label}
-            </button>
-          ))}
+              {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-gray-400" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={async () => {
+              setIsRefreshing(true)
+              try {
+                await loadData()
+                if (activeTab === 'live_orders') await loadLiveOrders()
+                if (activeTab === 'day_close') await loadDaySummary()
+              } finally {
+                setIsRefreshing(false)
+              }
+            }}>
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={signOut}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        {/* Status Badges */}
-        <div className="flex items-center gap-2">
+        {/* Row 2: Mobile tabs + badges */}
+        <div className="flex md:hidden items-center gap-2 mt-2 overflow-x-auto">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1 shrink-0">
+            {[
+              { key: 'tables' as CashierTab, label: 'Tables' },
+              { key: 'live_orders' as CashierTab, label: 'Live' },
+              { key: 'day_close' as CashierTab, label: 'Day Close' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? 'bg-white dark:bg-neutral-600 shadow-sm font-semibold dark:text-neutral-100'
+                    : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
           {statusCounts.foodReady > 0 && (
-            <Badge className="bg-green-100 text-green-700 border border-green-200 text-sm px-2.5 py-0.5">
-              <UtensilsCrossed className="h-3.5 w-3.5 mr-1" />
-              {statusCounts.foodReady} Ready
+            <Badge className="bg-green-100 text-green-700 border border-green-200 text-xs px-2 py-0.5 shrink-0">
+              <UtensilsCrossed className="h-3 w-3 mr-0.5" />
+              {statusCounts.foodReady}
             </Badge>
           )}
           {statusCounts.toSettle > 0 && (
-            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-sm px-2.5 py-0.5">
-              <Receipt className="h-3.5 w-3.5 mr-1" />
-              {statusCounts.toSettle} To Settle
+            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 shrink-0">
+              <Receipt className="h-3 w-3 mr-0.5" />
+              {statusCounts.toSettle}
             </Badge>
           )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <a href="/pos">
-            <Button size="sm" className="bg-amber-700 hover:bg-amber-800 text-sm">
-              <Plus className="h-4 w-4 mr-1" />
-              New Order
-            </Button>
-          </a>
-          {(profile?.role === 'admin' || profile?.role === 'manager') && (
-            <a href="/admin">
-              <Button variant="ghost" size="sm">Admin</Button>
-            </a>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setSoundEnabled(prev => {
-                const next = !prev
-                localStorage.setItem('cashier-sound', next ? '1' : '0')
-                if (next) unlockAudio()
-                return next
-              })
-            }}
-            title={soundEnabled ? 'Mute notifications' : 'Unmute notifications'}
-          >
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-gray-400" />}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={async () => {
-            setIsRefreshing(true)
-            try {
-              await loadData()
-              if (activeTab === 'live_orders') await loadLiveOrders()
-              if (activeTab === 'day_close') await loadDaySummary()
-            } finally {
-              setIsRefreshing(false)
-            }
-          }}>
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         {activeTab === 'tables' && (
-          <div className="p-6 space-y-6">
+          <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* Table Legend */}
-            <div className="flex items-center gap-5 text-sm text-gray-600 dark:text-neutral-400 pb-3 border-b border-gray-200 dark:border-neutral-600">
+            <div className="flex items-center gap-3 sm:gap-5 flex-wrap text-sm text-gray-600 dark:text-neutral-400 pb-3 border-b border-gray-200 dark:border-neutral-600">
               <span className="font-semibold text-gray-800 dark:text-neutral-200">Legend:</span>
               <div className="flex items-center gap-1.5">
                 <div className="w-3.5 h-3.5 rounded-sm bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-500" />
@@ -1574,10 +1612,10 @@ export default function CashierPage() {
         )}
 
         {activeTab === 'live_orders' && (
-          <div className="p-6">
+          <div className="p-3 sm:p-6">
             {/* Search + Filters Bar */}
             <div className="space-y-3 mb-5">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
                 <h2 className="font-semibold text-xl flex items-center gap-2 shrink-0 dark:text-neutral-100">
                   <Receipt className="h-5 w-5" />
                   Live Orders
@@ -1780,7 +1818,7 @@ export default function CashierPage() {
         )}
 
         {activeTab === 'day_close' && (
-          <div className="p-6 max-w-2xl mx-auto">
+          <div className="p-3 sm:p-6 max-w-2xl mx-auto">
             <h2 className="font-semibold text-xl mb-6 dark:text-neutral-100">Today&apos;s Summary</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-6">

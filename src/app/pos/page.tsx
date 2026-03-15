@@ -384,7 +384,7 @@ export default function POSPage() {
 
           {/* Search - only when viewing items */}
           {posMode === 'menu' && menuView === 'items' && (
-            <div className="relative w-64">
+            <div className="relative w-40 sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500" />
               <Input
                 placeholder="Search items..."
@@ -394,16 +394,16 @@ export default function POSPage() {
               />
             </div>
           )}
-          {(posMode === 'orders' || (posMode === 'menu' && menuView === 'categories')) && <div className="w-64" />}
+          {(posMode === 'orders' || (posMode === 'menu' && menuView === 'categories')) && <div className="hidden sm:block sm:w-64" />}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <a href="/cashier">
               <Button variant="outline" size="sm" className="text-amber-700 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-900/30">
                 Cashier
               </Button>
             </a>
             {(profile?.role === 'admin' || profile?.role === 'manager') && (
-              <a href="/admin">
+              <a href="/admin" className="hidden sm:inline">
                 <Button variant="ghost" size="sm">Admin</Button>
               </a>
             )}
@@ -420,7 +420,7 @@ export default function POSPage() {
           menuView === 'categories' ? (
           /* ---- Category Cards Grid ---- */
           <ScrollArea className="flex-1 p-4" style={{ minHeight: 0 }}>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {/* All Items card */}
               <button
                 onClick={() => selectCategory('all')}
@@ -735,7 +735,7 @@ export default function POSPage() {
             {groupTablesByDisplayGroup(tables).map(group => (
               <div key={group.group}>
                 <p className="text-sm font-medium text-gray-500 dark:text-neutral-400 mb-2">{group.label}</p>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                   {group.tables.map((table) => (
                     <button
                       key={table.id}

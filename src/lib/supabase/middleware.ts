@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/menu', '/login']
+  const publicRoutes = ['/menu', '/login', '/bar/login']
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
   // If it's a public route, skip the auth check entirely (no Supabase call)

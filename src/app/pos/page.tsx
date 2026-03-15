@@ -349,73 +349,105 @@ export default function POSPage() {
       {/* Left Panel: Menu */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="bg-white dark:bg-neutral-800 border-b dark:border-neutral-600 px-4 py-3 flex items-center justify-between" style={{ flexShrink: 0 }}>
-          <div className="flex items-center gap-3">
-            <Coffee className="h-6 w-6 text-amber-700" />
-            <h1 className="font-semibold text-lg hidden sm:block dark:text-neutral-100">Le Vantage Cafe</h1>
-            <span
-              className={`h-2 w-2 rounded-full ${
-                printStatus ? 'bg-green-500' : 'bg-red-500'
-              }`}
-              title={printStatus ? 'Print proxy connected' : 'Print proxy offline'}
-            />
-          </div>
-
-          {/* Mode Toggle */}
-          <div className="flex bg-gray-100 dark:bg-neutral-700 rounded-lg p-0.5">
-            <button
-              onClick={() => setPosMode('menu')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                posMode === 'menu' ? 'bg-white dark:bg-neutral-600 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
-              }`}
-            >
-              <UtensilsCrossed className="h-4 w-4" />
-              Menu
-            </button>
-            <button
-              onClick={() => setPosMode('orders')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                posMode === 'orders' ? 'bg-white dark:bg-neutral-600 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
-              }`}
-            >
-              <ClipboardList className="h-4 w-4" />
-              Orders
-            </button>
-          </div>
-
-          {/* Search - only when viewing items */}
-          {posMode === 'menu' && menuView === 'items' && (
-            <div className="relative w-40 sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500" />
-              <Input
-                placeholder="Search items..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 dark:bg-neutral-700 dark:border-neutral-500 dark:text-neutral-100"
+        <header className="bg-white dark:bg-neutral-800 border-b dark:border-neutral-600 px-3 sm:px-4 py-2 sm:py-3" style={{ flexShrink: 0 }}>
+          {/* Row 1: Logo + Desktop mode toggle + Search + Actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Coffee className="h-5 w-5 sm:h-6 sm:w-6 text-amber-700" />
+              <h1 className="font-semibold text-lg hidden sm:block dark:text-neutral-100">Le Vantage Cafe</h1>
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  printStatus ? 'bg-green-500' : 'bg-red-500'
+                }`}
+                title={printStatus ? 'Print proxy connected' : 'Print proxy offline'}
               />
             </div>
-          )}
-          {(posMode === 'orders' || (posMode === 'menu' && menuView === 'categories')) && <div className="hidden sm:block sm:w-64" />}
 
-          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Desktop: Mode Toggle inline */}
+            <div className="hidden sm:flex bg-gray-100 dark:bg-neutral-700 rounded-lg p-0.5">
+              <button
+                onClick={() => setPosMode('menu')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  posMode === 'menu' ? 'bg-white dark:bg-neutral-600 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
+                }`}
+              >
+                <UtensilsCrossed className="h-4 w-4" />
+                Menu
+              </button>
+              <button
+                onClick={() => setPosMode('orders')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  posMode === 'orders' ? 'bg-white dark:bg-neutral-600 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
+                }`}
+              >
+                <ClipboardList className="h-4 w-4" />
+                Orders
+              </button>
+            </div>
+
+            {/* Search - only when viewing items */}
+            {posMode === 'menu' && menuView === 'items' && (
+              <div className="relative w-40 sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500" />
+                <Input
+                  placeholder="Search items..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 dark:bg-neutral-700 dark:border-neutral-500 dark:text-neutral-100"
+                />
+              </div>
+            )}
+            {(posMode === 'orders' || (posMode === 'menu' && menuView === 'categories')) && <div className="hidden sm:block sm:w-64" />}
+
+            <div className="flex items-center gap-1 sm:gap-2">
+              <a href="/cashier" className="hidden sm:inline">
+                <Button variant="outline" size="sm" className="text-amber-700 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-900/30">
+                  Cashier
+                </Button>
+              </a>
+              {(profile?.role === 'admin' || profile?.role === 'manager') && (
+                <a href="/admin">
+                  <Button variant="ghost" size="icon" className="sm:hidden" title="Admin">
+                    <LayoutDashboard className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Admin</Button>
+                </a>
+              )}
+              <span className="text-sm text-gray-500 dark:text-neutral-400 hidden sm:block">{profile?.name}</span>
+              <ThemeToggle />
+              <Button variant="ghost" size="icon" onClick={signOut}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Row 2: Mobile mode toggle + Cashier button */}
+          <div className="flex sm:hidden items-center gap-2 mt-2">
+            <div className="flex bg-gray-100 dark:bg-neutral-700 rounded-lg p-0.5">
+              <button
+                onClick={() => setPosMode('menu')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  posMode === 'menu' ? 'bg-white dark:bg-neutral-600 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
+                }`}
+              >
+                <UtensilsCrossed className="h-4 w-4" />
+                Menu
+              </button>
+              <button
+                onClick={() => setPosMode('orders')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  posMode === 'orders' ? 'bg-white dark:bg-neutral-600 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
+                }`}
+              >
+                <ClipboardList className="h-4 w-4" />
+                Orders
+              </button>
+            </div>
             <a href="/cashier">
               <Button variant="outline" size="sm" className="text-amber-700 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-900/30">
                 Cashier
               </Button>
             </a>
-            {(profile?.role === 'admin' || profile?.role === 'manager') && (
-              <a href="/admin">
-                <Button variant="ghost" size="icon" className="sm:hidden" title="Admin">
-                  <LayoutDashboard className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Admin</Button>
-              </a>
-            )}
-            <span className="text-sm text-gray-500 dark:text-neutral-400 hidden sm:block">{profile?.name}</span>
-            <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={signOut}>
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
         </header>
 

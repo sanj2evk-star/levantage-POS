@@ -369,7 +369,7 @@ export default function AdminDashboard() {
     { label: 'UPI', amount: data.upiTotal, color: 'bg-blue-500', light: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700', icon: Smartphone },
     { label: 'Card', amount: data.cardTotal, color: 'bg-violet-500', light: 'bg-violet-50 dark:bg-violet-900/30 text-violet-700', icon: CreditCard },
     { label: 'Zomato', amount: data.zomatoTotal, color: 'bg-red-500', light: 'bg-red-50 dark:bg-red-900/30 text-red-700', icon: Store },
-    ...(data.ncTotal > 0 ? [{ label: 'NC', amount: data.ncTotal, color: 'bg-gray-400', light: 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400', icon: Percent }] : []),
+    ...(data.ncTotal > 0 ? [{ label: 'NC', amount: data.ncTotal, color: 'bg-gray-400', light: 'bg-gray-50 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400', icon: Percent }] : []),
   ].filter(m => m.amount > 0) : []
 
   const paymentTotal = paymentModes.reduce((s, m) => s + m.amount, 0)
@@ -381,22 +381,22 @@ export default function AdminDashboard() {
         {/* Greeting */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-neutral-100">
               {isToday ? 'Today\u2019s Overview' : displayDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
             </h1>
             {isToday && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-sm text-gray-500 dark:text-neutral-400 mt-0.5">
                 {displayDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
             )}
           </div>
-          <Button variant="ghost" size="icon" onClick={loadDashboard} className="text-gray-400 dark:text-gray-500">
+          <Button variant="ghost" size="icon" onClick={loadDashboard} className="text-gray-400 dark:text-neutral-500">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
 
         {/* Date Navigator */}
-        <div className="flex items-center gap-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-1.5 shadow-sm">
+        <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 rounded-xl border border-gray-100 dark:border-neutral-800 p-1.5 shadow-sm">
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => navigateDate(-1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -435,7 +435,7 @@ export default function AdminDashboard() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-200 dark:border-amber-800 border-t-amber-600" />
-          <p className="text-sm text-gray-400 dark:text-gray-500">Loading dashboard...</p>
+          <p className="text-sm text-gray-400 dark:text-neutral-500">Loading dashboard...</p>
         </div>
       ) : data ? (
         <div className="space-y-4">
@@ -504,88 +504,88 @@ export default function AdminDashboard() {
           {/* ── Quick Stats Grid ── */}
           <div className="grid grid-cols-2 gap-3">
             {/* Net Sales */}
-            <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30">
                   <TrendingUp className="h-3.5 w-3.5 text-blue-600" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Net Sales</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-neutral-400">Net Sales</span>
               </div>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{fmt(data.netSales)}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Excl. tax & service charge</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-neutral-100">{fmt(data.netSales)}</p>
+              <p className="text-[11px] text-gray-400 dark:text-neutral-500 mt-0.5">Excl. tax & service charge</p>
             </div>
 
             {/* GST */}
-            <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-900/30">
                   <Receipt className="h-3.5 w-3.5 text-orange-600" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">GST (5%)</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-neutral-400">GST (5%)</span>
               </div>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{fmt(data.taxes)}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Tax collected</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-neutral-100">{fmt(data.taxes)}</p>
+              <p className="text-[11px] text-gray-400 dark:text-neutral-500 mt-0.5">Tax collected</p>
             </div>
 
             {/* Service Charge */}
-            <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-900/30">
                   <HandCoins className="h-3.5 w-3.5 text-emerald-600" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">SC Collected</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-neutral-400">SC Collected</span>
               </div>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{fmt(data.scCollected)}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Service charge</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-neutral-100">{fmt(data.scCollected)}</p>
+              <p className="text-[11px] text-gray-400 dark:text-neutral-500 mt-0.5">Service charge</p>
             </div>
 
             {/* SC Deleted */}
-            <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30">
                   <XCircle className="h-3.5 w-3.5 text-red-500" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">SC Deleted</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-neutral-400">SC Deleted</span>
               </div>
               <p className="text-xl font-bold text-red-600">{fmt(data.scDeleted)}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Service charge waived</p>
+              <p className="text-[11px] text-gray-400 dark:text-neutral-500 mt-0.5">Service charge waived</p>
             </div>
           </div>
 
           {/* ── NC & Discounts ── */}
           <div className="grid grid-cols-2 gap-3">
             {/* NC (No Charge) */}
-            <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
                   <Gift className="h-3.5 w-3.5 text-amber-600" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">NC</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-neutral-400">NC</span>
               </div>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{fmt(data.ncTotal)}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">No charge</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-neutral-100">{fmt(data.ncTotal)}</p>
+              <p className="text-[11px] text-gray-400 dark:text-neutral-500 mt-0.5">No charge</p>
             </div>
 
             {/* Discounts */}
-            <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-900/30">
                   <Percent className="h-3.5 w-3.5 text-rose-600" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Discounts</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-neutral-400">Discounts</span>
               </div>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{fmt(data.discounts)}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Total discounts</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-neutral-100">{fmt(data.discounts)}</p>
+              <p className="text-[11px] text-gray-400 dark:text-neutral-500 mt-0.5">Total discounts</p>
             </div>
           </div>
 
           {/* ── Payment Breakdown ── */}
           {paymentModes.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Payment Breakdown</h3>
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-neutral-100 mb-3">Payment Breakdown</h3>
 
               {/* Stacked bar */}
-              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4">
+              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-neutral-800 mb-4">
                 {paymentModes.map((m) => (
                   <div
                     key={m.label}
@@ -604,17 +604,17 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{m.label}</span>
-                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{fmt(m.amount)}</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-neutral-300">{m.label}</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-neutral-100">{fmt(m.amount)}</span>
                       </div>
                       <div className="flex items-center justify-between mt-0.5">
-                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 mr-3">
+                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-neutral-800 mr-3">
                           <div
                             className={`h-full rounded-full ${m.color} transition-all duration-500`}
                             style={{ width: `${paymentTotal > 0 ? (m.amount / paymentTotal * 100) : 0}%` }}
                           />
                         </div>
-                        <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">
+                        <span className="text-[11px] text-gray-400 dark:text-neutral-500 tabular-nums">
                           {paymentTotal > 0 ? Math.round(m.amount / paymentTotal * 100) : 0}%
                         </span>
                       </div>
@@ -627,12 +627,12 @@ export default function AdminDashboard() {
 
           {/* ── SC Waived by Staff ── */}
           {data.scByStaff.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-gray-900 border border-red-100 dark:border-red-800 p-4 shadow-sm">
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-red-100 dark:border-red-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30">
                   <Users className="h-3.5 w-3.5 text-red-500" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">SC Waived by Staff</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-neutral-100">SC Waived by Staff</h3>
                 <span className="ml-auto text-xs font-bold text-red-500">{fmt(data.scDeleted)}</span>
               </div>
               <div className="space-y-2">
@@ -642,8 +642,8 @@ export default function AdminDashboard() {
                       {staff.name[0]?.toUpperCase() || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{staff.name}</p>
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500">{staff.count} table{staff.count > 1 ? 's' : ''}</p>
+                      <p className="text-sm font-medium text-gray-800 dark:text-neutral-200 truncate">{staff.name}</p>
+                      <p className="text-[11px] text-gray-400 dark:text-neutral-500">{staff.count} table{staff.count > 1 ? 's' : ''}</p>
                     </div>
                     <p className="text-sm font-bold text-red-600">{fmt(staff.amount)}</p>
                   </div>
@@ -653,12 +653,12 @@ export default function AdminDashboard() {
           )}
 
           {/* ── Meal Period Sales ── */}
-          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+          <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
                 <Utensils className="h-3.5 w-3.5 text-amber-600" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Sales by Meal Period</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-neutral-100">Sales by Meal Period</h3>
             </div>
 
             {/* Mobile-friendly meal cards instead of chart on small screens */}
@@ -667,10 +667,10 @@ export default function AdminDashboard() {
                 <div key={period.name} className="rounded-xl p-3" style={{ backgroundColor: MEAL_COLORS[i] + '12' }}>
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MEAL_COLORS[i] }} />
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{period.name}</span>
+                    <span className="text-xs font-medium text-gray-600 dark:text-neutral-400">{period.name}</span>
                   </div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{fmt(period.sales)}</p>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500">{period.orders} orders</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-neutral-100">{fmt(period.sales)}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-neutral-500">{period.orders} orders</p>
                 </div>
               ))}
             </div>
@@ -704,7 +704,7 @@ export default function AdminDashboard() {
             {/* Legend (larger screens) */}
             <div className="hidden sm:flex justify-center gap-4 mt-2">
               {data.mealPeriodSales.map((period, i) => (
-                <div key={period.name} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <div key={period.name} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-neutral-400">
                   <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: MEAL_COLORS[i] }} />
                   {period.name} ({period.orders})
                 </div>
@@ -713,15 +713,15 @@ export default function AdminDashboard() {
           </div>
 
           {/* ── Weekly Sales ── */}
-          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+          <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
                   <Flame className="h-3.5 w-3.5 text-amber-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Weekly Sales</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-neutral-100">Weekly Sales</h3>
               </div>
-              <span className="text-xs text-gray-400 dark:text-gray-500">
+              <span className="text-xs text-gray-400 dark:text-neutral-500">
                 {new Date(data.weeklySales[0]?.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                 {' – '}
                 {new Date(data.weeklySales[6]?.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
@@ -735,9 +735,9 @@ export default function AdminDashboard() {
                 const isSel = entry.date === selectedDate
                 return (
                   <div key={entry.date} className={`flex items-center gap-3 px-3 py-2 rounded-xl ${isSel ? 'bg-amber-50 dark:bg-amber-900/30 ring-1 ring-amber-200' : ''}`}>
-                    <div className="w-10 text-xs font-medium text-gray-500 dark:text-gray-400">{entry.day}</div>
+                    <div className="w-10 text-xs font-medium text-gray-500 dark:text-neutral-400">{entry.day}</div>
                     <div className="flex-1">
-                      <div className="h-5 rounded-md bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      <div className="h-5 rounded-md bg-gray-100 dark:bg-neutral-800 overflow-hidden">
                         <div
                           className={`h-full rounded-md transition-all duration-500 ${isSel ? 'bg-amber-600' : 'bg-amber-300'}`}
                           style={{ width: `${(entry.sales / maxSales) * 100}%` }}
@@ -745,8 +745,8 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <div className="text-right w-16">
-                      <p className={`text-xs font-bold ${isSel ? 'text-amber-700' : 'text-gray-700 dark:text-gray-300'}`}>{fmt(entry.sales)}</p>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500">{entry.orders} ord</p>
+                      <p className={`text-xs font-bold ${isSel ? 'text-amber-700' : 'text-gray-700 dark:text-neutral-300'}`}>{fmt(entry.sales)}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-neutral-500">{entry.orders} ord</p>
                     </div>
                   </div>
                 )
@@ -785,11 +785,11 @@ export default function AdminDashboard() {
             </div>
 
             {/* Week total */}
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Week Total</span>
-              <span className="font-bold text-gray-900 dark:text-gray-100">
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 dark:border-neutral-800 text-sm">
+              <span className="text-gray-500 dark:text-neutral-400">Week Total</span>
+              <span className="font-bold text-gray-900 dark:text-neutral-100">
                 {fmt(data.weeklySales.reduce((sum, d) => sum + d.sales, 0))}
-                <span className="text-gray-400 dark:text-gray-500 font-normal ml-1.5">
+                <span className="text-gray-400 dark:text-neutral-500 font-normal ml-1.5">
                   ({data.weeklySales.reduce((sum, d) => sum + d.orders, 0)} orders)
                 </span>
               </span>
@@ -798,12 +798,12 @@ export default function AdminDashboard() {
 
           {/* ── Category Performance ── */}
           {categoryPerf.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
                   <Coffee className="h-3.5 w-3.5 text-amber-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Category Performance</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-neutral-100">Category Performance</h3>
               </div>
 
               {/* Mobile: list view */}
@@ -812,13 +812,13 @@ export default function AdminDashboard() {
                   const maxTotal = categoryPerf[0]?.total || 1
                   return (
                     <div key={cat.name} className="flex items-center gap-3">
-                      <span className="w-5 text-xs font-medium text-gray-400 dark:text-gray-500 text-right">{i + 1}</span>
+                      <span className="w-5 text-xs font-medium text-gray-400 dark:text-neutral-500 text-right">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{cat.name}</span>
-                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100 ml-2">{fmt(cat.total)}</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-neutral-300 truncate">{cat.name}</span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-neutral-100 ml-2">{fmt(cat.total)}</span>
                         </div>
-                        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-neutral-800">
                           <div
                             className="h-full rounded-full bg-amber-500 transition-all duration-500"
                             style={{ width: `${(cat.total / maxTotal) * 100}%` }}
@@ -857,13 +857,13 @@ export default function AdminDashboard() {
 
           {/* ── Top 10 Items ── */}
           {topItems.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-900/30">
                   <Trophy className="h-3.5 w-3.5 text-emerald-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Top Items</h3>
-                <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">by quantity</span>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-neutral-100">Top Items</h3>
+                <span className="ml-auto text-xs text-gray-400 dark:text-neutral-500">by quantity</span>
               </div>
 
               {/* Mobile: list view */}
@@ -874,18 +874,18 @@ export default function AdminDashboard() {
                     <div key={item.name} className="flex items-center gap-3 py-1.5">
                       <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
                         i === 0 ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700' :
-                        i === 1 ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' :
+                        i === 1 ? 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400' :
                         i === 2 ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600' :
-                        'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                        'bg-gray-50 dark:bg-neutral-800 text-gray-400 dark:text-neutral-500'
                       }`}>
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{item.name}</span>
-                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100 ml-2 tabular-nums">{item.qty}</span>
+                          <span className="text-sm text-gray-700 dark:text-neutral-300 truncate">{item.name}</span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-neutral-100 ml-2 tabular-nums">{item.qty}</span>
                         </div>
-                        <div className="h-1 rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div className="h-1 rounded-full bg-gray-100 dark:bg-neutral-800">
                           <div
                             className="h-full rounded-full bg-emerald-400 transition-all duration-500"
                             style={{ width: `${(item.qty / maxQty) * 100}%` }}

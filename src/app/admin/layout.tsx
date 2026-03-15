@@ -63,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const visibleNav = navItems.filter(item => item.roles.includes(profile.role as UserRole))
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-neutral-950">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -75,12 +75,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transform transition-transform lg:translate-x-0 lg:static lg:z-auto',
+          'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-700 transform transition-transform lg:translate-x-0 lg:static lg:z-auto',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center justify-between border-b dark:border-gray-700 px-4">
+          <div className="flex h-16 items-center justify-between border-b dark:border-neutral-700 px-4">
             <Link href="/admin" className="flex items-center gap-2">
               <Coffee className="h-6 w-6 text-amber-700" />
               <span className="font-semibold text-lg">{APP_NAME}</span>
@@ -109,7 +109,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                     isActive
                       ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-900'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                      : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-neutral-100'
                   )}
                 >
                   <item.icon className={cn('h-5 w-5', isActive ? 'text-amber-700' : '')} />
@@ -119,19 +119,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             })}
           </nav>
 
-          <div className="border-t dark:border-gray-700 p-3">
+          <div className="border-t dark:border-neutral-700 p-3">
             <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 text-sm font-semibold">
                 {profile.name?.[0]?.toUpperCase() || 'A'}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{profile.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{profile.role}</p>
+                <p className="text-xs text-gray-500 dark:text-neutral-400 capitalize">{profile.role}</p>
               </div>
             </div>
             <Button
               variant="ghost"
-              className="w-full justify-start gap-3 text-gray-600 dark:text-gray-400 hover:text-red-600"
+              className="w-full justify-start gap-3 text-gray-600 dark:text-neutral-400 hover:text-red-600"
               onClick={signOut}
             >
               <LogOut className="h-5 w-5" />
@@ -144,7 +144,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b dark:border-gray-700 bg-white dark:bg-gray-900 px-4 lg:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b dark:border-neutral-700 bg-white dark:bg-neutral-900 px-4 lg:px-6">
           <Button
             variant="ghost"
             size="icon"

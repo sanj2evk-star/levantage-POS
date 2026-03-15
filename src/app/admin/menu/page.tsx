@@ -326,7 +326,7 @@ export default function MenuManagement() {
       case 'cafe': return 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 border-amber-200 dark:border-amber-800'
       case 'mocktail': return 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 border-purple-200'
       case 'juice_bar': return 'bg-green-50 dark:bg-green-900/30 text-green-700 border-green-200 dark:border-green-800'
-      default: return 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+      default: return 'bg-gray-50 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 border-gray-200 dark:border-neutral-700'
     }
   }
 

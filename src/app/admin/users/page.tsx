@@ -275,7 +275,7 @@ export default function UserManagement() {
             <TableBody>
               {profiles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  <TableCell colSpan={6} className="text-center text-gray-500 dark:text-neutral-400 py-8">
                     No staff members yet
                   </TableCell>
                 </TableRow>
@@ -377,7 +377,7 @@ export default function UserManagement() {
                     <SelectItem key={role.value} value={role.value}>
                       <div>
                         <span className="font-medium">{role.label}</span>
-                        <span className="text-gray-500 dark:text-gray-400 ml-2 text-xs">{role.description}</span>
+                        <span className="text-gray-500 dark:text-neutral-400 ml-2 text-xs">{role.description}</span>
                       </div>
                     </SelectItem>
                   ))}

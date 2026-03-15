@@ -137,9 +137,9 @@ export function RefundDialog({ bill, order, open, onClose, onRefunded, verifyPas
         </DialogHeader>
         <div className="space-y-4">
           {/* Bill summary */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-1 text-sm">
+          <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">Bill Total</span>
+              <span className="text-gray-500 dark:text-neutral-400">Bill Total</span>
               <span className="font-medium">₹{Number(bill.total).toFixed(2)}</span>
             </div>
             {Number(bill.total_refunded || 0) > 0 && (

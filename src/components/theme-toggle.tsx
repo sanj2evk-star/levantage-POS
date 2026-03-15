@@ -13,7 +13,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   if (!mounted) {
     return (
       <button className={`p-2 rounded-lg ${className}`} aria-label="Toggle theme">
-        <Sun className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+        <Sun className="h-5 w-5 text-gray-400 dark:text-neutral-500" />
       </button>
     )
   }
@@ -21,14 +21,14 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className={`p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 ${className}`}
+      className={`p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-neutral-800 ${className}`}
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
       {theme === "dark" ? (
         <Sun className="h-5 w-5 text-amber-400" />
       ) : (
-        <Moon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+        <Moon className="h-5 w-5 text-gray-600 dark:text-neutral-400" />
       )}
     </button>
   )

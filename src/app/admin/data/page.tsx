@@ -418,7 +418,7 @@ export default function DataManagementPage() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500" />
             <Input
               type="date"
               value={selectedDate}
@@ -444,25 +444,25 @@ export default function DataManagementPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Total Bills</p>
+            <p className="text-xs text-gray-500 dark:text-neutral-400">Total Bills</p>
             <p className="text-xl font-bold">{bills.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Total Orders</p>
+            <p className="text-xs text-gray-500 dark:text-neutral-400">Total Orders</p>
             <p className="text-xl font-bold">{totalOrders}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Total Sales</p>
+            <p className="text-xs text-gray-500 dark:text-neutral-400">Total Sales</p>
             <p className="text-xl font-bold">{fmtCurrency(totalBillAmount)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Selected</p>
+            <p className="text-xs text-gray-500 dark:text-neutral-400">Selected</p>
             <p className="text-xl font-bold text-red-600">{deleteCount}</p>
           </CardContent>
         </Card>
@@ -470,11 +470,11 @@ export default function DataManagementPage() {
 
       {/* Tabs + Search + Delete */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex gap-1 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1">
           <button
             onClick={() => { setActiveTab('bills'); setSearchQuery('') }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'bills' ? 'bg-white dark:bg-gray-900 shadow text-amber-900' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+              activeTab === 'bills' ? 'bg-white dark:bg-neutral-900 shadow text-amber-900' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
             }`}
           >
             <Receipt className="h-4 w-4" />
@@ -483,7 +483,7 @@ export default function DataManagementPage() {
           <button
             onClick={() => { setActiveTab('orders'); setSearchQuery('') }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'orders' ? 'bg-white dark:bg-gray-900 shadow text-amber-900' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+              activeTab === 'orders' ? 'bg-white dark:bg-neutral-900 shadow text-amber-900' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
             }`}
           >
             <ShoppingCart className="h-4 w-4" />
@@ -492,7 +492,7 @@ export default function DataManagementPage() {
           <button
             onClick={() => { setActiveTab('bulk'); setSearchQuery('') }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'bulk' ? 'bg-white dark:bg-gray-900 shadow text-red-700' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+              activeTab === 'bulk' ? 'bg-white dark:bg-neutral-900 shadow text-red-700' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
             }`}
           >
             <Zap className="h-4 w-4" />
@@ -501,7 +501,7 @@ export default function DataManagementPage() {
         </div>
 
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500" />
           <Input
             placeholder={activeTab === 'bills' ? 'Search bill #, order #, table...' : 'Search order #, table, status...'}
             value={searchQuery}
@@ -531,7 +531,7 @@ export default function DataManagementPage() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-700" />
               </div>
             ) : filteredBills.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-12 text-gray-500 dark:text-neutral-400">
                 <Receipt className="h-10 w-10 mx-auto mb-2 opacity-30" />
                 <p>No bills found for this date</p>
               </div>
@@ -539,9 +539,9 @@ export default function DataManagementPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50 dark:bg-gray-800">
+                    <tr className="border-b bg-gray-50 dark:bg-neutral-800">
                       <th className="p-3 text-left w-10">
-                        <button onClick={toggleAllBills} className="text-gray-400 dark:text-gray-500 hover:text-gray-700">
+                        <button onClick={toggleAllBills} className="text-gray-400 dark:text-neutral-500 hover:text-gray-700">
                           {selectedBills.size === filteredBills.length && filteredBills.length > 0
                             ? <CheckSquare className="h-4 w-4" />
                             : <Square className="h-4 w-4" />
@@ -572,7 +572,7 @@ export default function DataManagementPage() {
                       return (
                         <tr
                           key={bill.id}
-                          className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedBills.has(bill.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
+                          className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-800 ${selectedBills.has(bill.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
                         >
                           <td className="p-3">
                             <Checkbox
@@ -580,7 +580,7 @@ export default function DataManagementPage() {
                               onCheckedChange={() => toggleBill(bill.id)}
                             />
                           </td>
-                          <td className="p-3 text-gray-500 dark:text-gray-400">{idx + 1}</td>
+                          <td className="p-3 text-gray-500 dark:text-neutral-400">{idx + 1}</td>
                           <td className="p-3 font-mono text-xs">{bill.bill_number}</td>
                           <td className="p-3 font-mono text-xs">{order?.order_number || '-'}</td>
                           <td className="p-3">
@@ -592,7 +592,7 @@ export default function DataManagementPage() {
                               <Badge variant="secondary" className="text-xs">Takeaway</Badge>
                             )}
                           </td>
-                          <td className="p-3 text-xs text-gray-600 dark:text-gray-400 max-w-[200px] truncate" title={itemsSummary + moreItems}>
+                          <td className="p-3 text-xs text-gray-600 dark:text-neutral-400 max-w-[200px] truncate" title={itemsSummary + moreItems}>
                             {itemsSummary}{moreItems}
                           </td>
                           <td className="p-3 text-right font-medium">{fmtCurrency(bill.total)}</td>
@@ -603,13 +603,13 @@ export default function DataManagementPage() {
                                 bill.payment_mode === 'cash' ? 'border-green-300 text-green-700' :
                                 bill.payment_mode === 'upi' ? 'border-blue-300 text-blue-700' :
                                 bill.payment_mode === 'card' ? 'border-purple-300 text-purple-700' :
-                                'border-gray-300 dark:border-gray-600'
+                                'border-gray-300 dark:border-neutral-600'
                               }`}
                             >
                               {bill.payment_mode || 'N/A'}
                             </Badge>
                           </td>
-                          <td className="p-3 text-xs text-gray-500 dark:text-gray-400">{fmtTime(bill.created_at)}</td>
+                          <td className="p-3 text-xs text-gray-500 dark:text-neutral-400">{fmtTime(bill.created_at)}</td>
                           <td className="p-3 text-center">
                             <Button
                               variant="ghost"
@@ -629,7 +629,7 @@ export default function DataManagementPage() {
                   </tbody>
                   {filteredBills.length > 0 && (
                     <tfoot>
-                      <tr className="bg-gray-50 dark:bg-gray-800 font-medium">
+                      <tr className="bg-gray-50 dark:bg-neutral-800 font-medium">
                         <td colSpan={6} className="p-3 text-right">Total:</td>
                         <td className="p-3 text-right">
                           {fmtCurrency(filteredBills.reduce((s, b) => s + (b.total || 0), 0))}
@@ -654,7 +654,7 @@ export default function DataManagementPage() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-700" />
               </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-12 text-gray-500 dark:text-neutral-400">
                 <ShoppingCart className="h-10 w-10 mx-auto mb-2 opacity-30" />
                 <p>No orders found for this date</p>
               </div>
@@ -662,9 +662,9 @@ export default function DataManagementPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50 dark:bg-gray-800">
+                    <tr className="border-b bg-gray-50 dark:bg-neutral-800">
                       <th className="p-3 text-left w-10">
-                        <button onClick={toggleAllOrders} className="text-gray-400 dark:text-gray-500 hover:text-gray-700">
+                        <button onClick={toggleAllOrders} className="text-gray-400 dark:text-neutral-500 hover:text-gray-700">
                           {selectedOrders.size === filteredOrders.length && filteredOrders.length > 0
                             ? <CheckSquare className="h-4 w-4" />
                             : <Square className="h-4 w-4" />
@@ -703,7 +703,7 @@ export default function DataManagementPage() {
                       return (
                         <tr
                           key={order.id}
-                          className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedOrders.has(order.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
+                          className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-800 ${selectedOrders.has(order.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
                         >
                           <td className="p-3">
                             <Checkbox
@@ -711,7 +711,7 @@ export default function DataManagementPage() {
                               onCheckedChange={() => toggleOrder(order.id)}
                             />
                           </td>
-                          <td className="p-3 text-gray-500 dark:text-gray-400">{idx + 1}</td>
+                          <td className="p-3 text-gray-500 dark:text-neutral-400">{idx + 1}</td>
                           <td className="p-3 font-mono text-xs">{order.order_number}</td>
                           <td className="p-3">
                             <Badge variant="outline" className="text-xs capitalize">
@@ -724,7 +724,7 @@ export default function DataManagementPage() {
                                 {getTableDisplayName(table)}
                               </Badge>
                             ) : (
-                              <span className="text-gray-400 dark:text-gray-500">-</span>
+                              <span className="text-gray-400 dark:text-neutral-500">-</span>
                             )}
                           </td>
                           <td className="p-3">
@@ -732,17 +732,17 @@ export default function DataManagementPage() {
                               {order.status}
                             </Badge>
                           </td>
-                          <td className="p-3 text-xs text-gray-600 dark:text-gray-400 max-w-[200px] truncate" title={itemsSummary + moreItems}>
+                          <td className="p-3 text-xs text-gray-600 dark:text-neutral-400 max-w-[200px] truncate" title={itemsSummary + moreItems}>
                             {itemsSummary || 'No items'}{moreItems}
                           </td>
                           <td className="p-3">
                             {hasBill ? (
                               <Badge className="text-xs bg-green-100 dark:bg-green-900/40 text-green-700">Yes</Badge>
                             ) : (
-                              <Badge variant="outline" className="text-xs text-gray-400 dark:text-gray-500">No</Badge>
+                              <Badge variant="outline" className="text-xs text-gray-400 dark:text-neutral-500">No</Badge>
                             )}
                           </td>
-                          <td className="p-3 text-xs text-gray-500 dark:text-gray-400">{fmtTime(order.created_at)}</td>
+                          <td className="p-3 text-xs text-gray-500 dark:text-neutral-400">{fmtTime(order.created_at)}</td>
                           <td className="p-3 text-center">
                             <Button
                               variant="ghost"
@@ -842,9 +842,9 @@ export default function DataManagementPage() {
                 <div className="border rounded-lg overflow-x-auto max-h-[400px] overflow-y-auto">
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10">
-                      <tr className="border-b bg-gray-50 dark:bg-gray-800">
+                      <tr className="border-b bg-gray-50 dark:bg-neutral-800">
                         <th className="p-2 text-left w-10">
-                          <button onClick={toggleAllBulkBills} className="text-gray-400 dark:text-gray-500 hover:text-gray-700">
+                          <button onClick={toggleAllBulkBills} className="text-gray-400 dark:text-neutral-500 hover:text-gray-700">
                             {selectedBulkBills.size === bulkBills.length && bulkBills.length > 0
                               ? <CheckSquare className="h-4 w-4" />
                               : <Square className="h-4 w-4" />
@@ -866,7 +866,7 @@ export default function DataManagementPage() {
                         return (
                           <tr
                             key={bill.id}
-                            className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedBulkBills.has(bill.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
+                            className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-800 ${selectedBulkBills.has(bill.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
                           >
                             <td className="p-2">
                               <Checkbox
@@ -893,13 +893,13 @@ export default function DataManagementPage() {
                                   bill.payment_mode === 'cash' ? 'border-green-300 text-green-700' :
                                   bill.payment_mode === 'upi' ? 'border-blue-300 text-blue-700' :
                                   bill.payment_mode === 'card' ? 'border-purple-300 text-purple-700' :
-                                  'border-gray-300 dark:border-gray-600'
+                                  'border-gray-300 dark:border-neutral-600'
                                 }`}
                               >
                                 {bill.payment_mode || 'N/A'}
                               </Badge>
                             </td>
-                            <td className="p-2 text-xs text-gray-500 dark:text-gray-400">
+                            <td className="p-2 text-xs text-gray-500 dark:text-neutral-400">
                               {new Date(bill.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} {fmtTime(bill.created_at)}
                             </td>
                           </tr>
@@ -908,7 +908,7 @@ export default function DataManagementPage() {
                     </tbody>
                     {bulkBills.length > 0 && (
                       <tfoot>
-                        <tr className="bg-gray-50 dark:bg-gray-800 font-medium">
+                        <tr className="bg-gray-50 dark:bg-neutral-800 font-medium">
                           <td colSpan={4} className="p-2 text-right">Selected Total:</td>
                           <td className="p-2 text-right">
                             {fmtCurrency(bulkBills.filter(b => selectedBulkBills.has(b.id)).reduce((s, b) => s + Number(b.total), 0))}
@@ -923,7 +923,7 @@ export default function DataManagementPage() {
             )}
 
             {bulkBills.length === 0 && !bulkLoading && bulkFromDate && bulkToDate && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">Click &quot;Load Bills&quot; to see matching bills</p>
+              <p className="text-sm text-gray-500 dark:text-neutral-400">Click &quot;Load Bills&quot; to see matching bills</p>
             )}
           </CardContent>
         </Card>
@@ -939,7 +939,7 @@ export default function DataManagementPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-neutral-400">
               This will permanently delete the selected bills, their orders, items, payments, and KOTs. This cannot be undone.
             </p>
             <div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-3 space-y-1 text-sm">
@@ -977,7 +977,7 @@ export default function DataManagementPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-neutral-400">
               This will permanently delete the selected {deleteLabel}(s) and all associated data
               (items, payments, KOTs). This cannot be undone.
             </p>

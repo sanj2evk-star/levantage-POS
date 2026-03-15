@@ -232,7 +232,7 @@ export default function SettingsPage() {
               Save
             </Button>
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+          <p className="text-xs text-gray-400 dark:text-neutral-500 mt-2">
             Example: If set to 3 AM, a bill at 1 AM on Saturday will appear under Friday&apos;s sales.
           </p>
         </CardContent>
@@ -257,7 +257,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="font-medium">{printer.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{getStationLabel(printer.station_type)}</p>
+                  <p className="text-xs text-gray-500 dark:text-neutral-400">{getStationLabel(printer.station_type)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button

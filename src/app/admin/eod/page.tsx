@@ -382,20 +382,20 @@ export default function EODPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Sales</p>
+                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-neutral-400 mb-1">Total Sales</p>
                   <p className="text-xl font-bold">₹{summary.totalSales.toFixed(0)}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Orders</p>
+                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-neutral-400 mb-1">Total Orders</p>
                   <p className="text-xl font-bold">{summary.totalOrders}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Refunds</p>
+                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-neutral-400 mb-1">Refunds</p>
                   <p className="text-xl font-bold text-red-600">₹{summary.refundTotal.toFixed(0)}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Outstanding</p>
+                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-neutral-400 mb-1">Outstanding</p>
                   <p className="text-xl font-bold text-orange-600">₹{summary.outstandingTotal.toFixed(0)}</p>
                 </div>
               </div>
@@ -407,21 +407,21 @@ export default function EODPage() {
                 <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
                   <Banknote className="h-5 w-5 text-green-600" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Cash</p>
+                    <p className="text-xs text-gray-500 dark:text-neutral-400">Cash</p>
                     <p className="text-lg font-bold text-green-700">₹{summary.cashTotal.toFixed(0)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                   <Smartphone className="h-5 w-5 text-blue-600" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">UPI</p>
+                    <p className="text-xs text-gray-500 dark:text-neutral-400">UPI</p>
                     <p className="text-lg font-bold text-blue-700">₹{summary.upiTotal.toFixed(0)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
                   <CreditCard className="h-5 w-5 text-purple-600" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Card</p>
+                    <p className="text-xs text-gray-500 dark:text-neutral-400">Card</p>
                     <p className="text-lg font-bold text-purple-700">₹{summary.cardTotal.toFixed(0)}</p>
                   </div>
                 </div>
@@ -450,7 +450,7 @@ export default function EODPage() {
                   className="w-40"
                   min={0}
                 />
-                <span className="text-xs text-gray-400 dark:text-gray-500">
+                <span className="text-xs text-gray-400 dark:text-neutral-500">
                   Auto-suggested from previous day&apos;s actual cash
                 </span>
               </div>
@@ -469,7 +469,7 @@ export default function EODPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-gray-500 dark:text-gray-400">
+                    <tr className="border-b text-left text-gray-500 dark:text-neutral-400">
                       <th className="pb-2 font-medium">Denomination</th>
                       <th className="pb-2 font-medium text-center w-32">Count</th>
                       <th className="pb-2 font-medium text-right">Subtotal</th>
@@ -526,17 +526,17 @@ export default function EODPage() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Opening Balance</span>
+                  <span className="text-sm text-gray-500 dark:text-neutral-400">Opening Balance</span>
                   <span className="font-medium">₹{openingBalance.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">+ Cash Sales</span>
+                  <span className="text-sm text-gray-500 dark:text-neutral-400">+ Cash Sales</span>
                   <span className="font-medium text-green-700">
                     +₹{summary.cashTotal.toLocaleString('en-IN')}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">- Cash Refunds</span>
+                  <span className="text-sm text-gray-500 dark:text-neutral-400">- Cash Refunds</span>
                   <span className="font-medium text-red-600">
                     -₹{summary.cashRefundTotal.toLocaleString('en-IN')}
                   </span>
@@ -562,7 +562,7 @@ export default function EODPage() {
                       ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'
                       : shortSurplus > 0
                         ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
-                        : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                        : 'bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'
                   )}
                 >
                   <span className="font-semibold">
@@ -575,7 +575,7 @@ export default function EODPage() {
                         ? 'text-red-600'
                         : shortSurplus > 0
                           ? 'text-green-600'
-                          : 'text-gray-700 dark:text-gray-300'
+                          : 'text-gray-700 dark:text-neutral-300'
                     )}
                   >
                     {shortSurplus < 0 ? '-' : shortSurplus > 0 ? '+' : ''}₹
@@ -626,7 +626,7 @@ export default function EODPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Calendar className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-400 dark:text-gray-500">No daily closings found</p>
+                <p className="text-gray-400 dark:text-neutral-500">No daily closings found</p>
               </CardContent>
             </Card>
           ) : (
@@ -638,7 +638,7 @@ export default function EODPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b text-left text-gray-500 dark:text-gray-400">
+                      <tr className="border-b text-left text-gray-500 dark:text-neutral-400">
                         <th className="pb-2 font-medium">Date</th>
                         <th className="pb-2 font-medium text-right">Sales</th>
                         <th className="pb-2 font-medium text-right">Orders</th>
@@ -662,7 +662,7 @@ export default function EODPage() {
                                 onClick={() =>
                                   setExpandedClosingId(isExpanded ? null : c.id)
                                 }
-                                className="w-full flex items-center text-left py-2.5 px-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                className="w-full flex items-center text-left py-2.5 px-0 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
                               >
                                 <span className="flex-1 grid grid-cols-9 items-center text-sm">
                                   <span className="font-medium">
@@ -687,7 +687,7 @@ export default function EODPage() {
                                           ? 'border-red-300 text-red-600'
                                           : Number(c.short_surplus) > 0
                                             ? 'border-green-300 text-green-600'
-                                            : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                                            : 'border-gray-300 dark:border-neutral-600 text-gray-600 dark:text-neutral-400'
                                       )}
                                     >
                                       {Number(c.short_surplus) < 0
@@ -697,14 +697,14 @@ export default function EODPage() {
                                           : 'Exact'}
                                     </Badge>
                                   </span>
-                                  <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                  <span className="text-gray-500 dark:text-neutral-400 text-xs">
                                     {c.closer?.name || '-'}
                                   </span>
                                   <span className="text-right">
                                     {isExpanded ? (
-                                      <ChevronUp className="h-4 w-4 inline text-gray-400 dark:text-gray-500" />
+                                      <ChevronUp className="h-4 w-4 inline text-gray-400 dark:text-neutral-500" />
                                     ) : (
-                                      <ChevronDown className="h-4 w-4 inline text-gray-400 dark:text-gray-500" />
+                                      <ChevronDown className="h-4 w-4 inline text-gray-400 dark:text-neutral-500" />
                                     )}
                                   </span>
                                 </span>
@@ -712,11 +712,11 @@ export default function EODPage() {
 
                               {/* Expanded details */}
                               {isExpanded && (
-                                <div className="px-4 pb-4 bg-gray-50 dark:bg-gray-800 border-t">
+                                <div className="px-4 pb-4 bg-gray-50 dark:bg-neutral-800 border-t">
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
                                     {/* Denomination breakdown */}
                                     <div>
-                                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+                                      <p className="text-xs font-semibold text-gray-500 dark:text-neutral-400 uppercase mb-2">
                                         Denomination Breakdown
                                       </p>
                                       <table className="w-full text-xs">
@@ -746,43 +746,43 @@ export default function EODPage() {
 
                                     {/* Summary details */}
                                     <div className="space-y-2 text-xs">
-                                      <p className="font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+                                      <p className="font-semibold text-gray-500 dark:text-neutral-400 uppercase mb-2">
                                         Reconciliation Details
                                       </p>
                                       <div className="flex justify-between">
-                                        <span className="text-gray-500 dark:text-gray-400">Opening Balance</span>
+                                        <span className="text-gray-500 dark:text-neutral-400">Opening Balance</span>
                                         <span>₹{Number(c.opening_balance).toLocaleString('en-IN')}</span>
                                       </div>
                                       <div className="flex justify-between">
-                                        <span className="text-gray-500 dark:text-gray-400">Expected Cash</span>
+                                        <span className="text-gray-500 dark:text-neutral-400">Expected Cash</span>
                                         <span>₹{Number(c.expected_cash).toLocaleString('en-IN')}</span>
                                       </div>
                                       <div className="flex justify-between">
-                                        <span className="text-gray-500 dark:text-gray-400">Actual Cash</span>
+                                        <span className="text-gray-500 dark:text-neutral-400">Actual Cash</span>
                                         <span>₹{Number(c.actual_cash).toLocaleString('en-IN')}</span>
                                       </div>
                                       <div className="flex justify-between">
-                                        <span className="text-gray-500 dark:text-gray-400">Cash Refunds</span>
+                                        <span className="text-gray-500 dark:text-neutral-400">Cash Refunds</span>
                                         <span className="text-red-600">
                                           -₹{Number(c.cash_refunds).toLocaleString('en-IN')}
                                         </span>
                                       </div>
                                       <div className="flex justify-between">
-                                        <span className="text-gray-500 dark:text-gray-400">Total Refunds</span>
+                                        <span className="text-gray-500 dark:text-neutral-400">Total Refunds</span>
                                         <span className="text-red-600">
                                           -₹{Number(c.refund_total).toLocaleString('en-IN')}
                                         </span>
                                       </div>
                                       <div className="flex justify-between">
-                                        <span className="text-gray-500 dark:text-gray-400">Outstanding</span>
+                                        <span className="text-gray-500 dark:text-neutral-400">Outstanding</span>
                                         <span className="text-orange-600">
                                           ₹{Number(c.partial_outstanding).toLocaleString('en-IN')}
                                         </span>
                                       </div>
                                       {c.notes && (
                                         <div className="mt-3 pt-3 border-t">
-                                          <p className="text-gray-500 dark:text-gray-400 mb-1">Notes:</p>
-                                          <p className="text-gray-700 dark:text-gray-300">{c.notes}</p>
+                                          <p className="text-gray-500 dark:text-neutral-400 mb-1">Notes:</p>
+                                          <p className="text-gray-700 dark:text-neutral-300">{c.notes}</p>
                                         </div>
                                       )}
                                     </div>
@@ -810,28 +810,28 @@ export default function EODPage() {
           </DialogHeader>
           {summary && (
             <div className="space-y-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-neutral-400">
                 You are about to close the day for{' '}
-                <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedDate}</span>.
+                <span className="font-semibold text-gray-900 dark:text-neutral-100">{selectedDate}</span>.
                 This action cannot be undone.
               </p>
 
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Total Sales</span>
+                  <span className="text-gray-500 dark:text-neutral-400">Total Sales</span>
                   <span className="font-bold">₹{summary.totalSales.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Total Orders</span>
+                  <span className="text-gray-500 dark:text-neutral-400">Total Orders</span>
                   <span className="font-bold">{summary.totalOrders}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Expected Cash</span>
+                  <span className="text-gray-500 dark:text-neutral-400">Expected Cash</span>
                   <span>₹{expectedCash.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Actual Cash</span>
+                  <span className="text-gray-500 dark:text-neutral-400">Actual Cash</span>
                   <span>₹{actualCash.toFixed(2)}</span>
                 </div>
                 <div
@@ -841,7 +841,7 @@ export default function EODPage() {
                       ? 'text-red-600'
                       : shortSurplus > 0
                         ? 'text-green-600'
-                        : 'text-gray-700 dark:text-gray-300'
+                        : 'text-gray-700 dark:text-neutral-300'
                   )}
                 >
                   <span>{shortSurplus < 0 ? 'Short' : shortSurplus > 0 ? 'Surplus' : 'Match'}</span>

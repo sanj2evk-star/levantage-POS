@@ -503,7 +503,7 @@ export default function WaiterPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
         <header className="bg-amber-700 text-white px-4 py-3.5 flex items-center gap-2">
           <Coffee className="h-5 w-5" />
           <span className="font-semibold text-base">Captain</span>
@@ -511,10 +511,10 @@ export default function WaiterPage() {
         <div className="p-4 space-y-6">
           {[1, 2, 3].map(i => (
             <div key={i} className="space-y-3">
-              <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-5 w-32 bg-gray-200 dark:bg-neutral-700 rounded animate-pulse" />
               <div className="grid grid-cols-3 gap-3">
                 {[1, 2, 3, 4, 5, 6].map(j => (
-                  <div key={j} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+                  <div key={j} className="h-24 bg-gray-200 dark:bg-neutral-700 rounded-xl animate-pulse" />
                 ))}
               </div>
             </div>
@@ -526,7 +526,7 @@ export default function WaiterPage() {
 
   // ======== CART FOOTER (shared between categories + menu views) ========
   const cartFooter = cart.length > 0 && (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-20 pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t dark:border-neutral-700 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-20 pb-[env(safe-area-inset-bottom)]">
       <div className="p-3">
         <Sheet>
           <SheetTrigger
@@ -550,23 +550,23 @@ export default function WaiterPage() {
             </SheetHeader>
             <div className="mt-3 space-y-2 overflow-y-auto flex-1" style={{ maxHeight: 'calc(75vh - 200px)' }}>
               {cart.map((item, index) => (
-                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+                <div key={index} className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-3">
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold leading-tight">{item.menu_item.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">₹{item.unit_price} each</p>
+                      <p className="text-xs text-gray-500 dark:text-neutral-400 mt-0.5">₹{item.unit_price} each</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => updateQuantity(index, -1)}
-                        className="h-8 w-8 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 flex items-center justify-center active:scale-95"
+                        className="h-8 w-8 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 flex items-center justify-center active:scale-95"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
                       <span className="text-sm font-bold w-7 text-center">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(index, 1)}
-                        className="h-8 w-8 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 flex items-center justify-center active:scale-95"
+                        className="h-8 w-8 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 flex items-center justify-center active:scale-95"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -594,13 +594,13 @@ export default function WaiterPage() {
                           }
                         }}
                         placeholder="e.g., no onion, extra spicy..."
-                        className="h-8 text-xs bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 flex-1"
+                        className="h-8 text-xs bg-white dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100 flex-1"
                       />
                     </div>
                   ) : (
                     <button
                       onClick={() => setNoteOpenIndices(prev => new Set(prev).add(index))}
-                      className="mt-2 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-amber-700"
+                      className="mt-2 flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-500 hover:text-amber-700"
                     >
                       <MessageSquare className="h-3 w-3" />
                       Add note
@@ -609,7 +609,7 @@ export default function WaiterPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t dark:border-gray-700 space-y-3">
+            <div className="mt-3 pt-3 border-t dark:border-neutral-700 space-y-3">
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
                 <span className="text-amber-700">₹{Math.round(subtotal)}</span>
@@ -633,12 +633,12 @@ export default function WaiterPage() {
           <DialogTitle>Confirm Order</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600 dark:text-neutral-400">
             {addingToOrder
               ? `Add ${itemCount} items to ${addingToOrder.order_number}?`
               : `Place order for ${selectedTable ? getTableDisplayName(selectedTable) : 'Takeaway'}?`}
           </p>
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 space-y-1.5 max-h-52 overflow-y-auto">
+          <div className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-3 space-y-1.5 max-h-52 overflow-y-auto">
             {cart.map((item, i) => (
               <div key={i}>
                 <div className="flex justify-between text-sm">
@@ -688,7 +688,7 @@ export default function WaiterPage() {
     const occupiedCount = tables.filter(t => t.status === 'occupied').length
 
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
         {/* Header */}
         <header className="bg-amber-700 text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -719,8 +719,8 @@ export default function WaiterPage() {
             return (
               <div key={group.group}>
                 <div className="flex items-center gap-2 mb-2.5 px-1">
-                  <h2 className="font-bold text-sm text-gray-700 dark:text-gray-300">{group.label}</h2>
-                  <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">{sectionOccupied}/{group.tables.length}</span>
+                  <h2 className="font-bold text-sm text-gray-700 dark:text-neutral-300">{group.label}</h2>
+                  <span className="text-xs text-gray-400 dark:text-neutral-500 font-medium">{sectionOccupied}/{group.tables.length}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2.5">
                   {group.tables.map(table => {
@@ -738,11 +738,11 @@ export default function WaiterPage() {
                             ? 'border-transparent bg-amber-700 text-white shadow-sm'
                             : table.status === 'reserved'
                             ? 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/30'
-                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
+                            : 'border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900'
                         }`}
                       >
                         <p className={`text-xl font-bold leading-none ${
-                          isOccupied ? 'text-white' : 'text-gray-400 dark:text-gray-500'
+                          isOccupied ? 'text-white' : 'text-gray-400 dark:text-neutral-500'
                         }`}>
                           {getTableDisplayName(table)}
                         </p>
@@ -766,7 +766,7 @@ export default function WaiterPage() {
                           </div>
                         ) : (
                           <p className={`text-xs mt-1 capitalize ${
-                            table.status === 'reserved' ? 'text-yellow-700' : 'text-gray-400 dark:text-gray-500'
+                            table.status === 'reserved' ? 'text-yellow-700' : 'text-gray-400 dark:text-neutral-500'
                           }`}>
                             {table.status === 'available' || billPrinted ? '' : table.status}
                           </p>
@@ -801,7 +801,7 @@ export default function WaiterPage() {
                   </div>
                   <div>
                     <p className="font-bold text-base">{profile?.name || 'Captain'}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">{profile?.role}</p>
+                    <p className="text-xs text-gray-400 dark:text-neutral-500 capitalize">{profile?.role}</p>
                   </div>
                 </div>
               </div>
@@ -812,17 +812,17 @@ export default function WaiterPage() {
               <div className="space-y-1">
                 <button
                   onClick={startTakeaway}
-                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-left transition-colors active:scale-[0.98]"
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-gray-100 dark:hover:bg-neutral-700 text-left transition-colors active:scale-[0.98]"
                 >
-                  <UtensilsCrossed className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                  <UtensilsCrossed className="h-5 w-5 text-gray-500 dark:text-neutral-400" />
                   <span className="text-sm font-medium">New Takeaway</span>
                 </button>
 
                 <button
                   onClick={() => { setDrawerOpen(false) }}
-                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-left transition-colors active:scale-[0.98]"
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-gray-100 dark:hover:bg-neutral-700 text-left transition-colors active:scale-[0.98]"
                 >
-                  <LayoutGrid className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                  <LayoutGrid className="h-5 w-5 text-gray-500 dark:text-neutral-400" />
                   <span className="text-sm font-medium">All Tables</span>
                 </button>
               </div>
@@ -831,7 +831,7 @@ export default function WaiterPage() {
 
               {/* Theme toggle */}
               <div className="px-3 flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Theme</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-neutral-400">Theme</span>
                 <ThemeToggle />
               </div>
 
@@ -860,11 +860,11 @@ export default function WaiterPage() {
     const orderTotal = activeItems.reduce((sum, i) => sum + i.total_price, 0)
 
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-        <header className="bg-white dark:bg-gray-900 border-b dark:border-gray-700 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex flex-col">
+        <header className="bg-white dark:bg-neutral-900 border-b dark:border-neutral-700 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
           <button
             onClick={() => { setView('tables'); setActiveOrder(null) }}
-            className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95"
+            className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 active:scale-95"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -877,12 +877,12 @@ export default function WaiterPage() {
                 activeOrder.status === 'ready' ? 'bg-green-100 text-green-700' :
                 activeOrder.status === 'preparing' ? 'bg-blue-100 text-blue-700' :
                 activeOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400'
               }`}>
                 {activeOrder.status}
               </span>
               {activeOrder.created_at && (
-                <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                <span className="text-xs text-gray-400 dark:text-neutral-500 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {timeAgo(activeOrder.created_at)}
                 </span>
@@ -893,8 +893,8 @@ export default function WaiterPage() {
 
         <div className="flex-1 p-4 space-y-4">
           {/* Current items */}
-          <div className="bg-white dark:bg-gray-900 dark:border dark:border-gray-700 rounded-xl p-4 space-y-2.5">
-            <h3 className="font-bold text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Current Items</h3>
+          <div className="bg-white dark:bg-neutral-900 dark:border dark:border-neutral-700 rounded-xl p-4 space-y-2.5">
+            <h3 className="font-bold text-xs text-gray-400 dark:text-neutral-500 uppercase tracking-wide">Current Items</h3>
             {activeItems.map(item => (
               <div key={item.id} className="flex justify-between items-start py-1">
                 <span className="flex items-start gap-2 flex-1 min-w-0 mr-2">
@@ -914,14 +914,14 @@ export default function WaiterPage() {
               <>
                 <Separator />
                 {cancelledItems.map(item => (
-                  <div key={item.id} className="flex justify-between text-xs text-gray-400 dark:text-gray-500 line-through py-0.5">
+                  <div key={item.id} className="flex justify-between text-xs text-gray-400 dark:text-neutral-500 line-through py-0.5">
                     <span>{item.quantity}x {item.menu_item?.name}</span>
                     <span>₹{Math.round(item.total_price)}</span>
                   </div>
                 ))}
               </>
             )}
-            <div className="pt-3 border-t dark:border-gray-700 flex justify-between items-center">
+            <div className="pt-3 border-t dark:border-neutral-700 flex justify-between items-center">
               <span className="font-bold text-base">Total</span>
               <span className="font-bold text-lg text-amber-700">₹{Math.round(orderTotal).toLocaleString('en-IN')}</span>
             </div>
@@ -959,7 +959,7 @@ export default function WaiterPage() {
             <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
               {groupTablesByDisplayGroup(tables.filter(t => t.status === 'available')).map(group => (
                 <div key={group.group}>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{group.label}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-neutral-400 mb-2">{group.label}</p>
                   <div className="grid grid-cols-4 gap-2">
                     {group.tables.map(table => (
                       <button
@@ -975,7 +975,7 @@ export default function WaiterPage() {
                 </div>
               ))}
               {tables.filter(t => t.status === 'available').length === 0 && (
-                <p className="text-center text-gray-400 dark:text-gray-500 py-4">No available tables</p>
+                <p className="text-center text-gray-400 dark:text-neutral-500 py-4">No available tables</p>
               )}
             </div>
           </DialogContent>
@@ -987,9 +987,9 @@ export default function WaiterPage() {
   // ======== CATEGORIES VIEW ========
   if (view === 'categories') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex flex-col">
         {/* Header */}
-        <header className="bg-white dark:bg-gray-900 border-b dark:border-gray-700 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
+        <header className="bg-white dark:bg-neutral-900 border-b dark:border-neutral-700 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
           <button
             onClick={() => {
               if (addingToOrder) {
@@ -999,7 +999,7 @@ export default function WaiterPage() {
                 setCart([])
               }
             }}
-            className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95"
+            className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 active:scale-95"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -1013,13 +1013,13 @@ export default function WaiterPage() {
               <p className="text-xs text-amber-600 font-medium mt-0.5">Adding items to existing order</p>
             )}
             {!addingToOrder && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Select a category</p>
+              <p className="text-xs text-gray-400 dark:text-neutral-500 mt-0.5">Select a category</p>
             )}
           </div>
         </header>
 
         {/* Search */}
-        <div className="px-4 py-3 bg-white dark:bg-gray-900 border-b dark:border-gray-700">
+        <div className="px-4 py-3 bg-white dark:bg-neutral-900 border-b dark:border-neutral-700">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -1032,7 +1032,7 @@ export default function WaiterPage() {
                   setView('menu')
                 }
               }}
-              className="pl-9 pr-8 h-11 rounded-xl dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+              className="pl-9 pr-8 h-11 rounded-xl dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100"
             />
           </div>
         </div>
@@ -1058,11 +1058,11 @@ export default function WaiterPage() {
                 <button
                   key={cat.id}
                   onClick={() => selectCategory(cat.id)}
-                  className="bg-white dark:bg-gray-900 rounded-xl p-4 text-left shadow-sm border border-gray-100 dark:border-gray-800 active:scale-95 transition-transform hover:border-amber-200 min-h-[96px]"
+                  className="bg-white dark:bg-neutral-900 rounded-xl p-4 text-left shadow-sm border border-gray-100 dark:border-neutral-800 active:scale-95 transition-transform hover:border-amber-200 min-h-[96px]"
                 >
                   <UtensilsCrossed className="h-5 w-5 mb-2 text-amber-700" />
                   <h3 className="font-semibold text-sm leading-snug line-clamp-2">{cat.name}</h3>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{count} items</p>
+                  <p className="text-xs text-gray-400 dark:text-neutral-500 mt-1">{count} items</p>
                 </button>
               )
             })}
@@ -1082,15 +1082,15 @@ export default function WaiterPage() {
     : categories.find(c => c.id === activeCategory)?.name || 'Menu'
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex flex-col">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-900 border-b dark:border-gray-700 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
+      <header className="bg-white dark:bg-neutral-900 border-b dark:border-neutral-700 px-4 py-3.5 flex items-center gap-3 sticky top-0 z-10">
         <button
           onClick={() => {
             setView('categories')
             setSearchQuery('')
           }}
-          className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95"
+          className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 active:scale-95"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -1100,19 +1100,19 @@ export default function WaiterPage() {
               ? `Add to ${addingToOrder.order_number}`
               : selectedTable ? getTableDisplayName(selectedTable) : 'Takeaway'}
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{activeCategoryName}</p>
+          <p className="text-xs text-gray-400 dark:text-neutral-500 mt-0.5">{activeCategoryName}</p>
         </div>
       </header>
 
       {/* Search */}
-      <div className="px-4 py-2.5 bg-white dark:bg-gray-900 border-b dark:border-gray-700">
+      <div className="px-4 py-2.5 bg-white dark:bg-neutral-900 border-b dark:border-neutral-700">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-8 h-10 rounded-xl dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+            className="pl-9 pr-8 h-10 rounded-xl dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100"
           />
           {searchQuery && (
             <button
@@ -1126,11 +1126,11 @@ export default function WaiterPage() {
       </div>
 
       {/* Category chips for quick switching */}
-      <div className="px-3 py-2.5 bg-white dark:bg-gray-900 border-b dark:border-gray-700 flex gap-2 overflow-x-auto scrollbar-hide">
+      <div className="px-3 py-2.5 bg-white dark:bg-neutral-900 border-b dark:border-neutral-700 flex gap-2 overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setActiveCategory('all')}
           className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
-            activeCategory === 'all' ? 'bg-amber-700 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+            activeCategory === 'all' ? 'bg-amber-700 text-white' : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400'
           }`}
         >
           All
@@ -1140,7 +1140,7 @@ export default function WaiterPage() {
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
             className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeCategory === cat.id ? 'bg-amber-700 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+              activeCategory === cat.id ? 'bg-amber-700 text-white' : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400'
             }`}
           >
             {cat.name}
@@ -1151,7 +1151,7 @@ export default function WaiterPage() {
       {/* Items */}
       <div className="flex-1 p-3 pb-28">
         {filteredItems.length === 0 && (
-          <div className="text-center py-16 text-gray-400 dark:text-gray-500">
+          <div className="text-center py-16 text-gray-400 dark:text-neutral-500">
             <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
             <p className="text-sm font-medium">No items found</p>
             {searchQuery && (
@@ -1168,7 +1168,7 @@ export default function WaiterPage() {
               <button
                 key={item.id}
                 onClick={() => addToCart(item)}
-                className={`bg-white dark:bg-gray-900 rounded-xl p-3 text-left shadow-sm border-2 active:scale-95 transition-all min-h-[90px] ${
+                className={`bg-white dark:bg-neutral-900 rounded-xl p-3 text-left shadow-sm border-2 active:scale-95 transition-all min-h-[90px] ${
                   inCart ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-900/30' : 'border-transparent'
                 }`}
               >

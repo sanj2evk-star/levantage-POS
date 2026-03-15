@@ -90,7 +90,7 @@ export function OrdersPanel({ onSettleBill }: OrdersPanelProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b dark:border-gray-700 space-y-3">
+      <div className="p-4 border-b dark:border-neutral-700 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-lg flex items-center gap-2">
             <Receipt className="h-5 w-5" />
@@ -128,7 +128,7 @@ export function OrdersPanel({ onSettleBill }: OrdersPanelProps) {
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-700" />
           </div>
         ) : orders.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+          <div className="text-center py-12 text-gray-400 dark:text-neutral-500">
             <Receipt className="h-10 w-10 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No {filter} orders</p>
           </div>
@@ -144,7 +144,7 @@ export function OrdersPanel({ onSettleBill }: OrdersPanelProps) {
                 <button
                   key={order.id}
                   onClick={() => onSettleBill(order)}
-                  className="w-full text-left bg-white dark:bg-gray-900 rounded-lg p-3 border dark:border-gray-700 hover:border-amber-300 hover:bg-amber-50/50 dark:hover:bg-amber-900/30 transition-colors"
+                  className="w-full text-left bg-white dark:bg-neutral-900 rounded-lg p-3 border dark:border-neutral-700 hover:border-amber-300 hover:bg-amber-50/50 dark:hover:bg-amber-900/30 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
@@ -156,7 +156,7 @@ export function OrdersPanel({ onSettleBill }: OrdersPanelProps) {
                     <span className="font-bold text-sm text-amber-700">₹{orderTotal.toFixed(0)}</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-neutral-400">
                     <span>
                       {order.table
                         ? getTableDisplayName(order.table)
@@ -165,7 +165,7 @@ export function OrdersPanel({ onSettleBill }: OrdersPanelProps) {
                     <span>{timeAgo}</span>
                   </div>
 
-                  <div className="mt-1.5 text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                  <div className="mt-1.5 text-xs text-gray-600 dark:text-neutral-400 line-clamp-1">
                     {activeItems.map(i => `${i.quantity}x ${i.menu_item?.name}`).join(', ')}
                   </div>
 

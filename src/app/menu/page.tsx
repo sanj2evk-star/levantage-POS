@@ -56,7 +56,7 @@ export default function PublicMenuPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-amber-50 dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-amber-50 dark:bg-neutral-900">
         <div className="text-center">
           <Coffee className="h-12 w-12 text-amber-700 dark:text-amber-400 mx-auto animate-pulse" />
           <p className="mt-4 text-amber-800 dark:text-amber-200">Loading menu...</p>
@@ -66,9 +66,9 @@ export default function PublicMenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-gray-900 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-neutral-900 dark:to-neutral-900">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b dark:border-gray-700">
+      <header className="sticky top-0 z-10 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-b dark:border-neutral-700">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -76,18 +76,18 @@ export default function PublicMenuPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-amber-900 dark:text-amber-100">{cafeName}</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Menu</p>
+              <p className="text-xs text-gray-500 dark:text-neutral-400">Menu</p>
             </div>
           </div>
 
           {/* Search */}
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500" />
             <Input
               placeholder="Search menu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+              className="pl-9 bg-gray-50 dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100"
             />
           </div>
 
@@ -98,7 +98,7 @@ export default function PublicMenuPage() {
               className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 activeCategory === 'all'
                   ? 'bg-amber-700 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
               }`}
             >
               All
@@ -110,7 +110,7 @@ export default function PublicMenuPage() {
                 className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   activeCategory === cat.id
                     ? 'bg-amber-700 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
                 }`}
               >
                 {cat.name}
@@ -124,7 +124,7 @@ export default function PublicMenuPage() {
       <main className="max-w-2xl mx-auto px-4 py-6">
         {groupedItems.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-gray-500 dark:text-neutral-400">
               {searchQuery ? 'No items match your search.' : 'Menu is being updated.'}
             </p>
           </div>
@@ -139,7 +139,7 @@ export default function PublicMenuPage() {
                   {items.map(item => (
                     <div
                       key={item.id}
-                      className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700"
+                      className="bg-white dark:bg-neutral-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-neutral-700"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
@@ -153,10 +153,10 @@ export default function PublicMenuPage() {
                                 <span className="h-2 w-2 rounded-full bg-red-600" />
                               </span>
                             )}
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</h3>
+                            <h3 className="font-semibold text-gray-900 dark:text-neutral-100">{item.name}</h3>
                           </div>
                           {item.description && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{item.description}</p>
+                            <p className="text-sm text-gray-500 dark:text-neutral-400 mt-1">{item.description}</p>
                           )}
                         </div>
                         <p className="text-lg font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
@@ -174,10 +174,10 @@ export default function PublicMenuPage() {
         {/* Footer */}
         <div className="mt-12 pb-8 text-center">
           <Separator className="mb-6" />
-          <p className="text-sm text-gray-400 dark:text-gray-500">
+          <p className="text-sm text-gray-400 dark:text-neutral-500">
             Prices inclusive of all taxes
           </p>
-          <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">
+          <p className="text-xs text-gray-300 dark:text-neutral-600 mt-1">
             Powered by Le Vantage Cafe
           </p>
         </div>

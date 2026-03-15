@@ -901,7 +901,7 @@ export default function ReportsPage() {
                         {summary.waiterStats.map((w, i) => (
                           <div key={w.id} className="flex items-center justify-between py-2.5 border-b last:border-0">
                             <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-semibold shrink-0">
+                              <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 flex items-center justify-center text-sm font-semibold shrink-0">
                                 {w.name[0]}
                               </div>
                               <div>
@@ -963,7 +963,7 @@ export default function ReportsPage() {
                   <>
                     {/* Payment mode cards */}
                     <div className="grid grid-cols-3 gap-3 mb-6">
-                      <div className="text-center p-3 sm:p-4 bg-green-50 rounded-xl border border-green-100">
+                      <div className="text-center p-3 sm:p-4 bg-green-50 dark:bg-green-900/30 rounded-xl border border-green-100">
                         <Banknote className="h-5 w-5 sm:h-6 sm:w-6 mx-auto text-green-600 mb-1.5" />
                         <p className="text-xs text-muted-foreground">Cash</p>
                         <p className="text-base sm:text-xl font-bold text-green-700">₹{summary.cashTotal.toFixed(0)}</p>
@@ -971,7 +971,7 @@ export default function ReportsPage() {
                           {summary.cashCount} txns · {summary.totalSales > 0 ? ((summary.cashTotal / summary.totalSales) * 100).toFixed(0) : 0}%
                         </p>
                       </div>
-                      <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      <div className="text-center p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100">
                         <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 mx-auto text-blue-600 mb-1.5" />
                         <p className="text-xs text-muted-foreground">UPI</p>
                         <p className="text-base sm:text-xl font-bold text-blue-700">₹{summary.upiTotal.toFixed(0)}</p>
@@ -979,7 +979,7 @@ export default function ReportsPage() {
                           {summary.upiCount} txns · {summary.totalSales > 0 ? ((summary.upiTotal / summary.totalSales) * 100).toFixed(0) : 0}%
                         </p>
                       </div>
-                      <div className="text-center p-3 sm:p-4 bg-purple-50 rounded-xl border border-purple-100">
+                      <div className="text-center p-3 sm:p-4 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-100">
                         <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 mx-auto text-purple-600 mb-1.5" />
                         <p className="text-xs text-muted-foreground">Card</p>
                         <p className="text-base sm:text-xl font-bold text-purple-700">₹{summary.cardTotal.toFixed(0)}</p>
@@ -1167,7 +1167,7 @@ export default function ReportsPage() {
 
               {/* Refunds & Outstanding side by side */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className={cn('rounded-xl border bg-card', summary.refundSummary.count > 0 && 'border-orange-200')}>
+                <div className={cn('rounded-xl border bg-card', summary.refundSummary.count > 0 && 'border-orange-200 dark:border-orange-800')}>
                   <div className="p-4 border-b">
                     <h3 className="text-sm sm:text-base font-semibold">Refunds</h3>
                   </div>
@@ -1193,7 +1193,7 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                <div className={cn('rounded-xl border bg-card', summary.outstandingSummary.count > 0 && 'border-amber-200')}>
+                <div className={cn('rounded-xl border bg-card', summary.outstandingSummary.count > 0 && 'border-amber-200 dark:border-amber-800')}>
                   <div className="p-4 border-b">
                     <h3 className="text-sm sm:text-base font-semibold">Outstanding / Partial</h3>
                   </div>

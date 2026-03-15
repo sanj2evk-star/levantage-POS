@@ -207,8 +207,8 @@ export default function TableManagement() {
       {tables.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-gray-500 mb-4">No tables configured yet.</p>
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">No tables configured yet.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
               Use &quot;Bulk Add&quot; to quickly add multiple tables for each section.
             </p>
             <Button onClick={() => setBulkDialogOpen(true)}>
@@ -229,7 +229,7 @@ export default function TableManagement() {
               </CardHeader>
               <CardContent>
                 {sectionTables.length === 0 ? (
-                  <p className="text-gray-400 text-sm">No tables in this section</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm">No tables in this section</p>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {sectionTables.map((table) => (

@@ -322,11 +322,11 @@ export default function MenuManagement() {
 
   const getStationColor = (station: string) => {
     switch (station) {
-      case 'kitchen': return 'bg-orange-50 text-orange-700 border-orange-200'
-      case 'cafe': return 'bg-amber-50 text-amber-700 border-amber-200'
-      case 'mocktail': return 'bg-purple-50 text-purple-700 border-purple-200'
-      case 'juice_bar': return 'bg-green-50 text-green-700 border-green-200'
-      default: return 'bg-gray-50 text-gray-700 border-gray-200'
+      case 'kitchen': return 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 border-orange-200 dark:border-orange-800'
+      case 'cafe': return 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 border-amber-200 dark:border-amber-800'
+      case 'mocktail': return 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 border-purple-200'
+      case 'juice_bar': return 'bg-green-50 dark:bg-green-900/30 text-green-700 border-green-200 dark:border-green-800'
+      default: return 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
     }
   }
 
@@ -581,7 +581,7 @@ export default function MenuManagement() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
                         onClick={() =>
                           setDeleteDialog({
                             open: true,

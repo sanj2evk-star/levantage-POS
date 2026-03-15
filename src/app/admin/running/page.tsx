@@ -139,9 +139,9 @@ export default function RunningOrdersPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+        <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 rounded-xl animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />)}
         </div>
       </div>
     )
@@ -162,25 +162,25 @@ export default function RunningOrdersPage() {
       </div>
 
       {/* Summary bar */}
-      <div className="flex items-center gap-6 bg-white rounded-xl border p-4">
+      <div className="flex items-center gap-6 bg-white dark:bg-gray-900 rounded-xl border dark:border-gray-700 p-4">
         <div className="text-center">
-          <p className="text-xs text-gray-400">Running / Total</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Running / Total</p>
           <p className="text-2xl font-bold">
             <span className="text-amber-700">{runningTables.length}</span>
             <span className="text-gray-300 mx-1">/</span>
-            <span className="text-gray-500">{totalTables}</span>
+            <span className="text-gray-500 dark:text-gray-400">{totalTables}</span>
           </p>
         </div>
-        <div className="h-10 border-l border-gray-200" />
+        <div className="h-10 border-l border-gray-200 dark:border-gray-700" />
         <div className="text-center">
-          <p className="text-xs text-gray-400">Est. Total Amount</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Est. Total Amount</p>
           <p className="text-2xl font-bold text-amber-800">₹{totalAmount.toLocaleString('en-IN')}</p>
         </div>
       </div>
 
       {/* Table cards */}
       {runningTables.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           <UtensilsCrossed className="h-12 w-12 mx-auto mb-3 opacity-40" />
           <p>No running tables</p>
         </div>
@@ -198,21 +198,21 @@ export default function RunningOrdersPage() {
             return (
               <div
                 key={table.id}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
               >
                 {/* Table header row */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-base">{getTableDisplayName(table)}</span>
                     <Badge className={`text-[10px] capitalize border-0 ${
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      order.status === 'preparing' ? 'bg-blue-100 text-blue-700' :
-                      order.status === 'ready' ? 'bg-green-100 text-green-700' :
-                      order.status === 'served' ? 'bg-purple-100 text-purple-700' :
-                      'bg-gray-100 text-gray-700'
+                      order.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700' :
+                      order.status === 'preparing' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700' :
+                      order.status === 'ready' ? 'bg-green-100 dark:bg-green-900/40 text-green-700' :
+                      order.status === 'served' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700' :
+                      'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                     }`}>{order.status}</Badge>
                   </div>
-                  <span className="flex items-center gap-1 text-sm text-gray-500 font-medium">
+                  <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 font-medium">
                     <Clock className="h-3.5 w-3.5" />
                     {elapsed}
                   </span>
@@ -220,17 +220,17 @@ export default function RunningOrdersPage() {
 
                 {/* Order info + items */}
                 <div className="px-4 py-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span className="font-medium">{order.order_number} · {itemCount} items</span>
                     {order.waiter && <span>Cpt: {order.waiter.name}</span>}
                   </div>
-                  <p className="text-xs text-gray-600 line-clamp-2">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
                     {activeItems.map(i => `${i.quantity}x ${i.menu_item?.name}`).join(', ')}
                   </p>
                 </div>
 
                 {/* Amount footer */}
-                <div className="px-4 py-2.5 bg-amber-50 border-t border-amber-100 flex items-center justify-end">
+                <div className="px-4 py-2.5 bg-amber-50 dark:bg-amber-900/30 border-t border-amber-100 dark:border-amber-800 flex items-center justify-end">
                   <span className="text-lg font-bold text-amber-800">₹{amount.toLocaleString('en-IN')}</span>
                 </div>
               </div>

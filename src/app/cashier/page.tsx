@@ -53,6 +53,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 type CashierTab = 'tables' | 'live_orders' | 'day_close'
 type LiveOrderFilter = 'all' | 'dine_in' | 'takeaway'
@@ -991,10 +992,10 @@ export default function CashierPage() {
   // Helper: table card style based on status + bill
   function getTableCardStyle(table: TableType, info: TableOrderInfo | null | undefined): string {
     if (table.status === 'available') {
-      return 'border-gray-200 bg-white shadow-sm cursor-default'
+      return 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-900/50 cursor-default'
     }
     if (table.status === 'reserved') {
-      return 'border-yellow-400 bg-yellow-50 opacity-80 cursor-default'
+      return 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 opacity-80 cursor-default'
     }
     // occupied — dark filled cards for active tables
     if (info?.billStatus === 'paid') {
@@ -1010,7 +1011,7 @@ export default function CashierPage() {
   }
 
   function getTableNumberColor(table: TableType, info: TableOrderInfo | null | undefined): string {
-    if (table.status === 'available') return 'text-gray-400'
+    if (table.status === 'available') return 'text-gray-400 dark:text-gray-500'
     if (table.status === 'reserved') return 'text-yellow-800'
     // Active tables have dark bg, so use white text
     return 'text-white'
@@ -1255,19 +1256,19 @@ export default function CashierPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#FBF9F6]">
-        <header className="bg-white border-b px-6 py-3.5 flex items-center gap-2">
+      <div className="min-h-screen bg-[#FBF9F6] dark:bg-gray-900">
+        <header className="bg-white dark:bg-gray-900 border-b dark:border-gray-700 px-6 py-3.5 flex items-center gap-2">
           <Coffee className="h-6 w-6 text-amber-700" />
-          <span className="font-bold text-xl">Cashier</span>
+          <span className="font-bold text-xl dark:text-gray-100">Cashier</span>
         </header>
         <div className="p-6 space-y-6">
-          <div className="h-16 bg-gray-200 rounded-lg animate-pulse" />
+          <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
           {[1, 2, 3].map(i => (
             <div key={i} className="space-y-3">
-              <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
+              <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
               <div className="grid grid-cols-6 gap-3">
                 {[1, 2, 3, 4, 5, 6].map(j => (
-                  <div key={j} className="h-24 bg-gray-200 rounded-xl animate-pulse" />
+                  <div key={j} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
                 ))}
               </div>
             </div>
@@ -1278,17 +1279,17 @@ export default function CashierPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF9F6] flex flex-col">
+    <div className="min-h-screen bg-[#FBF9F6] dark:bg-gray-900 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-white dark:bg-gray-900 border-b dark:border-gray-700 px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <Coffee className="h-6 w-6 text-amber-700" />
-          <span className="font-bold text-xl text-gray-900">Cashier</span>
-          {profile?.name && <span className="text-base text-gray-600 font-medium">({profile.name})</span>}
+          <span className="font-bold text-xl text-gray-900 dark:text-gray-100">Cashier</span>
+          {profile?.name && <span className="text-base text-gray-600 dark:text-gray-400 font-medium">({profile.name})</span>}
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
           {[
             { key: 'tables' as CashierTab, label: 'Tables' },
             { key: 'live_orders' as CashierTab, label: 'Live Orders' },
@@ -1299,8 +1300,8 @@ export default function CashierPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`px-5 py-2 text-base rounded-md transition-colors ${
                 activeTab === tab.key
-                  ? 'bg-white shadow-sm font-semibold'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white dark:bg-gray-700 shadow-sm font-semibold dark:text-gray-100'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               {tab.label}
@@ -1363,6 +1364,7 @@ export default function CashierPage() {
           }}>
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
+          <ThemeToggle />
           <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>
@@ -1374,10 +1376,10 @@ export default function CashierPage() {
         {activeTab === 'tables' && (
           <div className="p-6 space-y-6">
             {/* Table Legend */}
-            <div className="flex items-center gap-5 text-sm text-gray-600 pb-3 border-b border-gray-200">
-              <span className="font-semibold text-gray-800">Legend:</span>
+            <div className="flex items-center gap-5 text-sm text-gray-600 dark:text-gray-400 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <span className="font-semibold text-gray-800 dark:text-gray-200">Legend:</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-3.5 h-3.5 rounded-sm bg-white border border-gray-300" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600" />
                 <span>Available</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -1396,9 +1398,9 @@ export default function CashierPage() {
 
             {/* Unsettled Orders — bill printed, table freed, pending settlement */}
             {unsettledOrders.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <h2 className="font-bold text-lg text-amber-800">Pending Settlement</h2>
+                  <h2 className="font-bold text-lg text-amber-800 dark:text-amber-300">Pending Settlement</h2>
                   <Badge className="bg-amber-100 text-amber-700 border-0 text-sm">
                     {unsettledOrders.length}
                   </Badge>
@@ -1459,7 +1461,7 @@ export default function CashierPage() {
               return (
                 <div key={group.group}>
                   <div className="flex items-center gap-3 mb-3">
-                    <h2 className="font-bold text-lg text-gray-900">{group.label}</h2>
+                    <h2 className="font-bold text-lg text-gray-900 dark:text-gray-100">{group.label}</h2>
                     <Badge variant="outline" className="text-sm px-2.5 py-0.5">
                       {occupiedCount}/{group.tables.length}
                       {runningCount > 0 && <span className="text-green-600 ml-1">({runningCount} running)</span>}
@@ -1481,7 +1483,7 @@ export default function CashierPage() {
                           {/* Print count badge (top-right) */}
                           {info && (info.billPrintCount > 0 || isPrinted) && (
                             <div className={`absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold z-10 ${
-                              (info.billPrintCount || 0) > 1 ? 'bg-red-500 text-white' : 'bg-white text-gray-700 shadow-sm border'
+                              (info.billPrintCount || 0) > 1 ? 'bg-red-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-sm dark:shadow-gray-900/50 border dark:border-gray-700'
                             }`}>
                               <Printer className="h-3 w-3" />
                               {(info.billPrintCount || 0) > 1 && <span>{info.billPrintCount}</span>}
@@ -1555,7 +1557,7 @@ export default function CashierPage() {
                               )}
                             </div>
                           ) : (
-                            <p className="text-sm capitalize text-gray-500 mt-1 font-medium">
+                            <p className="text-sm capitalize text-gray-500 dark:text-gray-400 mt-1 font-medium">
                               {table.status}
                             </p>
                           )}
@@ -1576,7 +1578,7 @@ export default function CashierPage() {
             {/* Search + Filters Bar */}
             <div className="space-y-3 mb-5">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="font-semibold text-xl flex items-center gap-2 shrink-0">
+                <h2 className="font-semibold text-xl flex items-center gap-2 shrink-0 dark:text-gray-100">
                   <Receipt className="h-5 w-5" />
                   Live Orders
                 </h2>
@@ -1598,7 +1600,7 @@ export default function CashierPage() {
               {/* Filters row */}
               <div className="flex items-center gap-4 flex-wrap">
                 {/* Order type filter */}
-                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                   {([
                     { key: 'all' as LiveOrderFilter, label: 'All' },
                     { key: 'dine_in' as LiveOrderFilter, label: 'Dine In' },
@@ -1609,8 +1611,8 @@ export default function CashierPage() {
                       onClick={() => setLiveOrderFilter(f.key)}
                       className={`px-3.5 py-1.5 text-sm rounded-md transition-colors ${
                         liveOrderFilter === f.key
-                          ? 'bg-white shadow-sm font-medium'
-                          : 'text-gray-500 hover:text-gray-700'
+                          ? 'bg-white dark:bg-gray-700 shadow-sm font-medium dark:text-gray-100'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                       }`}
                     >
                       {f.label}
@@ -1635,7 +1637,7 @@ export default function CashierPage() {
                       className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                         liveStatusFilter === f.key
                           ? `${f.color} border-current font-medium`
-                          : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
                       {f.label} ({f.count})
@@ -1651,7 +1653,7 @@ export default function CashierPage() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-700" />
               </div>
             ) : filteredLiveOrders.length === 0 ? (
-              <div className="text-center py-16 text-gray-400">
+              <div className="text-center py-16 text-gray-400 dark:text-gray-500">
                 <Receipt className="h-12 w-12 mx-auto mb-3 opacity-40" />
                 <p>No active orders</p>
               </div>
@@ -1676,12 +1678,12 @@ export default function CashierPage() {
                     <button
                       key={order.id}
                       onClick={() => openKotDetail(order)}
-                      className="w-full text-left bg-white rounded-xl p-4 border-2 border-gray-200 hover:border-amber-400 hover:shadow-md transition-all active:scale-[0.98]"
+                      className="w-full text-left bg-white dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-700 hover:border-amber-400 hover:shadow-md dark:hover:shadow-gray-900/50 transition-all active:scale-[0.98]"
                     >
                       {/* Top row: order number + badge + total */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-lg text-gray-900">{order.order_number}</span>
+                          <span className="font-bold text-lg text-gray-900 dark:text-gray-100">{order.order_number}</span>
                           <Badge
                             variant="outline"
                             className={`text-xs ${isDineIn ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-orange-200 text-orange-700 bg-orange-50'}`}
@@ -1693,13 +1695,13 @@ export default function CashierPage() {
                       </div>
 
                       {/* Table + captain + time */}
-                      <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                      <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
                         <div className="flex items-center gap-1.5">
                           {isDineIn && order.table && (
                             <span className="font-medium">{getTableDisplayName(order.table)}</span>
                           )}
                           {order.waiterName && (
-                            <span className="text-gray-400">{isDineIn && order.table ? '·' : ''} {order.waiterName}</span>
+                            <span className="text-gray-400 dark:text-gray-500">{isDineIn && order.table ? '·' : ''} {order.waiterName}</span>
                           )}
                         </div>
                         <span>{timeAgo}</span>
@@ -1717,7 +1719,7 @@ export default function CashierPage() {
                         >
                           {order.status}
                         </Badge>
-                        <span className="text-sm text-gray-600 font-medium">
+                        <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
                           {activeItems.reduce((s, i) => s + i.quantity, 0)} items
                         </span>
                       </div>
@@ -1734,7 +1736,7 @@ export default function CashierPage() {
                             <div key={idx} className="flex items-center justify-between text-sm">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                                <span className="text-gray-700 truncate">{item.quantity}x {item.menu_item?.name}</span>
+                                <span className="text-gray-700 dark:text-gray-300 truncate">{item.quantity}x {item.menu_item?.name}</span>
                               </div>
                               <span className={`text-xs capitalize shrink-0 ml-2 ${
                                 kotStatus === 'ready' ? 'text-green-600' :
@@ -1746,7 +1748,7 @@ export default function CashierPage() {
                           )
                         })}
                         {activeItems.length > 6 && (
-                          <p className="text-xs text-gray-400 pl-3.5">+{activeItems.length - 6} more items</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 pl-3.5">+{activeItems.length - 6} more items</p>
                         )}
                       </div>
 
@@ -1779,46 +1781,46 @@ export default function CashierPage() {
 
         {activeTab === 'day_close' && (
           <div className="p-6 max-w-2xl mx-auto">
-            <h2 className="font-semibold text-xl mb-6">Today&apos;s Summary</h2>
+            <h2 className="font-semibold text-xl mb-6 dark:text-gray-100">Today&apos;s Summary</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-white rounded-xl p-5 border">
-                <p className="text-sm text-gray-500 mb-1">Total Bills</p>
-                <p className="text-3xl font-bold">{daySummary.totalOrders}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Bills</p>
+                <p className="text-3xl font-bold dark:text-gray-100">{daySummary.totalOrders}</p>
               </div>
-              <div className="bg-white rounded-xl p-5 border">
-                <p className="text-sm text-gray-500 mb-1">Total Sales</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Sales</p>
                 <p className="text-3xl font-bold text-amber-700">₹{daySummary.totalSales.toLocaleString('en-IN')}</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border divide-y">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 divide-y dark:divide-gray-700">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center">
                     <Banknote className="h-5 w-5 text-green-700" />
                   </div>
-                  <span className="font-medium">Cash</span>
+                  <span className="font-medium dark:text-gray-200">Cash</span>
                 </div>
-                <span className="font-bold text-lg">₹{daySummary.cashTotal.toLocaleString('en-IN')}</span>
+                <span className="font-bold text-lg dark:text-gray-100">₹{daySummary.cashTotal.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center">
                     <Smartphone className="h-5 w-5 text-blue-700" />
                   </div>
-                  <span className="font-medium">UPI</span>
+                  <span className="font-medium dark:text-gray-200">UPI</span>
                 </div>
-                <span className="font-bold text-lg">₹{daySummary.upiTotal.toLocaleString('en-IN')}</span>
+                <span className="font-bold text-lg dark:text-gray-100">₹{daySummary.upiTotal.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-purple-100 flex items-center justify-center">
                     <CreditCard className="h-5 w-5 text-purple-700" />
                   </div>
-                  <span className="font-medium">Card</span>
+                  <span className="font-medium dark:text-gray-200">Card</span>
                 </div>
-                <span className="font-bold text-lg">₹{daySummary.cardTotal.toLocaleString('en-IN')}</span>
+                <span className="font-bold text-lg dark:text-gray-100">₹{daySummary.cardTotal.toLocaleString('en-IN')}</span>
               </div>
               {daySummary.zomatoTotal > 0 && (
                 <div className="flex items-center justify-between p-4">
@@ -1826,7 +1828,7 @@ export default function CashierPage() {
                     <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
                       <Store className="h-5 w-5 text-red-600" />
                     </div>
-                    <span className="font-medium">Zomato</span>
+                    <span className="font-medium dark:text-gray-200">Zomato</span>
                   </div>
                   <span className="font-bold text-lg text-red-600">₹{daySummary.zomatoTotal.toLocaleString('en-IN')}</span>
                 </div>
@@ -1837,7 +1839,7 @@ export default function CashierPage() {
                     <div className="h-9 w-9 rounded-lg bg-orange-100 flex items-center justify-center">
                       <Gift className="h-5 w-5 text-orange-600" />
                     </div>
-                    <span className="font-medium">NC (Complimentary)</span>
+                    <span className="font-medium dark:text-gray-200">NC (Complimentary)</span>
                   </div>
                   <span className="font-bold text-lg text-orange-600">₹{daySummary.ncTotal.toLocaleString('en-IN')}</span>
                 </div>
@@ -1848,7 +1850,7 @@ export default function CashierPage() {
                     <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
                       <Clock className="h-5 w-5 text-red-600" />
                     </div>
-                    <span className="font-medium">Outstanding</span>
+                    <span className="font-medium dark:text-gray-200">Outstanding</span>
                   </div>
                   <span className="font-bold text-lg text-red-600">₹{daySummary.outstanding.toLocaleString('en-IN')}</span>
                 </div>
@@ -1857,11 +1859,11 @@ export default function CashierPage() {
 
             <div className="mt-6 space-y-3">
               {dayAlreadyClosed ? (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-xl p-4 flex items-center gap-3">
                   <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />
                   <div>
-                    <p className="font-semibold text-green-800">Day Closed</p>
-                    <p className="text-sm text-green-600">Today&apos;s business day has been closed.</p>
+                    <p className="font-semibold text-green-800 dark:text-green-300">Day Closed</p>
+                    <p className="text-sm text-green-600 dark:text-green-400">Today&apos;s business day has been closed.</p>
                   </div>
                 </div>
               ) : (
@@ -1883,7 +1885,7 @@ export default function CashierPage() {
 
             {/* Recent Bills */}
             <div className="mt-8">
-              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 dark:text-gray-100">
                 <Receipt className="h-5 w-5" />
                 Today&apos;s Bills ({recentBills.length})
               </h3>
@@ -1897,10 +1899,10 @@ export default function CashierPage() {
                     placeholder="Search bill #, table, captain, order #..."
                     value={billSearchQuery}
                     onChange={e => setBillSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-400 transition-colors"
+                    className="w-full pl-9 pr-8 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-400 transition-colors"
                   />
                   {billSearchQuery && (
-                    <button onClick={() => setBillSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <button onClick={() => setBillSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                       <X className="h-4 w-4" />
                     </button>
                   )}
@@ -1908,7 +1910,7 @@ export default function CashierPage() {
               )}
 
               {recentBills.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No bills yet today</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No bills yet today</p>
               ) : (() => {
                 const q = billSearchQuery.toLowerCase().trim()
                 const filtered = q ? recentBills.filter(bill => {
@@ -1926,12 +1928,12 @@ export default function CashierPage() {
                 }) : recentBills
 
                 if (filtered.length === 0) {
-                  return <p className="text-sm text-gray-400 text-center py-6">No bills match &quot;{billSearchQuery}&quot;</p>
+                  return <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No bills match &quot;{billSearchQuery}&quot;</p>
                 }
 
                 return (
                 <div className="space-y-2">
-                  {q && <p className="text-xs text-gray-400 mb-1">{filtered.length} of {recentBills.length} bills</p>}
+                  {q && <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{filtered.length} of {recentBills.length} bills</p>}
                   {filtered.map(bill => {
                     const tableName = bill.order?.table ? getTableDisplayName(bill.order.table) : null
                     const captainName = bill.order?.waiter?.name || null
@@ -1952,15 +1954,15 @@ export default function CashierPage() {
                       <button
                         key={bill.id}
                         onClick={() => openRecentBill(bill)}
-                        className="w-full text-left bg-white rounded-xl p-4 border border-gray-200 hover:border-amber-400 hover:shadow-sm transition-all active:scale-[0.99] flex items-center justify-between gap-3"
+                        className="w-full text-left bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-amber-400 hover:shadow-sm dark:hover:shadow-gray-900/50 transition-all active:scale-[0.99] flex items-center justify-between gap-3"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <span className="font-bold text-base">{bill.bill_number}</span>
-                            {tableName && <span className="text-sm text-gray-500">{tableName}</span>}
+                            <span className="font-bold text-base dark:text-gray-100">{bill.bill_number}</span>
+                            {tableName && <span className="text-sm text-gray-500 dark:text-gray-400">{tableName}</span>}
                             {bill.order?.order_type === 'takeaway' && <Badge variant="outline" className="text-xs py-0 px-1.5">Take</Badge>}
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
                             <span>{time}</span>
                             {captainName && <span>· {captainName}</span>}
                             {bill.order?.order_number && <span>· {bill.order.order_number}</span>}
@@ -1973,7 +1975,7 @@ export default function CashierPage() {
                           }`}>
                             {isPartial ? 'Partial' : (bill.payment_mode || '').toUpperCase()}
                           </Badge>
-                          <span className={`font-bold text-base tabular-nums ${isPaid ? 'text-gray-900' : 'text-red-600'}`}>
+                          <span className={`font-bold text-base tabular-nums ${isPaid ? 'text-gray-900 dark:text-gray-100' : 'text-red-600'}`}>
                             ₹{Number(bill.total).toLocaleString('en-IN')}
                           </span>
                         </div>
@@ -1999,11 +2001,11 @@ export default function CashierPage() {
           </DialogHeader>
 
           {/* Tab switcher */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => setTransferMode('table')}
               className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
-                transferMode === 'table' ? 'bg-white shadow-sm font-semibold' : 'text-gray-500 hover:text-gray-700'
+                transferMode === 'table' ? 'bg-white dark:bg-gray-700 shadow-sm font-semibold dark:text-gray-100' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Move Table
@@ -2020,7 +2022,7 @@ export default function CashierPage() {
                 if (transferItems.length === 0) loadTransferItems(transferSourceTable)
               }}
               className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
-                transferMode === 'items' ? 'bg-white shadow-sm font-semibold' : 'text-gray-500 hover:text-gray-700'
+                transferMode === 'items' ? 'bg-white dark:bg-gray-700 shadow-sm font-semibold dark:text-gray-100' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Move Items
@@ -2030,22 +2032,22 @@ export default function CashierPage() {
           {/* Move Table mode */}
           {transferMode === 'table' && (
             <div className="space-y-3 max-h-[50vh] overflow-y-auto">
-              <p className="text-sm text-gray-500">Select destination table (available tables):</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Select destination table (available tables):</p>
               {(() => {
                 const availableTables = tables.filter(t => t.status === 'available')
                 if (availableTables.length === 0) {
-                  return <p className="text-center py-6 text-gray-400 text-sm">No available tables</p>
+                  return <p className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">No available tables</p>
                 }
                 return groupTablesByDisplayGroup(availableTables).map(group => (
                   <div key={group.group}>
-                    <p className="text-xs font-semibold text-gray-500 mb-1.5">{group.label}</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">{group.label}</p>
                     <div className="grid grid-cols-5 gap-2">
                       {group.tables.map(t => (
                         <button
                           key={t.id}
                           onClick={() => performTableTransfer(t)}
                           disabled={transferring}
-                          className="p-2.5 rounded-lg border-2 border-gray-200 bg-white hover:border-amber-400 hover:bg-amber-50 text-center font-bold text-lg transition-all active:scale-95 disabled:opacity-50"
+                          className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-gray-100 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-center font-bold text-lg transition-all active:scale-95 disabled:opacity-50"
                         >
                           {getTableDisplayName(t)}
                         </button>
@@ -2057,7 +2059,7 @@ export default function CashierPage() {
               {transferring && (
                 <div className="flex items-center justify-center py-3">
                   <div className="h-5 w-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                  <span className="ml-2 text-sm text-gray-500">Transferring...</span>
+                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Transferring...</span>
                 </div>
               )}
             </div>
@@ -2071,13 +2073,13 @@ export default function CashierPage() {
                   <div className="h-5 w-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : transferItems.length === 0 ? (
-                <p className="text-center py-6 text-gray-400 text-sm">No active items</p>
+                <p className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">No active items</p>
               ) : (
                 <>
                   {/* Item checkboxes */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm text-gray-500">Select items to move:</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Select items to move:</p>
                       <button
                         onClick={() => {
                           if (selectedItemIds.size === transferItems.length) {
@@ -2091,11 +2093,11 @@ export default function CashierPage() {
                         {selectedItemIds.size === transferItems.length ? 'Deselect All' : 'Select All'}
                       </button>
                     </div>
-                    <div className="max-h-[25vh] overflow-y-auto border rounded-lg divide-y">
+                    <div className="max-h-[25vh] overflow-y-auto border dark:border-gray-700 rounded-lg divide-y dark:divide-gray-700">
                       {transferItems.map(item => (
                         <label
                           key={item.id}
-                          className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                         >
                           <Checkbox
                             checked={selectedItemIds.has(item.id)}
@@ -2108,8 +2110,8 @@ export default function CashierPage() {
                               })
                             }}
                           />
-                          <span className="flex-1 text-sm font-medium">{item.quantity}x {item.name}</span>
-                          <span className="text-sm text-gray-500">₹{item.total_price}</span>
+                          <span className="flex-1 text-sm font-medium dark:text-gray-200">{item.quantity}x {item.name}</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">₹{item.total_price}</span>
                         </label>
                       ))}
                     </div>
@@ -2118,7 +2120,7 @@ export default function CashierPage() {
                   {/* Destination table grid — available + occupied (without bills), excluding source */}
                   {selectedItemIds.size > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm text-gray-500">Move to:</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Move to:</p>
                       {(() => {
                         const destTables = tables.filter(t => {
                           // Exclude source table
@@ -2134,13 +2136,13 @@ export default function CashierPage() {
                           return false
                         })
                         if (destTables.length === 0) {
-                          return <p className="text-center py-4 text-gray-400 text-sm">No tables available</p>
+                          return <p className="text-center py-4 text-gray-400 dark:text-gray-500 text-sm">No tables available</p>
                         }
                         return (
                           <div className="max-h-[20vh] overflow-y-auto">
                             {groupTablesByDisplayGroup(destTables).map(group => (
                               <div key={group.group} className="mb-2">
-                                <p className="text-xs font-semibold text-gray-500 mb-1">{group.label}</p>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{group.label}</p>
                                 <div className="grid grid-cols-5 gap-2">
                                   {group.tables.map(t => {
                                     const isAvail = t.status === 'available'
@@ -2150,10 +2152,10 @@ export default function CashierPage() {
                                         onClick={() => setTransferDestTable(t)}
                                         className={`p-2 rounded-lg border-2 text-center font-bold text-base transition-all active:scale-95 ${
                                           transferDestTable?.id === t.id
-                                            ? 'border-amber-500 bg-amber-50 text-amber-800'
+                                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
                                             : isAvail
-                                              ? 'border-gray-200 bg-gray-50 hover:border-amber-400 text-gray-500'
-                                              : 'border-green-300 bg-green-50 hover:border-amber-400 text-green-700'
+                                              ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-amber-400 text-gray-500 dark:text-gray-400'
+                                              : 'border-green-300 bg-green-50 dark:bg-green-900/30 hover:border-amber-400 text-green-700 dark:text-green-400'
                                         }`}
                                       >
                                         {getTableDisplayName(t)}
@@ -2212,7 +2214,7 @@ export default function CashierPage() {
             return (
               <>
                 {/* Header */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b px-5 py-4">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b dark:border-gray-700 px-5 py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center">
@@ -2220,7 +2222,7 @@ export default function CashierPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-lg">{kotDetailOrder.order_number}</h3>
+                          <h3 className="font-bold text-lg dark:text-gray-100">{kotDetailOrder.order_number}</h3>
                           <Badge
                             variant="outline"
                             className={`text-xs ${isDineIn ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-orange-200 text-orange-700 bg-orange-50'}`}
@@ -2233,8 +2235,8 @@ export default function CashierPage() {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-0.5">
-                          {tableName && <span className="font-medium text-gray-700">{tableName}</span>}
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                          {tableName && <span className="font-medium text-gray-700 dark:text-gray-300">{tableName}</span>}
                           {kotDetailOrder.waiterName && <span>· {kotDetailOrder.waiterName}</span>}
                           <span>· {formatDistanceToNow(new Date(kotDetailOrder.created_at), { addSuffix: true })}</span>
                         </div>
@@ -2242,7 +2244,7 @@ export default function CashierPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-amber-800">₹{orderTotal.toFixed(0)}</p>
-                      <p className="text-xs text-gray-500">{activeItems.reduce((s: number, i: any) => s + i.quantity, 0)} items · {batches.length} KOT{batches.length > 1 ? 's' : ''}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{activeItems.reduce((s: number, i: any) => s + i.quantity, 0)} items · {batches.length} KOT{batches.length > 1 ? 's' : ''}</p>
                     </div>
                   </div>
                 </div>
@@ -2256,14 +2258,14 @@ export default function CashierPage() {
                     const isTransferOpen = kotTransferBatchIdx === batchIdx
 
                     return (
-                      <div key={batchIdx} className="bg-white border rounded-xl overflow-hidden">
+                      <div key={batchIdx} className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl overflow-hidden">
                         {/* Batch header */}
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/80 border-b dark:border-gray-700">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-white bg-amber-600 px-2 py-0.5 rounded-full">
                               {kotLabel}
                             </span>
-                            <span className="text-xs text-gray-500">{batchTime}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{batchTime}</span>
                             {batch.kotEntry && (
                               <Badge variant="outline" className={`text-xs capitalize ${
                                 batch.kotEntry.status === 'ready' ? 'border-green-300 text-green-700' :
@@ -2276,7 +2278,7 @@ export default function CashierPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-700">₹{batchTotal.toFixed(0)}</span>
+                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">₹{batchTotal.toFixed(0)}</span>
                             {!hasBill && batches.length > 1 && (
                               <button
                                 onClick={() => {
@@ -2291,7 +2293,7 @@ export default function CashierPage() {
                                 className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors flex items-center gap-1 ${
                                   isTransferOpen
                                     ? 'bg-amber-100 border-amber-300 text-amber-800'
-                                    : 'bg-white border-gray-200 text-gray-600 hover:border-amber-300 hover:text-amber-700'
+                                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-amber-300 hover:text-amber-700'
                                 }`}
                               >
                                 <ArrowRightLeft className="h-3 w-3" />
@@ -2302,7 +2304,7 @@ export default function CashierPage() {
                         </div>
 
                         {/* Batch items */}
-                        <div className="divide-y">
+                        <div className="divide-y dark:divide-gray-700">
                           {batch.items.map((item: any, idx: number) => {
                             const kotStatus = item.kot_status || 'pending'
                             const dotColor = kotStatus === 'ready' ? 'bg-green-500' :
@@ -2318,10 +2320,10 @@ export default function CashierPage() {
                                   <div className={`w-3.5 h-3.5 rounded-sm border-2 shrink-0 ${isVeg ? 'border-green-600' : 'border-red-600'}`}>
                                     <div className={`w-1.5 h-1.5 rounded-full m-auto mt-[2px] ${isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
                                   </div>
-                                  <span className="text-sm font-medium text-gray-800 truncate">
+                                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                                     {item.quantity}x {item.menu_item?.name}
                                   </span>
-                                  {item.notes && <span className="text-xs text-gray-400 truncate">({item.notes})</span>}
+                                  {item.notes && <span className="text-xs text-gray-400 dark:text-gray-500 truncate">({item.notes})</span>}
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">
                                   <span className={`text-xs capitalize font-medium ${
@@ -2330,7 +2332,7 @@ export default function CashierPage() {
                                     kotStatus === 'served' ? 'text-purple-600' :
                                     'text-yellow-600'
                                   }`}>{kotStatus}</span>
-                                  <span className="text-sm text-gray-600">₹{Number(item.total_price).toFixed(0)}</span>
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">₹{Number(item.total_price).toFixed(0)}</span>
                                 </div>
                               </div>
                             )
@@ -2339,8 +2341,8 @@ export default function CashierPage() {
 
                         {/* Transfer destination picker (inline, below batch) */}
                         {isTransferOpen && (
-                          <div className="bg-amber-50/50 border-t p-3 space-y-2">
-                            <p className="text-xs font-medium text-gray-600">Move this KOT to:</p>
+                          <div className="bg-amber-50/50 dark:bg-amber-900/10 border-t dark:border-gray-700 p-3 space-y-2">
+                            <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Move this KOT to:</p>
                             <div className="max-h-[25vh] overflow-y-auto">
                               {(() => {
                                 const destTables = tables.filter(t => {
@@ -2355,11 +2357,11 @@ export default function CashierPage() {
                                   return false
                                 })
                                 if (destTables.length === 0) {
-                                  return <p className="text-center py-3 text-gray-400 text-xs">No tables available</p>
+                                  return <p className="text-center py-3 text-gray-400 dark:text-gray-500 text-xs">No tables available</p>
                                 }
                                 return groupTablesByDisplayGroup(destTables).map(group => (
                                   <div key={group.group} className="mb-2">
-                                    <p className="text-xs font-semibold text-gray-500 mb-1">{group.label}</p>
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{group.label}</p>
                                     <div className="grid grid-cols-6 gap-1.5">
                                       {group.tables.map(t => {
                                         const isAvail = t.status === 'available'
@@ -2369,10 +2371,10 @@ export default function CashierPage() {
                                             onClick={() => setKotTransferDestTable(t)}
                                             className={`p-1.5 rounded-lg border-2 text-center font-bold text-sm transition-all active:scale-95 ${
                                               kotTransferDestTable?.id === t.id
-                                                ? 'border-amber-500 bg-amber-100 text-amber-800'
+                                                ? 'border-amber-500 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
                                                 : isAvail
-                                                  ? 'border-gray-200 bg-white hover:border-amber-400 text-gray-500'
-                                                  : 'border-green-300 bg-green-50 hover:border-amber-400 text-green-700'
+                                                  ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-amber-400 text-gray-500 dark:text-gray-400'
+                                                  : 'border-green-300 bg-green-50 dark:bg-green-900/30 hover:border-amber-400 text-green-700 dark:text-green-400'
                                             }`}
                                           >
                                             {getTableDisplayName(t)}
@@ -2406,7 +2408,7 @@ export default function CashierPage() {
                   })}
 
                   {batches.length === 0 && (
-                    <div className="text-center py-10 text-gray-400">
+                    <div className="text-center py-10 text-gray-400 dark:text-gray-500">
                       <ClipboardList className="h-10 w-10 mx-auto mb-2 opacity-40" />
                       <p>No items in this order</p>
                     </div>
@@ -2414,7 +2416,7 @@ export default function CashierPage() {
                 </div>
 
                 {/* Footer: Settle button */}
-                <div className="border-t bg-gray-50 px-5 py-3 flex items-center gap-3">
+                <div className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-5 py-3 flex items-center gap-3">
                   <Button
                     variant="outline"
                     className="flex-1"
@@ -2473,16 +2475,16 @@ export default function CashierPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="bg-amber-50 rounded-lg p-3 text-sm">
-              <p className="font-medium text-amber-800 mb-1">Day Summary</p>
-              <div className="grid grid-cols-2 gap-1 text-amber-700">
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 text-sm">
+              <p className="font-medium text-amber-800 dark:text-amber-300 mb-1">Day Summary</p>
+              <div className="grid grid-cols-2 gap-1 text-amber-700 dark:text-amber-400">
                 <span>Total Sales:</span>
                 <span className="font-bold text-right">₹{daySummary.totalSales.toLocaleString('en-IN')}</span>
                 <span>Bills:</span>
                 <span className="font-bold text-right">{daySummary.totalOrders}</span>
               </div>
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Enter security PIN to close today&apos;s business day. This action cannot be undone.
             </p>
             <div className="space-y-2">

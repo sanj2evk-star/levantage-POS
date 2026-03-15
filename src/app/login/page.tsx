@@ -69,11 +69,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-900 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
-            <Coffee className="h-8 w-8 text-amber-700" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+            <Coffee className="h-8 w-8 text-amber-700 dark:text-amber-400" />
           </div>
           <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
           <CardDescription>Sign in to manage your cafe</CardDescription>
@@ -102,7 +102,7 @@ export default function LoginPage() {
               />
             </div>
             {error && (
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}

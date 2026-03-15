@@ -1006,7 +1006,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </DialogHeader>
             <div className="space-y-2 overflow-y-auto -mx-4 px-4 pb-1">
               {/* Items */}
-              <div className="bg-gray-50 rounded-lg p-2.5 space-y-1">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5 space-y-1">
                 {activeItems.map(item => (
                   <div key={item.id} className="flex justify-between text-sm">
                     <span>{item.quantity}x {item.menu_item?.name}</span>
@@ -1041,13 +1041,13 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
               {/* Payments */}
               {existingPayments.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-2.5 space-y-1">
-                  <p className="text-xs font-medium text-gray-500">Payments</p>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5 space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Payments</p>
                   {existingPayments.map(p => (
                     <div key={p.id} className="flex justify-between text-sm">
                       <span className="flex items-center gap-2">
                         <Badge variant="outline" className="text-[10px]">{p.mode.toUpperCase()}</Badge>
-                        {p.reference_number && <span className="text-xs text-gray-400">Ref: {p.reference_number}</span>}
+                        {p.reference_number && <span className="text-xs text-gray-400 dark:text-gray-500">Ref: {p.reference_number}</span>}
                       </span>
                       <span>₹{Number(p.amount).toFixed(2)}</span>
                     </div>
@@ -1069,7 +1069,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
               {/* Collect Balance */}
               {isPartial && (
-                <div className="border rounded-lg p-3 space-y-2.5 bg-amber-50">
+                <div className="border dark:border-gray-700 rounded-lg p-3 space-y-2.5 bg-amber-50 dark:bg-amber-900/30">
                   {!collectBalanceMode ? (
                     <Button className="w-full bg-amber-600 hover:bg-amber-700" onClick={() => setCollectBalanceMode(true)}>
                       Collect Balance — ₹{outstanding.toFixed(2)}
@@ -1101,7 +1101,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                       )}
                       {/* Split payment details */}
                       {collectPaymentMode === 'split' && (
-                        <div className="bg-white rounded-lg p-2.5 space-y-2 border">
+                        <div className="bg-white dark:bg-gray-900 rounded-lg p-2.5 space-y-2 border dark:border-gray-700">
                           <div className="flex justify-between items-center">
                             <span className="text-xs font-medium">Split Payments</span>
                             <div className="flex gap-1.5">
@@ -1120,7 +1120,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                             <div key={idx} className="space-y-1">
                               <div className="flex items-center gap-1.5">
                                 <select value={sp.mode} onChange={e => updateCollectSplit(idx, 'mode', e.target.value)}
-                                  className="h-8 rounded-lg border border-gray-200 px-2 text-xs bg-white">
+                                  className="h-8 rounded-lg border border-gray-200 dark:border-gray-700 px-2 text-xs bg-white dark:bg-gray-900 dark:text-gray-200">
                                   <option value="cash">Cash</option><option value="upi">UPI</option>
                                   <option value="card">Card</option><option value="zomato">Zomato</option>
                                 </select>
@@ -1140,7 +1140,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                             const splitTotal = collectSplitPayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0)
                             const remaining = Math.round((outstanding - splitTotal) * 100) / 100
                             return (
-                              <div className="flex justify-between text-xs pt-2 border-t border-gray-200">
+                              <div className="flex justify-between text-xs pt-2 border-t border-gray-200 dark:border-gray-700">
                                 <span>Remaining</span>
                                 <span className={`font-semibold ${remaining > 0.5 ? 'text-red-500' : 'text-green-500'}`}>
                                   ₹{remaining.toFixed(2)}
@@ -1175,7 +1175,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Enter security PIN to reprint bill <strong>{existingBill.bill_number}</strong>
               </p>
               <div className="space-y-2">
@@ -1227,28 +1227,28 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
       }}>
         <DialogContent className="!w-[92vw] !max-w-[1400px] !h-[56vw] !max-h-[85vh] !grid-rows-none !flex !flex-col !gap-0 !p-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
           {/* ── HEADER ── */}
-          <div className="px-8 py-3 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 shrink-0">
+          <div className="px-8 py-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border-b border-amber-100 dark:border-amber-900 shrink-0">
             <div className="flex items-center justify-between pr-8">
               <div className="flex items-center gap-4">
                 <div className="h-11 w-11 rounded-xl bg-amber-600 text-white flex items-center justify-center text-base font-bold shadow-md shadow-amber-200">
                   {tableName.replace(/[^A-Z0-9]/gi, '').slice(0, 3)}
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900 tracking-tight">{tableName}</h2>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">{tableName}</h2>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-gray-500 font-mono">{order.order_number}</span>
-                    <span className="text-gray-300">·</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{order.order_number}</span>
+                    <span className="text-gray-300 dark:text-gray-600">·</span>
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 border ${order.order_type === 'dine_in' ? 'border-blue-200 text-blue-600 bg-blue-50' : 'border-orange-200 text-orange-600 bg-orange-50'}`}>
                       {order.order_type === 'takeaway' ? 'Takeaway' : 'Dine In'}
                     </Badge>
                     {waiterName && (
                       <>
-                        <span className="text-gray-300">·</span>
+                        <span className="text-gray-300 dark:text-gray-600">·</span>
                         <span className="text-xs text-amber-700 font-medium">Cpt: {waiterName}</span>
                       </>
                     )}
-                    <span className="text-gray-300">·</span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-gray-300 dark:text-gray-600">·</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
                       {(() => {
                         const mins = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000)
                         return mins < 1 ? '<1m' : mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`
@@ -1262,17 +1262,17 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 <div className="flex gap-1.5">
                   {onAddItems && (
                     <button onClick={() => { onClose(); onAddItems(order) }}
-                      className="h-9 w-9 rounded-xl border border-amber-200 bg-white flex items-center justify-center text-amber-600 hover:bg-amber-50 hover:border-amber-300 transition-all shadow-sm"
+                      className="h-9 w-9 rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 flex items-center justify-center text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:border-amber-300 transition-all shadow-sm"
                       title="Add Items"><Plus className="h-4 w-4" /></button>
                   )}
                   {tables && tables.length > 0 && order.order_type === 'dine_in' && (
                     <button onClick={() => setTransferDialogOpen(true)}
-                      className="h-9 w-9 rounded-xl border border-amber-200 bg-white flex items-center justify-center text-amber-600 hover:bg-amber-50 hover:border-amber-300 transition-all shadow-sm"
+                      className="h-9 w-9 rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 flex items-center justify-center text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:border-amber-300 transition-all shadow-sm"
                       title="Transfer Table"><ArrowRightLeft className="h-4 w-4" /></button>
                   )}
                   {waiters && waiters.length > 0 && (
                     <button onClick={() => setReassignDialogOpen(true)}
-                      className="h-9 w-9 rounded-xl border border-amber-200 bg-white flex items-center justify-center text-amber-600 hover:bg-amber-50 hover:border-amber-300 transition-all shadow-sm"
+                      className="h-9 w-9 rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 flex items-center justify-center text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:border-amber-300 transition-all shadow-sm"
                       title="Reassign Captain"><UserRound className="h-4 w-4" /></button>
                   )}
                 </div>
@@ -1281,17 +1281,17 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           </div>
 
           {/* ── SIDE-BY-SIDE BODY ── */}
-          <div className="flex-1 flex min-h-0 overflow-hidden bg-gray-50/30">
+          <div className="flex-1 flex min-h-0 overflow-hidden bg-gray-50/30 dark:bg-gray-900/30">
             {/* LEFT PANEL — Bill Items & Charges */}
-            <div className="w-[40%] border-r border-gray-200 overflow-y-auto bg-white">
+            <div className="w-[40%] border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-900">
               <div className="px-6 py-4 space-y-3">
                 {/* Items section header */}
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Order Items</p>
-                  <span className="text-xs text-gray-400 font-medium">{activeItems.length} items</span>
+                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Order Items</p>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">{activeItems.length} items</span>
                 </div>
                 {order.bill_print_count && order.bill_print_count > 0 && order.status !== 'completed' && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-2.5 py-1.5">
                     <Lock className="h-3 w-3 shrink-0" />
                     <span>Items locked — bill already printed</span>
                   </div>
@@ -1300,21 +1300,21 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 {/* Items list */}
                 <div className="space-y-0.5">
                   {activeItems.map(item => (
-                    <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                    <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className={`h-4.5 w-4.5 rounded border-2 flex items-center justify-center shrink-0 ${item.menu_item?.is_veg ? 'border-green-500' : 'border-red-500'}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${item.menu_item?.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-800">{item.menu_item?.name}</p>
-                          <p className="text-[11px] text-gray-400">{item.quantity} × ₹{item.unit_price.toFixed(0)}</p>
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{item.menu_item?.name}</p>
+                          <p className="text-[11px] text-gray-400 dark:text-gray-500">{item.quantity} × ₹{item.unit_price.toFixed(0)}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span className="text-sm font-semibold text-gray-700 tabular-nums">₹{item.total_price.toFixed(0)}</span>
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">₹{item.total_price.toFixed(0)}</span>
                         {order.status !== 'completed' && !(order.bill_print_count && order.bill_print_count > 0) && (
                           <button onClick={() => openCancelDialog(item.id, item.menu_item?.name || 'Item')}
-                            className="h-6 w-6 flex items-center justify-center rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100">
+                            className="h-6 w-6 flex items-center justify-center rounded-md text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors opacity-0 group-hover:opacity-100">
                             <X className="h-3.5 w-3.5" />
                           </button>
                         )}
@@ -1322,7 +1322,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                     </div>
                   ))}
                   {localItems.filter(i => i.is_cancelled).map(item => (
-                    <div key={item.id} className="flex justify-between py-1 px-3 text-xs text-gray-400 line-through">
+                    <div key={item.id} className="flex justify-between py-1 px-3 text-xs text-gray-400 dark:text-gray-500 line-through">
                       <span>{item.quantity}× {item.menu_item?.name}</span>
                       <span>₹{item.total_price.toFixed(0)}</span>
                     </div>
@@ -1330,29 +1330,29 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 </div>
 
                 {/* Divider */}
-                <div className="border-t border-dashed border-gray-200" />
+                <div className="border-t border-dashed border-gray-200 dark:border-gray-700" />
 
                 {/* Charges breakdown */}
                 <div className="space-y-2 px-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Subtotal</span>
-                    <span className="font-medium text-gray-700 tabular-nums">₹{subtotal.toFixed(2)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300 tabular-nums">₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm items-center">
-                    <span className="flex items-center gap-2 text-gray-500">
+                    <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                       SC ({SERVICE_CHARGE_PERCENT}%)
                       <button
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-all ${
                           serviceChargeRemoved
-                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                            : 'bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600'
+                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600'
                         }`}
                         onClick={handleScRemoveClick}
                       >
                         {serviceChargeRemoved ? '+ ADD' : '− REMOVE'}
                       </button>
                     </span>
-                    <span className={`tabular-nums font-medium ${serviceChargeRemoved ? 'line-through text-gray-300' : 'text-gray-700'}`}>
+                    <span className={`tabular-nums font-medium ${serviceChargeRemoved ? 'line-through text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}`}>
                       ₹{(Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100).toFixed(2)}
                     </span>
                   </div>
@@ -1363,26 +1363,26 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">GST ({GST_PERCENT}%)</span>
-                    <span className="font-medium text-gray-700 tabular-nums">₹{gstAmount.toFixed(2)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">GST ({GST_PERCENT}%)</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300 tabular-nums">₹{gstAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
                 {/* Grand Total */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl px-4 py-2.5 border border-amber-200">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 rounded-xl px-4 py-2.5 border border-amber-200 dark:border-amber-800">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-800">Grand Total</span>
+                    <span className="font-bold text-gray-800 dark:text-gray-200">Grand Total</span>
                     <span className="font-black text-2xl text-amber-700 tabular-nums">₹{total.toFixed(2)}</span>
                   </div>
                 </div>
 
                 {/* Discount Toggle */}
-                <details className="group rounded-xl border border-gray-200 bg-white overflow-hidden">
-                  <summary className="flex items-center justify-between cursor-pointer px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors select-none">
-                    <span className="flex items-center gap-2 font-medium"><Percent className="h-3.5 w-3.5 text-gray-400" /> Discount</span>
-                    <span className="text-xs text-gray-400 group-open:rotate-90 transition-transform">▸</span>
+                <details className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+                  <summary className="flex items-center justify-between cursor-pointer px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors select-none">
+                    <span className="flex items-center gap-2 font-medium"><Percent className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" /> Discount</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 group-open:rotate-90 transition-transform">▸</span>
                   </summary>
-                  <div className="px-4 pb-3 space-y-2 border-t border-gray-100 pt-2.5">
+                  <div className="px-4 pb-3 space-y-2 border-t border-gray-100 dark:border-gray-700 pt-2.5">
                     <div className="flex gap-2">
                       <Button variant={discountType === 'none' ? 'default' : 'outline'} size="sm" className="h-8 text-xs flex-1 rounded-lg"
                         onClick={() => { setDiscountType('none'); setDiscountValue(''); setDiscountPinVerified(false) }}>None</Button>
@@ -1407,12 +1407,12 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                           {[5, 10, 15].map(p => (
                             <button key={p} onClick={() => { setDiscountValue(String(p)); setDiscountPinVerified(false) }}
                               className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
-                                discountValue === String(p) ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300'
+                                discountValue === String(p) ? 'bg-amber-600 text-white border-amber-600' : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-amber-300'
                               }`}>{p}%</button>
                           ))}
                         </div>
                         {needsDiscountAuth && (
-                          <p className="text-xs text-amber-600 flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-lg">
+                          <p className="text-xs text-amber-600 flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/30 px-3 py-1.5 rounded-lg">
                             <Lock className="h-3.5 w-3.5 shrink-0" />PIN required to apply discount
                           </p>
                         )}
@@ -1428,7 +1428,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
                 {/* Print Preview */}
                 <button onClick={printPreviewBill} disabled={printing}
-                  className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border-2 border-dashed border-gray-300 text-gray-500 font-medium text-sm hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50/50 transition-all disabled:opacity-50">
+                  className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 font-medium text-sm hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50/50 dark:hover:bg-amber-900/30 transition-all disabled:opacity-50">
                   <Printer className="h-4 w-4" />
                   {printing ? 'Printing...' : 'Print Preview'}
                 </button>
@@ -1436,9 +1436,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </div>
 
             {/* RIGHT PANEL — Payment & Settlement */}
-            <div className="w-[60%] flex flex-col min-h-0 bg-white">
+            <div className="w-[60%] flex flex-col min-h-0 bg-white dark:bg-gray-900">
               <div className="flex-1 overflow-y-auto px-8 py-4 space-y-4">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Select Payment</p>
+                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Select Payment</p>
 
                 {/* Payment method grid — 6 across on wide dialog */}
                 <div className="grid grid-cols-6 gap-2.5">
@@ -1470,11 +1470,11 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                       }}
                       className={`flex flex-col items-center gap-1.5 py-3.5 rounded-xl border-2 transition-all text-sm font-semibold ${
                         paymentMode === pm.mode
-                          ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-100 scale-[1.03]'
-                          : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm'
+                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 shadow-md shadow-amber-100 dark:shadow-amber-900/20 scale-[1.03]'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm'
                       }`}
                     >
-                      <pm.icon className={`h-6 w-6 ${paymentMode === pm.mode ? 'text-amber-600' : 'text-gray-400'}`} />
+                      <pm.icon className={`h-6 w-6 ${paymentMode === pm.mode ? 'text-amber-600' : 'text-gray-400 dark:text-gray-500'}`} />
                       {pm.label}
                     </button>
                   ))}
@@ -1495,10 +1495,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                         <label className="text-xs font-semibold text-emerald-700 mb-1.5 block uppercase tracking-wider">Cash Received</label>
                         <Input type="number" placeholder="Enter amount" autoFocus
                           value={cashReceived} onChange={e => setCashReceived(e.target.value)}
-                          className="h-12 text-xl font-bold bg-white border-emerald-300 focus-visible:ring-emerald-400 rounded-lg" />
+                          className="h-12 text-xl font-bold bg-white dark:bg-gray-900 border-emerald-300 focus-visible:ring-emerald-400 rounded-lg" />
                       </div>
                       {received > 0 && (
-                        <div className={`flex items-center justify-between py-3 px-4 rounded-xl ${change >= 0 ? 'bg-emerald-100 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                        <div className={`flex items-center justify-between py-3 px-4 rounded-xl ${change >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'}`}>
                           <span className={`text-sm font-bold ${change >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                             {change >= 0 ? 'Return Change' : 'Amount Short'}
                           </span>
@@ -1514,7 +1514,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                             className={`px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all ${
                               cashReceived === String(amt)
                                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
-                                : 'bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50'
+                                : 'bg-white dark:bg-gray-900 text-emerald-700 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'
                             }`}>
                             {amt === roundedTotal ? 'Exact' : `₹${amt}`}
                           </button>
@@ -1535,7 +1535,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                     </div>
                     <Input placeholder={`Enter ${paymentMode === 'upi' ? 'UPI transaction' : paymentMode === 'zomato' ? 'Zomato order' : 'Card transaction'} reference${requirePaymentRef ? ' (required)' : ''}`}
                       value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)}
-                      className="h-11 bg-white border-blue-300 rounded-lg text-sm" />
+                      className="h-11 bg-white dark:bg-gray-900 border-blue-300 rounded-lg text-sm" />
                   </div>
                 )}
 
@@ -1553,15 +1553,15 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                         const prevTotal = splitPayments.slice(0, index).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
                         const remaining = Math.round(roundedTotal - prevTotal)
                         return (
-                          <div key={index} className="bg-white rounded-xl p-3 border border-violet-100 space-y-2.5 shadow-sm">
+                          <div key={index} className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-violet-100 dark:border-violet-900/50 space-y-2.5 shadow-sm">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-white bg-violet-500 rounded-full w-5 h-5 flex items-center justify-center">{index + 1}</span>
-                                <span className="text-sm font-medium text-gray-700">Payment {index + 1}</span>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment {index + 1}</span>
                               </div>
                               {splitPayments.length > 2 && (
                                 <button onClick={() => removeSplitPayment(index)}
-                                  className="h-7 w-7 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+                                  className="h-7 w-7 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors">
                                   <X className="h-4 w-4" /></button>
                               )}
                             </div>
@@ -1575,8 +1575,8 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                                 <button key={opt.m} onClick={() => updateSplitPayment(index, 'mode', opt.m)}
                                   className={`flex flex-col items-center gap-0.5 py-2 rounded-lg border-2 text-[11px] font-semibold transition-all ${
                                     payment.mode === opt.m
-                                      ? 'border-violet-500 bg-violet-50 text-violet-700'
-                                      : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700'
+                                      : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:border-gray-300'
                                   }`}>
                                   <opt.icon className="h-4 w-4" />
                                   {opt.label}
@@ -1621,7 +1621,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
 
                 {/* NC (No Charge) inline authorization */}
                 {paymentMode === 'nc' && (
-                  <div className="bg-amber-50 rounded-xl p-4 space-y-3 border border-amber-200">
+                  <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4 space-y-3 border border-amber-200 dark:border-amber-800">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-semibold text-amber-800">No Charge (NC)</span>
                       <span className="text-xl font-bold text-amber-800">₹{total.toFixed(2)}</span>
@@ -1641,7 +1641,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                             value={ncReason}
                             onChange={(e) => setNcReason(e.target.value)}
                             rows={2}
-                            className="bg-white border-amber-300 focus-visible:ring-amber-400 rounded-lg text-sm"
+                            className="bg-white dark:bg-gray-900 border-amber-300 focus-visible:ring-amber-400 rounded-lg text-sm"
                           />
                         </div>
                         <div>
@@ -1652,7 +1652,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                             value={ncPin}
                             onChange={(e) => setNcPin(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && confirmNcPayment()}
-                            className="h-11 bg-white border-amber-300 focus-visible:ring-amber-400 rounded-lg"
+                            className="h-11 bg-white dark:bg-gray-900 border-amber-300 focus-visible:ring-amber-400 rounded-lg"
                           />
                         </div>
                         <button
@@ -1669,7 +1669,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
               </div>
 
               {/* Settle button pinned at bottom */}
-              <div className="px-8 py-3 border-t border-gray-100 bg-white shrink-0">
+              <div className="px-8 py-3 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
                 <button
                   onClick={settleBill}
                   disabled={settling || !paymentMode || (paymentMode === 'nc' && !ncAuthorized)}
@@ -1693,7 +1693,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Cancelling <strong>{cancelItemName}</strong> from {order.order_number}
             </p>
             <div className="space-y-2">
@@ -1742,19 +1742,19 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Moving {order.order_number} from {tableName} to:
             </p>
             {groupTablesByDisplayGroup((tables || []).filter(t => t.status === 'available')).map(group => (
               <div key={group.group}>
-                <p className="text-sm font-medium text-gray-500 mb-2">{group.label}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{group.label}</p>
                 <div className="grid grid-cols-5 gap-2">
                   {group.tables.map(table => (
                     <button
                       key={table.id}
                       onClick={() => transferTable(table)}
                       disabled={transferring}
-                      className="p-2 rounded-lg text-center border-2 border-green-300 bg-green-50 hover:border-amber-400 hover:bg-amber-50 transition-all"
+                      className="p-2 rounded-lg text-center border-2 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-900/30 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-all"
                     >
                       <p className="text-sm font-bold">{getTableDisplayName(table)}</p>
                     </button>
@@ -1763,7 +1763,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
               </div>
             ))}
             {(tables || []).filter(t => t.status === 'available').length === 0 && (
-              <p className="text-center text-gray-400 py-4">No available tables</p>
+              <p className="text-center text-gray-400 dark:text-gray-500 py-4">No available tables</p>
             )}
           </div>
         </DialogContent>
@@ -1779,7 +1779,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2 max-h-[60vh] overflow-y-auto">
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
               Reassign {order.order_number} to:
             </p>
             {(waiters || []).filter(w => w.id !== order.waiter_id).map(waiter => (
@@ -1787,19 +1787,19 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                 key={waiter.id}
                 onClick={() => reassignWaiter(waiter)}
                 disabled={reassigning}
-                className="w-full p-3 rounded-lg text-left border hover:border-amber-300 hover:bg-amber-50 transition-all flex items-center gap-3"
+                className="w-full p-3 rounded-lg text-left border dark:border-gray-700 hover:border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-all flex items-center gap-3"
               >
                 <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm">
                   {waiter.name.charAt(0)}
                 </div>
                 <div>
                   <p className="font-medium text-sm">{waiter.name}</p>
-                  <p className="text-xs text-gray-400 capitalize">{waiter.role}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">{waiter.role}</p>
                 </div>
               </button>
             ))}
             {(waiters || []).filter(w => w.id !== order.waiter_id).length === 0 && (
-              <p className="text-center text-gray-400 py-4">No other staff available</p>
+              <p className="text-center text-gray-400 dark:text-gray-500 py-4">No other staff available</p>
             )}
           </div>
         </DialogContent>
@@ -1815,7 +1815,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Discount of <strong>{effectiveDiscountPercent.toFixed(0)}%</strong> exceeds the {discountMaxPercent}% cashier limit.
               Enter security PIN to authorize.
             </p>
@@ -1851,7 +1851,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Enter security PIN to remove service charge of <strong>₹{(Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100).toFixed(2)}</strong>
             </p>
             <div className="space-y-2">

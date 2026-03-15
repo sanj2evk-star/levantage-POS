@@ -137,9 +137,9 @@ export function RefundDialog({ bill, order, open, onClose, onRefunded, verifyPas
         </DialogHeader>
         <div className="space-y-4">
           {/* Bill summary */}
-          <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Bill Total</span>
+              <span className="text-gray-500 dark:text-gray-400">Bill Total</span>
               <span className="font-medium">₹{Number(bill.total).toFixed(2)}</span>
             </div>
             {Number(bill.total_refunded || 0) > 0 && (
@@ -247,7 +247,7 @@ export function RefundDialog({ bill, order, open, onClose, onRefunded, verifyPas
 
           {/* Refund amount summary */}
           {actualRefundAmount > 0 && (
-            <div className="bg-red-50 rounded-lg p-3 text-center">
+            <div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-3 text-center">
               <p className="text-sm text-red-600">Refund Amount</p>
               <p className="text-2xl font-bold text-red-700">₹{actualRefundAmount.toFixed(2)}</p>
             </div>

@@ -232,11 +232,11 @@ export default function UserManagement() {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-purple-100 text-purple-800'
-      case 'manager': return 'bg-indigo-100 text-indigo-800'
-      case 'accountant': return 'bg-teal-100 text-teal-800'
-      case 'cashier': return 'bg-blue-100 text-blue-800'
-      case 'waiter': return 'bg-green-100 text-green-800'
+      case 'admin': return 'bg-purple-100 dark:bg-purple-900/40 text-purple-800'
+      case 'manager': return 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800'
+      case 'accountant': return 'bg-teal-100 dark:bg-teal-900/40 text-teal-800'
+      case 'cashier': return 'bg-blue-100 dark:bg-blue-900/40 text-blue-800'
+      case 'waiter': return 'bg-green-100 dark:bg-green-900/40 text-green-800'
       default: return ''
     }
   }
@@ -275,7 +275,7 @@ export default function UserManagement() {
             <TableBody>
               {profiles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={6} className="text-center text-gray-500 dark:text-gray-400 py-8">
                     No staff members yet
                   </TableCell>
                 </TableRow>
@@ -311,7 +311,7 @@ export default function UserManagement() {
                           size="icon"
                           onClick={() => confirmDelete(profile)}
                           title="Delete"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -377,7 +377,7 @@ export default function UserManagement() {
                     <SelectItem key={role.value} value={role.value}>
                       <div>
                         <span className="font-medium">{role.label}</span>
-                        <span className="text-gray-500 ml-2 text-xs">{role.description}</span>
+                        <span className="text-gray-500 dark:text-gray-400 ml-2 text-xs">{role.description}</span>
                       </div>
                     </SelectItem>
                   ))}

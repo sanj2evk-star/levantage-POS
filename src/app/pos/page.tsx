@@ -761,6 +761,13 @@ export default function POSPage() {
 
                           if (orderData && (billPrinted || billExists || orderCompleted)) {
                             // Bill printed/exists or order completed — reuse table for new order
+                            // Ensure old order has bill_print_count >= 1 for Pending Settlement tracking
+                            if (!billPrinted) {
+                              supabase.from('orders')
+                                .update({ bill_print_count: 1 })
+                                .eq('id', orderData.id)
+                                .then(() => {})
+                            }
                             setSelectedTable(table.id)
                             setAddingToOrder(null)
                             setTableDialogOpen(false)

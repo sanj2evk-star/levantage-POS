@@ -282,7 +282,7 @@ export default function CashierPage() {
 
     // Find orders where bill was printed (bill_print_count > 0),
     // not completed, and table was reassigned to a new order.
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('orders')
       .select(`
         id, order_number, status, created_at, table_id, waiter_id, bill_print_count, service_charge_removed,
@@ -296,12 +296,18 @@ export default function CashierPage() {
       .gte('created_at', dayStart)
       .order('created_at', { ascending: false })
 
+    if (error) {
+      console.error('[Unsettled] Query failed:', error.message)
+      return
+    }
+
     if (data) {
       const unsettled = data
         .filter((o: any) => {
           // Must have a table
           if (!o.table) return false
           // Table's current_order_id must NOT be this order (table was reassigned)
+          // Also include orders where table was freed (current_order_id is null)
           if (o.table.current_order_id === o.id) return false
           // Must have been printed OR have a bill record
           const bill = Array.isArray(o.bill) ? o.bill[0] : o.bill
@@ -338,6 +344,7 @@ export default function CashierPage() {
             tableId: o.table.id,
           }
         })
+      console.log('[Unsettled] Found', data.length, 'candidates,', unsettled.length, 'unsettled')
       setUnsettledOrders(unsettled)
     }
   }, [boundaryHour])

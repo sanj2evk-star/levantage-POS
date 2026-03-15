@@ -181,6 +181,14 @@ export default function WaiterPage() {
 
         // If bill printed/exists or order completed, reuse table for new order
         if (billPrinted || billExists || orderCompleted) {
+          // Ensure old order has bill_print_count >= 1 for Pending Settlement tracking
+          if (!billPrinted) {
+            const supabase = createClient()
+            supabase.from('orders')
+              .update({ bill_print_count: 1 })
+              .eq('id', order.id)
+              .then(() => {})
+          }
           setActiveOrder(null)
           setAddingToOrder(null)
           setSearchQuery('')

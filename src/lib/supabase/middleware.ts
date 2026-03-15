@@ -51,15 +51,16 @@ export async function updateSession(request: NextRequest) {
     const result = await Promise.race([userPromise, timeoutPromise]) as any
     user = result?.data?.user || null
   } catch {
-    // Supabase timed out or errored — redirect to login as fallback
+    // Supabase timed out or errored — redirect to appropriate login
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = pathname.startsWith('/bar') ? '/bar/login' : '/login'
     return NextResponse.redirect(url)
   }
 
   if (!user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    // Bar routes get their own login page
+    url.pathname = pathname.startsWith('/bar') ? '/bar/login' : '/login'
     return NextResponse.redirect(url)
   }
 

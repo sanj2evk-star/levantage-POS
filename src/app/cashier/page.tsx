@@ -38,6 +38,7 @@ import {
   X,
   ClipboardList,
   ChevronRight,
+  LayoutDashboard,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -1360,8 +1361,11 @@ export default function CashierPage() {
               </Button>
             </a>
             {(profile?.role === 'admin' || profile?.role === 'manager') && (
-              <a href="/admin" className="hidden sm:inline">
-                <Button variant="ghost" size="sm">Admin</Button>
+              <a href="/admin">
+                <Button variant="ghost" size="icon" className="sm:hidden" title="Admin">
+                  <LayoutDashboard className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Admin</Button>
               </a>
             )}
             <Button

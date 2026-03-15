@@ -53,6 +53,7 @@ import {
   UtensilsCrossed,
   Receipt,
   ClipboardList,
+  LayoutDashboard,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { BillingDialog } from '@/components/pos/billing-dialog'
@@ -403,8 +404,11 @@ export default function POSPage() {
               </Button>
             </a>
             {(profile?.role === 'admin' || profile?.role === 'manager') && (
-              <a href="/admin" className="hidden sm:inline">
-                <Button variant="ghost" size="sm">Admin</Button>
+              <a href="/admin">
+                <Button variant="ghost" size="icon" className="sm:hidden" title="Admin">
+                  <LayoutDashboard className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Admin</Button>
               </a>
             )}
             <span className="text-sm text-gray-500 dark:text-neutral-400 hidden sm:block">{profile?.name}</span>

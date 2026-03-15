@@ -369,7 +369,7 @@ export default function AdminDashboard() {
     { label: 'UPI', amount: data.upiTotal, color: 'bg-blue-500', light: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700', icon: Smartphone },
     { label: 'Card', amount: data.cardTotal, color: 'bg-violet-500', light: 'bg-violet-50 dark:bg-violet-900/30 text-violet-700', icon: CreditCard },
     { label: 'Zomato', amount: data.zomatoTotal, color: 'bg-red-500', light: 'bg-red-50 dark:bg-red-900/30 text-red-700', icon: Store },
-    ...(data.ncTotal > 0 ? [{ label: 'NC', amount: data.ncTotal, color: 'bg-gray-400', light: 'bg-gray-50 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400', icon: Percent }] : []),
+    ...(data.ncTotal > 0 ? [{ label: 'NC', amount: data.ncTotal, color: 'bg-gray-400', light: 'bg-gray-50 dark:bg-neutral-700 text-gray-600 dark:text-neutral-400', icon: Percent }] : []),
   ].filter(m => m.amount > 0) : []
 
   const paymentTotal = paymentModes.reduce((s, m) => s + m.amount, 0)
@@ -396,7 +396,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Date Navigator */}
-        <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 rounded-xl border border-gray-100 dark:border-neutral-800 p-1.5 shadow-sm">
+        <div className="flex items-center gap-2 bg-white dark:bg-neutral-800 rounded-xl border border-gray-100 dark:border-neutral-700 p-1.5 shadow-sm">
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => navigateDate(-1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -504,7 +504,7 @@ export default function AdminDashboard() {
           {/* ── Quick Stats Grid ── */}
           <div className="grid grid-cols-2 gap-3">
             {/* Net Sales */}
-            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30">
                   <TrendingUp className="h-3.5 w-3.5 text-blue-600" />
@@ -516,7 +516,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* GST */}
-            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-900/30">
                   <Receipt className="h-3.5 w-3.5 text-orange-600" />
@@ -528,7 +528,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Service Charge */}
-            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-900/30">
                   <HandCoins className="h-3.5 w-3.5 text-emerald-600" />
@@ -540,7 +540,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* SC Deleted */}
-            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30">
                   <XCircle className="h-3.5 w-3.5 text-red-500" />
@@ -555,7 +555,7 @@ export default function AdminDashboard() {
           {/* ── NC & Discounts ── */}
           <div className="grid grid-cols-2 gap-3">
             {/* NC (No Charge) */}
-            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
                   <Gift className="h-3.5 w-3.5 text-amber-600" />
@@ -567,7 +567,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Discounts */}
-            <div className="rounded-xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-900/30">
                   <Percent className="h-3.5 w-3.5 text-rose-600" />
@@ -581,11 +581,11 @@ export default function AdminDashboard() {
 
           {/* ── Payment Breakdown ── */}
           {paymentModes.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-neutral-100 mb-3">Payment Breakdown</h3>
 
               {/* Stacked bar */}
-              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-neutral-800 mb-4">
+              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-neutral-700 mb-4">
                 {paymentModes.map((m) => (
                   <div
                     key={m.label}
@@ -608,7 +608,7 @@ export default function AdminDashboard() {
                         <span className="text-sm font-bold text-gray-900 dark:text-neutral-100">{fmt(m.amount)}</span>
                       </div>
                       <div className="flex items-center justify-between mt-0.5">
-                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-neutral-800 mr-3">
+                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-neutral-700 mr-3">
                           <div
                             className={`h-full rounded-full ${m.color} transition-all duration-500`}
                             style={{ width: `${paymentTotal > 0 ? (m.amount / paymentTotal * 100) : 0}%` }}
@@ -627,7 +627,7 @@ export default function AdminDashboard() {
 
           {/* ── SC Waived by Staff ── */}
           {data.scByStaff.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-red-100 dark:border-red-800 p-4 shadow-sm">
+            <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-red-100 dark:border-red-800 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30">
                   <Users className="h-3.5 w-3.5 text-red-500" />
@@ -653,7 +653,7 @@ export default function AdminDashboard() {
           )}
 
           {/* ── Meal Period Sales ── */}
-          <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+          <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
                 <Utensils className="h-3.5 w-3.5 text-amber-600" />
@@ -713,7 +713,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* ── Weekly Sales ── */}
-          <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+          <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
@@ -737,7 +737,7 @@ export default function AdminDashboard() {
                   <div key={entry.date} className={`flex items-center gap-3 px-3 py-2 rounded-xl ${isSel ? 'bg-amber-50 dark:bg-amber-900/30 ring-1 ring-amber-200' : ''}`}>
                     <div className="w-10 text-xs font-medium text-gray-500 dark:text-neutral-400">{entry.day}</div>
                     <div className="flex-1">
-                      <div className="h-5 rounded-md bg-gray-100 dark:bg-neutral-800 overflow-hidden">
+                      <div className="h-5 rounded-md bg-gray-100 dark:bg-neutral-700 overflow-hidden">
                         <div
                           className={`h-full rounded-md transition-all duration-500 ${isSel ? 'bg-amber-600' : 'bg-amber-300'}`}
                           style={{ width: `${(entry.sales / maxSales) * 100}%` }}
@@ -785,7 +785,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Week total */}
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 dark:border-neutral-800 text-sm">
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 dark:border-neutral-700 text-sm">
               <span className="text-gray-500 dark:text-neutral-400">Week Total</span>
               <span className="font-bold text-gray-900 dark:text-neutral-100">
                 {fmt(data.weeklySales.reduce((sum, d) => sum + d.sales, 0))}
@@ -798,7 +798,7 @@ export default function AdminDashboard() {
 
           {/* ── Category Performance ── */}
           {categoryPerf.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
                   <Coffee className="h-3.5 w-3.5 text-amber-600" />
@@ -818,7 +818,7 @@ export default function AdminDashboard() {
                           <span className="text-sm font-medium text-gray-700 dark:text-neutral-300 truncate">{cat.name}</span>
                           <span className="text-sm font-bold text-gray-900 dark:text-neutral-100 ml-2">{fmt(cat.total)}</span>
                         </div>
-                        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-neutral-800">
+                        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-neutral-700">
                           <div
                             className="h-full rounded-full bg-amber-500 transition-all duration-500"
                             style={{ width: `${(cat.total / maxTotal) * 100}%` }}
@@ -857,7 +857,7 @@ export default function AdminDashboard() {
 
           {/* ── Top 10 Items ── */}
           {topItems.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 p-4 shadow-sm">
+            <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-900/30">
                   <Trophy className="h-3.5 w-3.5 text-emerald-600" />
@@ -874,9 +874,9 @@ export default function AdminDashboard() {
                     <div key={item.name} className="flex items-center gap-3 py-1.5">
                       <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
                         i === 0 ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700' :
-                        i === 1 ? 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400' :
+                        i === 1 ? 'bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-neutral-400' :
                         i === 2 ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600' :
-                        'bg-gray-50 dark:bg-neutral-800 text-gray-400 dark:text-neutral-500'
+                        'bg-gray-50 dark:bg-neutral-700 text-gray-400 dark:text-neutral-500'
                       }`}>
                         {i + 1}
                       </div>
@@ -885,7 +885,7 @@ export default function AdminDashboard() {
                           <span className="text-sm text-gray-700 dark:text-neutral-300 truncate">{item.name}</span>
                           <span className="text-sm font-bold text-gray-900 dark:text-neutral-100 ml-2 tabular-nums">{item.qty}</span>
                         </div>
-                        <div className="h-1 rounded-full bg-gray-100 dark:bg-neutral-800">
+                        <div className="h-1 rounded-full bg-gray-100 dark:bg-neutral-700">
                           <div
                             className="h-full rounded-full bg-emerald-400 transition-all duration-500"
                             style={{ width: `${(item.qty / maxQty) * 100}%` }}

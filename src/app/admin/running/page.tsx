@@ -139,9 +139,9 @@ export default function RunningOrdersPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 bg-gray-200 dark:bg-neutral-700 rounded animate-pulse" />
+        <div className="h-8 w-48 bg-gray-200 dark:bg-neutral-600 rounded animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 dark:bg-neutral-700 rounded-xl animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 dark:bg-neutral-600 rounded-xl animate-pulse" />)}
         </div>
       </div>
     )
@@ -162,7 +162,7 @@ export default function RunningOrdersPage() {
       </div>
 
       {/* Summary bar */}
-      <div className="flex items-center gap-6 bg-white dark:bg-neutral-900 rounded-xl border dark:border-neutral-700 p-4">
+      <div className="flex items-center gap-6 bg-white dark:bg-neutral-800 rounded-xl border dark:border-neutral-600 p-4">
         <div className="text-center">
           <p className="text-xs text-gray-400 dark:text-neutral-500">Running / Total</p>
           <p className="text-2xl font-bold">
@@ -171,7 +171,7 @@ export default function RunningOrdersPage() {
             <span className="text-gray-500 dark:text-neutral-400">{totalTables}</span>
           </p>
         </div>
-        <div className="h-10 border-l border-gray-200 dark:border-neutral-700" />
+        <div className="h-10 border-l border-gray-200 dark:border-neutral-600" />
         <div className="text-center">
           <p className="text-xs text-gray-400 dark:text-neutral-500">Est. Total Amount</p>
           <p className="text-2xl font-bold text-amber-800">₹{totalAmount.toLocaleString('en-IN')}</p>
@@ -198,10 +198,10 @@ export default function RunningOrdersPage() {
             return (
               <div
                 key={table.id}
-                className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-700 overflow-hidden hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-600 overflow-hidden hover:shadow-md transition-shadow"
               >
                 {/* Table header row */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-neutral-800">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-neutral-700">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-base">{getTableDisplayName(table)}</span>
                     <Badge className={`text-[10px] capitalize border-0 ${
@@ -209,7 +209,7 @@ export default function RunningOrdersPage() {
                       order.status === 'preparing' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700' :
                       order.status === 'ready' ? 'bg-green-100 dark:bg-green-900/40 text-green-700' :
                       order.status === 'served' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700' :
-                      'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300'
+                      'bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-neutral-300'
                     }`}>{order.status}</Badge>
                   </div>
                   <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-neutral-400 font-medium">

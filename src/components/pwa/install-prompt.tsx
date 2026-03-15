@@ -78,7 +78,7 @@ export function InstallPrompt() {
   // Android / Chrome install banner
   if (showBanner) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-neutral-900 p-4 shadow-lg">
+      <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-neutral-800 p-4 shadow-lg">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
             <Download className="h-5 w-5 text-amber-700" />
@@ -105,7 +105,7 @@ export function InstallPrompt() {
   // iOS instructions banner
   if (showIOSInstructions) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-neutral-900 p-4 shadow-lg">
+      <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-neutral-800 p-4 shadow-lg">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
             <Download className="h-5 w-5 text-amber-700" />

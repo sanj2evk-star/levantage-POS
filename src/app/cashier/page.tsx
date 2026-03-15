@@ -992,7 +992,7 @@ export default function CashierPage() {
   // Helper: table card style based on status + bill
   function getTableCardStyle(table: TableType, info: TableOrderInfo | null | undefined): string {
     if (table.status === 'available') {
-      return 'border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-sm dark:shadow-neutral-900/50 cursor-default'
+      return 'border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 shadow-sm dark:shadow-neutral-800/50 cursor-default'
     }
     if (table.status === 'reserved') {
       return 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 opacity-80 cursor-default'
@@ -1256,19 +1256,19 @@ export default function CashierPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#FBF9F6] dark:bg-neutral-900">
-        <header className="bg-white dark:bg-neutral-900 border-b dark:border-neutral-700 px-6 py-3.5 flex items-center gap-2">
+      <div className="min-h-screen bg-[#FBF9F6] dark:bg-neutral-800">
+        <header className="bg-white dark:bg-neutral-800 border-b dark:border-neutral-600 px-6 py-3.5 flex items-center gap-2">
           <Coffee className="h-6 w-6 text-amber-700" />
           <span className="font-bold text-xl dark:text-neutral-100">Cashier</span>
         </header>
         <div className="p-6 space-y-6">
-          <div className="h-16 bg-gray-200 dark:bg-neutral-700 rounded-lg animate-pulse" />
+          <div className="h-16 bg-gray-200 dark:bg-neutral-600 rounded-lg animate-pulse" />
           {[1, 2, 3].map(i => (
             <div key={i} className="space-y-3">
-              <div className="h-5 w-32 bg-gray-200 dark:bg-neutral-700 rounded animate-pulse" />
+              <div className="h-5 w-32 bg-gray-200 dark:bg-neutral-600 rounded animate-pulse" />
               <div className="grid grid-cols-6 gap-3">
                 {[1, 2, 3, 4, 5, 6].map(j => (
-                  <div key={j} className="h-24 bg-gray-200 dark:bg-neutral-700 rounded-xl animate-pulse" />
+                  <div key={j} className="h-24 bg-gray-200 dark:bg-neutral-600 rounded-xl animate-pulse" />
                 ))}
               </div>
             </div>
@@ -1279,9 +1279,9 @@ export default function CashierPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF9F6] dark:bg-neutral-900 flex flex-col">
+    <div className="min-h-screen bg-[#FBF9F6] dark:bg-neutral-800 flex flex-col">
       {/* Header */}
-      <header className="bg-white dark:bg-neutral-900 border-b dark:border-neutral-700 px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-white dark:bg-neutral-800 border-b dark:border-neutral-600 px-6 py-3.5 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <Coffee className="h-6 w-6 text-amber-700" />
           <span className="font-bold text-xl text-gray-900 dark:text-neutral-100">Cashier</span>
@@ -1289,7 +1289,7 @@ export default function CashierPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1">
           {[
             { key: 'tables' as CashierTab, label: 'Tables' },
             { key: 'live_orders' as CashierTab, label: 'Live Orders' },
@@ -1300,7 +1300,7 @@ export default function CashierPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`px-5 py-2 text-base rounded-md transition-colors ${
                 activeTab === tab.key
-                  ? 'bg-white dark:bg-neutral-700 shadow-sm font-semibold dark:text-neutral-100'
+                  ? 'bg-white dark:bg-neutral-600 shadow-sm font-semibold dark:text-neutral-100'
                   : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
               }`}
             >
@@ -1376,10 +1376,10 @@ export default function CashierPage() {
         {activeTab === 'tables' && (
           <div className="p-6 space-y-6">
             {/* Table Legend */}
-            <div className="flex items-center gap-5 text-sm text-gray-600 dark:text-neutral-400 pb-3 border-b border-gray-200 dark:border-neutral-700">
+            <div className="flex items-center gap-5 text-sm text-gray-600 dark:text-neutral-400 pb-3 border-b border-gray-200 dark:border-neutral-600">
               <span className="font-semibold text-gray-800 dark:text-neutral-200">Legend:</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-3.5 h-3.5 rounded-sm bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-500" />
                 <span>Available</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -1483,7 +1483,7 @@ export default function CashierPage() {
                           {/* Print count badge (top-right) */}
                           {info && (info.billPrintCount > 0 || isPrinted) && (
                             <div className={`absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold z-10 ${
-                              (info.billPrintCount || 0) > 1 ? 'bg-red-500 text-white' : 'bg-white dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 shadow-sm dark:shadow-neutral-900/50 border dark:border-neutral-700'
+                              (info.billPrintCount || 0) > 1 ? 'bg-red-500 text-white' : 'bg-white dark:bg-neutral-700 text-gray-700 dark:text-neutral-300 shadow-sm dark:shadow-neutral-800/50 border dark:border-neutral-600'
                             }`}>
                               <Printer className="h-3 w-3" />
                               {(info.billPrintCount || 0) > 1 && <span>{info.billPrintCount}</span>}
@@ -1600,7 +1600,7 @@ export default function CashierPage() {
               {/* Filters row */}
               <div className="flex items-center gap-4 flex-wrap">
                 {/* Order type filter */}
-                <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1">
+                <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1">
                   {([
                     { key: 'all' as LiveOrderFilter, label: 'All' },
                     { key: 'dine_in' as LiveOrderFilter, label: 'Dine In' },
@@ -1611,7 +1611,7 @@ export default function CashierPage() {
                       onClick={() => setLiveOrderFilter(f.key)}
                       className={`px-3.5 py-1.5 text-sm rounded-md transition-colors ${
                         liveOrderFilter === f.key
-                          ? 'bg-white dark:bg-neutral-700 shadow-sm font-medium dark:text-neutral-100'
+                          ? 'bg-white dark:bg-neutral-600 shadow-sm font-medium dark:text-neutral-100'
                           : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
                       }`}
                     >
@@ -1637,7 +1637,7 @@ export default function CashierPage() {
                       className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                         liveStatusFilter === f.key
                           ? `${f.color} border-current font-medium`
-                          : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 text-gray-500 dark:text-neutral-400 hover:border-gray-300 dark:hover:border-neutral-600'
+                          : 'bg-white dark:bg-neutral-700 border-gray-200 dark:border-neutral-600 text-gray-500 dark:text-neutral-400 hover:border-gray-300 dark:hover:border-neutral-500'
                       }`}
                     >
                       {f.label} ({f.count})
@@ -1678,7 +1678,7 @@ export default function CashierPage() {
                     <button
                       key={order.id}
                       onClick={() => openKotDetail(order)}
-                      className="w-full text-left bg-white dark:bg-neutral-800 rounded-xl p-4 border-2 border-gray-200 dark:border-neutral-700 hover:border-amber-400 hover:shadow-md dark:hover:shadow-neutral-900/50 transition-all active:scale-[0.98]"
+                      className="w-full text-left bg-white dark:bg-neutral-700 rounded-xl p-4 border-2 border-gray-200 dark:border-neutral-600 hover:border-amber-400 hover:shadow-md dark:hover:shadow-neutral-800/50 transition-all active:scale-[0.98]"
                     >
                       {/* Top row: order number + badge + total */}
                       <div className="flex items-center justify-between mb-2">
@@ -1784,17 +1784,17 @@ export default function CashierPage() {
             <h2 className="font-semibold text-xl mb-6 dark:text-neutral-100">Today&apos;s Summary</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-white dark:bg-neutral-800 rounded-xl p-5 border dark:border-neutral-700">
+              <div className="bg-white dark:bg-neutral-700 rounded-xl p-5 border dark:border-neutral-600">
                 <p className="text-sm text-gray-500 dark:text-neutral-400 mb-1">Total Bills</p>
                 <p className="text-3xl font-bold dark:text-neutral-100">{daySummary.totalOrders}</p>
               </div>
-              <div className="bg-white dark:bg-neutral-800 rounded-xl p-5 border dark:border-neutral-700">
+              <div className="bg-white dark:bg-neutral-700 rounded-xl p-5 border dark:border-neutral-600">
                 <p className="text-sm text-gray-500 dark:text-neutral-400 mb-1">Total Sales</p>
                 <p className="text-3xl font-bold text-amber-700">₹{daySummary.totalSales.toLocaleString('en-IN')}</p>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-neutral-800 rounded-xl border dark:border-neutral-700 divide-y dark:divide-neutral-700">
+            <div className="bg-white dark:bg-neutral-700 rounded-xl border dark:border-neutral-600 divide-y dark:divide-neutral-600">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center">
@@ -1899,7 +1899,7 @@ export default function CashierPage() {
                     placeholder="Search bill #, table, captain, order #..."
                     value={billSearchQuery}
                     onChange={e => setBillSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-8 py-2.5 text-sm border border-gray-200 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-800 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-400 transition-colors"
+                    className="w-full pl-9 pr-8 py-2.5 text-sm border border-gray-200 dark:border-neutral-600 rounded-xl bg-white dark:bg-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-400 transition-colors"
                   />
                   {billSearchQuery && (
                     <button onClick={() => setBillSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-neutral-300">
@@ -1954,7 +1954,7 @@ export default function CashierPage() {
                       <button
                         key={bill.id}
                         onClick={() => openRecentBill(bill)}
-                        className="w-full text-left bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700 hover:border-amber-400 hover:shadow-sm dark:hover:shadow-neutral-900/50 transition-all active:scale-[0.99] flex items-center justify-between gap-3"
+                        className="w-full text-left bg-white dark:bg-neutral-700 rounded-xl p-4 border border-gray-200 dark:border-neutral-600 hover:border-amber-400 hover:shadow-sm dark:hover:shadow-neutral-800/50 transition-all active:scale-[0.99] flex items-center justify-between gap-3"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
@@ -2001,11 +2001,11 @@ export default function CashierPage() {
           </DialogHeader>
 
           {/* Tab switcher */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1">
             <button
               onClick={() => setTransferMode('table')}
               className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
-                transferMode === 'table' ? 'bg-white dark:bg-neutral-700 shadow-sm font-semibold dark:text-neutral-100' : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
+                transferMode === 'table' ? 'bg-white dark:bg-neutral-600 shadow-sm font-semibold dark:text-neutral-100' : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
               }`}
             >
               Move Table
@@ -2022,7 +2022,7 @@ export default function CashierPage() {
                 if (transferItems.length === 0) loadTransferItems(transferSourceTable)
               }}
               className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
-                transferMode === 'items' ? 'bg-white dark:bg-neutral-700 shadow-sm font-semibold dark:text-neutral-100' : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
+                transferMode === 'items' ? 'bg-white dark:bg-neutral-600 shadow-sm font-semibold dark:text-neutral-100' : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
               }`}
             >
               Move Items
@@ -2047,7 +2047,7 @@ export default function CashierPage() {
                           key={t.id}
                           onClick={() => performTableTransfer(t)}
                           disabled={transferring}
-                          className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 dark:text-neutral-100 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-center font-bold text-lg transition-all active:scale-95 disabled:opacity-50"
+                          className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 dark:text-neutral-100 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-center font-bold text-lg transition-all active:scale-95 disabled:opacity-50"
                         >
                           {getTableDisplayName(t)}
                         </button>
@@ -2093,11 +2093,11 @@ export default function CashierPage() {
                         {selectedItemIds.size === transferItems.length ? 'Deselect All' : 'Select All'}
                       </button>
                     </div>
-                    <div className="max-h-[25vh] overflow-y-auto border dark:border-neutral-700 rounded-lg divide-y dark:divide-neutral-700">
+                    <div className="max-h-[25vh] overflow-y-auto border dark:border-neutral-600 rounded-lg divide-y dark:divide-neutral-600">
                       {transferItems.map(item => (
                         <label
                           key={item.id}
-                          className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-neutral-800 cursor-pointer"
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-neutral-600 cursor-pointer"
                         >
                           <Checkbox
                             checked={selectedItemIds.has(item.id)}
@@ -2154,7 +2154,7 @@ export default function CashierPage() {
                                           transferDestTable?.id === t.id
                                             ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
                                             : isAvail
-                                              ? 'border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 hover:border-amber-400 text-gray-500 dark:text-neutral-400'
+                                              ? 'border-gray-200 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 hover:border-amber-400 text-gray-500 dark:text-neutral-400'
                                               : 'border-green-300 bg-green-50 dark:bg-green-900/30 hover:border-amber-400 text-green-700 dark:text-green-400'
                                         }`}
                                       >
@@ -2214,7 +2214,7 @@ export default function CashierPage() {
             return (
               <>
                 {/* Header */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b dark:border-neutral-700 px-5 py-4">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b dark:border-neutral-600 px-5 py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center">
@@ -2258,9 +2258,9 @@ export default function CashierPage() {
                     const isTransferOpen = kotTransferBatchIdx === batchIdx
 
                     return (
-                      <div key={batchIdx} className="bg-white dark:bg-neutral-800 border dark:border-neutral-700 rounded-xl overflow-hidden">
+                      <div key={batchIdx} className="bg-white dark:bg-neutral-700 border dark:border-neutral-600 rounded-xl overflow-hidden">
                         {/* Batch header */}
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-neutral-800/80 border-b dark:border-neutral-700">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-neutral-700/80 border-b dark:border-neutral-600">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-white bg-amber-600 px-2 py-0.5 rounded-full">
                               {kotLabel}
@@ -2293,7 +2293,7 @@ export default function CashierPage() {
                                 className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors flex items-center gap-1 ${
                                   isTransferOpen
                                     ? 'bg-amber-100 border-amber-300 text-amber-800'
-                                    : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 text-gray-600 dark:text-neutral-400 hover:border-amber-300 hover:text-amber-700'
+                                    : 'bg-white dark:bg-neutral-700 border-gray-200 dark:border-neutral-600 text-gray-600 dark:text-neutral-400 hover:border-amber-300 hover:text-amber-700'
                                 }`}
                               >
                                 <ArrowRightLeft className="h-3 w-3" />
@@ -2304,7 +2304,7 @@ export default function CashierPage() {
                         </div>
 
                         {/* Batch items */}
-                        <div className="divide-y dark:divide-neutral-700">
+                        <div className="divide-y dark:divide-neutral-600">
                           {batch.items.map((item: any, idx: number) => {
                             const kotStatus = item.kot_status || 'pending'
                             const dotColor = kotStatus === 'ready' ? 'bg-green-500' :
@@ -2341,7 +2341,7 @@ export default function CashierPage() {
 
                         {/* Transfer destination picker (inline, below batch) */}
                         {isTransferOpen && (
-                          <div className="bg-amber-50/50 dark:bg-amber-900/10 border-t dark:border-neutral-700 p-3 space-y-2">
+                          <div className="bg-amber-50/50 dark:bg-amber-900/10 border-t dark:border-neutral-600 p-3 space-y-2">
                             <p className="text-xs font-medium text-gray-600 dark:text-neutral-400">Move this KOT to:</p>
                             <div className="max-h-[25vh] overflow-y-auto">
                               {(() => {
@@ -2373,7 +2373,7 @@ export default function CashierPage() {
                                               kotTransferDestTable?.id === t.id
                                                 ? 'border-amber-500 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
                                                 : isAvail
-                                                  ? 'border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:border-amber-400 text-gray-500 dark:text-neutral-400'
+                                                  ? 'border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 hover:border-amber-400 text-gray-500 dark:text-neutral-400'
                                                   : 'border-green-300 bg-green-50 dark:bg-green-900/30 hover:border-amber-400 text-green-700 dark:text-green-400'
                                             }`}
                                           >
@@ -2416,7 +2416,7 @@ export default function CashierPage() {
                 </div>
 
                 {/* Footer: Settle button */}
-                <div className="border-t dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 px-5 py-3 flex items-center gap-3">
+                <div className="border-t dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 px-5 py-3 flex items-center gap-3">
                   <Button
                     variant="outline"
                     className="flex-1"

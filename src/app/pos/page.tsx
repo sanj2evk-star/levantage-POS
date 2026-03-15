@@ -337,18 +337,18 @@ export default function POSPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-neutral-800">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-neutral-700">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-700" />
       </div>
     )
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-neutral-800 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 dark:bg-neutral-700 overflow-hidden">
       {/* Left Panel: Menu */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="bg-white dark:bg-neutral-900 border-b dark:border-neutral-700 px-4 py-3 flex items-center justify-between" style={{ flexShrink: 0 }}>
+        <header className="bg-white dark:bg-neutral-800 border-b dark:border-neutral-600 px-4 py-3 flex items-center justify-between" style={{ flexShrink: 0 }}>
           <div className="flex items-center gap-3">
             <Coffee className="h-6 w-6 text-amber-700" />
             <h1 className="font-semibold text-lg hidden sm:block dark:text-neutral-100">Le Vantage Cafe</h1>
@@ -361,11 +361,11 @@ export default function POSPage() {
           </div>
 
           {/* Mode Toggle */}
-          <div className="flex bg-gray-100 dark:bg-neutral-800 rounded-lg p-0.5">
+          <div className="flex bg-gray-100 dark:bg-neutral-700 rounded-lg p-0.5">
             <button
               onClick={() => setPosMode('menu')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                posMode === 'menu' ? 'bg-white dark:bg-neutral-700 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
+                posMode === 'menu' ? 'bg-white dark:bg-neutral-600 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
               }`}
             >
               <UtensilsCrossed className="h-4 w-4" />
@@ -374,7 +374,7 @@ export default function POSPage() {
             <button
               onClick={() => setPosMode('orders')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                posMode === 'orders' ? 'bg-white dark:bg-neutral-700 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
+                posMode === 'orders' ? 'bg-white dark:bg-neutral-600 shadow text-amber-700' : 'text-gray-500 dark:text-neutral-400'
               }`}
             >
               <ClipboardList className="h-4 w-4" />
@@ -390,7 +390,7 @@ export default function POSPage() {
                 placeholder="Search items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100"
+                className="pl-9 dark:bg-neutral-700 dark:border-neutral-500 dark:text-neutral-100"
               />
             </div>
           )}
@@ -438,7 +438,7 @@ export default function POSPage() {
                   <button
                     key={cat.id}
                     onClick={() => selectCategory(cat.id)}
-                    className="bg-white dark:bg-neutral-900 rounded-xl p-4 text-left shadow-sm border border-gray-100 dark:border-neutral-800 active:scale-95 transition-transform hover:border-amber-200 dark:hover:border-amber-700 hover:shadow-md"
+                    className="bg-white dark:bg-neutral-800 rounded-xl p-4 text-left shadow-sm border border-gray-100 dark:border-neutral-700 active:scale-95 transition-transform hover:border-amber-200 dark:hover:border-amber-700 hover:shadow-md"
                   >
                     <UtensilsCrossed className="h-5 w-5 mb-2 text-amber-700" />
                     <h3 className="font-semibold text-sm line-clamp-2 dark:text-neutral-100">{cat.name}</h3>
@@ -451,7 +451,7 @@ export default function POSPage() {
           ) : (
           /* ---- Items Grid (after category selected) ---- */
           <>
-            <div className="bg-white dark:bg-neutral-900 border-b dark:border-neutral-700 px-4 py-2 flex items-center gap-3" style={{ flexShrink: 0 }}>
+            <div className="bg-white dark:bg-neutral-800 border-b dark:border-neutral-600 px-4 py-2 flex items-center gap-3" style={{ flexShrink: 0 }}>
               <Button
                 variant="ghost"
                 size="icon"
@@ -471,8 +471,8 @@ export default function POSPage() {
                     <button
                       key={item.id}
                       onClick={() => addToCart(item)}
-                      className={`bg-white dark:bg-neutral-900 rounded-xl p-3 text-left shadow-sm border active:scale-95 transition-all hover:shadow-md ${
-                        inCart ? 'border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-800' : 'border-gray-100 dark:border-neutral-800 hover:border-amber-200 dark:hover:border-amber-700'
+                      className={`bg-white dark:bg-neutral-800 rounded-xl p-3 text-left shadow-sm border active:scale-95 transition-all hover:shadow-md ${
+                        inCart ? 'border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-800' : 'border-gray-100 dark:border-neutral-700 hover:border-amber-200 dark:hover:border-amber-700'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -532,9 +532,9 @@ export default function POSPage() {
       </div>
 
       {/* Right Panel: Cart (Desktop) */}
-      <div className="hidden lg:flex w-96 flex-col bg-white dark:bg-neutral-900 border-l dark:border-neutral-700">
+      <div className="hidden lg:flex w-96 flex-col bg-white dark:bg-neutral-800 border-l dark:border-neutral-600">
         {/* Cart Header */}
-        <div className="p-4 border-b dark:border-neutral-700">
+        <div className="p-4 border-b dark:border-neutral-600">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-lg flex items-center gap-2 dark:text-neutral-100">
               <ShoppingCart className="h-5 w-5" />
@@ -600,7 +600,7 @@ export default function POSPage() {
           ) : (
             <div className="space-y-3">
               {cart.map((item, index) => (
-                <div key={index} className="flex items-center gap-3 bg-gray-50 dark:bg-neutral-800 rounded-lg p-3">
+                <div key={index} className="flex items-center gap-3 bg-gray-50 dark:bg-neutral-700 rounded-lg p-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate dark:text-neutral-100">{item.menu_item.name}</p>
                     <p className="text-xs text-gray-500 dark:text-neutral-400">₹{item.unit_price} each</p>
@@ -645,7 +645,7 @@ export default function POSPage() {
 
         {/* Cart Footer */}
         {cart.length > 0 && (
-          <div className="border-t dark:border-neutral-700 p-4 space-y-3">
+          <div className="border-t dark:border-neutral-600 p-4 space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500 dark:text-neutral-400">Subtotal ({itemCount} items)</span>
               <span className="font-semibold dark:text-neutral-100">₹{subtotal.toFixed(2)}</span>
@@ -684,7 +684,7 @@ export default function POSPage() {
               </SheetHeader>
               <div className="mt-4 space-y-3 overflow-y-auto max-h-[50vh]">
                 {cart.map((item, index) => (
-                  <div key={index} className="flex items-center gap-3 bg-gray-50 dark:bg-neutral-800 rounded-lg p-3">
+                  <div key={index} className="flex items-center gap-3 bg-gray-50 dark:bg-neutral-700 rounded-lg p-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate dark:text-neutral-100">{item.menu_item.name}</p>
                       <p className="text-xs text-gray-500 dark:text-neutral-400">₹{item.unit_price}</p>
@@ -704,7 +704,7 @@ export default function POSPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 pt-4 border-t dark:border-neutral-700 space-y-3">
+              <div className="mt-4 pt-4 border-t dark:border-neutral-600 space-y-3">
                 <div className="flex justify-between dark:text-neutral-100">
                   <span>Subtotal</span>
                   <span className="font-bold">₹{subtotal.toFixed(2)}</span>
@@ -798,7 +798,7 @@ export default function POSPage() {
                           ? 'border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200'
                           : table.status === 'occupied'
                           ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:border-green-400 cursor-pointer'
-                          : 'border-gray-200 dark:border-neutral-700 hover:border-amber-300 dark:hover:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/30 dark:text-neutral-300'
+                          : 'border-gray-200 dark:border-neutral-600 hover:border-amber-300 dark:hover:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/30 dark:text-neutral-300'
                       }`}
                     >
                       <p className="text-sm font-bold">{getTableDisplayName(table)}</p>

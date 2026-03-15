@@ -198,11 +198,11 @@ export default function HawkEyePage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1 mb-4 overflow-x-auto">
+      <div className="flex gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1 mb-4 overflow-x-auto">
         <button
           onClick={() => setFilter('all')}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-            filter === 'all' ? 'bg-white dark:bg-neutral-900 shadow text-gray-900 dark:text-neutral-100' : 'text-gray-600 dark:text-neutral-400'
+            filter === 'all' ? 'bg-white dark:bg-neutral-800 shadow text-gray-900 dark:text-neutral-100' : 'text-gray-600 dark:text-neutral-400'
           }`}
         >
           All ({logs.length})
@@ -210,7 +210,7 @@ export default function HawkEyePage() {
         <button
           onClick={() => setFilter('item_cancel')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-            filter === 'item_cancel' ? 'bg-white dark:bg-neutral-900 shadow text-red-700' : 'text-gray-600 dark:text-neutral-400'
+            filter === 'item_cancel' ? 'bg-white dark:bg-neutral-800 shadow text-red-700' : 'text-gray-600 dark:text-neutral-400'
           }`}
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -219,7 +219,7 @@ export default function HawkEyePage() {
         <button
           onClick={() => setFilter('bill_reprint')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-            filter === 'bill_reprint' ? 'bg-white dark:bg-neutral-900 shadow text-amber-700' : 'text-gray-600 dark:text-neutral-400'
+            filter === 'bill_reprint' ? 'bg-white dark:bg-neutral-800 shadow text-amber-700' : 'text-gray-600 dark:text-neutral-400'
           }`}
         >
           <Printer className="h-3.5 w-3.5" />
@@ -228,7 +228,7 @@ export default function HawkEyePage() {
         <button
           onClick={() => setFilter('refund')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-            filter === 'refund' ? 'bg-white dark:bg-neutral-900 shadow text-orange-700' : 'text-gray-600 dark:text-neutral-400'
+            filter === 'refund' ? 'bg-white dark:bg-neutral-800 shadow text-orange-700' : 'text-gray-600 dark:text-neutral-400'
           }`}
         >
           <RotateCcw className="h-3.5 w-3.5" />
@@ -250,7 +250,7 @@ export default function HawkEyePage() {
               <p className="text-xs mt-1">All clear!</p>
             </div>
           ) : (
-            <div className="divide-y dark:divide-neutral-700">
+            <div className="divide-y dark:divide-neutral-600">
               {filteredLogs.map((log) => {
                 const actionConfig: Record<AuditAction, { bg: string; text: string; icon: typeof Trash2; label: string }> = {
                   item_cancel: { bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-600', icon: Trash2, label: 'Item Cancelled' },
@@ -258,13 +258,13 @@ export default function HawkEyePage() {
                   refund: { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-600', icon: RotateCcw, label: 'Refund' },
                   partial_payment: { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-600', icon: Clock, label: 'Partial Payment' },
                   balance_collected: { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-600', icon: Wallet, label: 'Balance Collected' },
-                  daily_closing: { bg: 'bg-gray-100 dark:bg-neutral-800', text: 'text-gray-600 dark:text-neutral-400', icon: CalendarCheck, label: 'Day Closed' },
+                  daily_closing: { bg: 'bg-gray-100 dark:bg-neutral-700', text: 'text-gray-600 dark:text-neutral-400', icon: CalendarCheck, label: 'Day Closed' },
                 }
                 const cfg = actionConfig[log.action] || actionConfig.item_cancel
                 const Icon = cfg.icon
 
                 return (
-                  <div key={log.id} className="p-4 hover:bg-gray-50 dark:hover:bg-neutral-800">
+                  <div key={log.id} className="p-4 hover:bg-gray-50 dark:hover:bg-neutral-600">
                     <div className="flex items-start gap-3">
                       <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full ${cfg.bg} ${cfg.text}`}>
                         <Icon className="h-4 w-4" />

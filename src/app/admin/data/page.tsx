@@ -470,11 +470,11 @@ export default function DataManagementPage() {
 
       {/* Tabs + Search + Delete */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-        <div className="flex gap-1 bg-gray-100 dark:bg-neutral-800 rounded-lg p-1">
+        <div className="flex gap-1 bg-gray-100 dark:bg-neutral-700 rounded-lg p-1">
           <button
             onClick={() => { setActiveTab('bills'); setSearchQuery('') }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'bills' ? 'bg-white dark:bg-neutral-900 shadow text-amber-900' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
+              activeTab === 'bills' ? 'bg-white dark:bg-neutral-800 shadow text-amber-900' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
             }`}
           >
             <Receipt className="h-4 w-4" />
@@ -483,7 +483,7 @@ export default function DataManagementPage() {
           <button
             onClick={() => { setActiveTab('orders'); setSearchQuery('') }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'orders' ? 'bg-white dark:bg-neutral-900 shadow text-amber-900' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
+              activeTab === 'orders' ? 'bg-white dark:bg-neutral-800 shadow text-amber-900' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
             }`}
           >
             <ShoppingCart className="h-4 w-4" />
@@ -492,7 +492,7 @@ export default function DataManagementPage() {
           <button
             onClick={() => { setActiveTab('bulk'); setSearchQuery('') }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'bulk' ? 'bg-white dark:bg-neutral-900 shadow text-red-700' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
+              activeTab === 'bulk' ? 'bg-white dark:bg-neutral-800 shadow text-red-700' : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900'
             }`}
           >
             <Zap className="h-4 w-4" />
@@ -539,7 +539,7 @@ export default function DataManagementPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50 dark:bg-neutral-800">
+                    <tr className="border-b bg-gray-50 dark:bg-neutral-700">
                       <th className="p-3 text-left w-10">
                         <button onClick={toggleAllBills} className="text-gray-400 dark:text-neutral-500 hover:text-gray-700">
                           {selectedBills.size === filteredBills.length && filteredBills.length > 0
@@ -572,7 +572,7 @@ export default function DataManagementPage() {
                       return (
                         <tr
                           key={bill.id}
-                          className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-800 ${selectedBills.has(bill.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
+                          className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-600 ${selectedBills.has(bill.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
                         >
                           <td className="p-3">
                             <Checkbox
@@ -603,7 +603,7 @@ export default function DataManagementPage() {
                                 bill.payment_mode === 'cash' ? 'border-green-300 text-green-700' :
                                 bill.payment_mode === 'upi' ? 'border-blue-300 text-blue-700' :
                                 bill.payment_mode === 'card' ? 'border-purple-300 text-purple-700' :
-                                'border-gray-300 dark:border-neutral-600'
+                                'border-gray-300 dark:border-neutral-500'
                               }`}
                             >
                               {bill.payment_mode || 'N/A'}
@@ -629,7 +629,7 @@ export default function DataManagementPage() {
                   </tbody>
                   {filteredBills.length > 0 && (
                     <tfoot>
-                      <tr className="bg-gray-50 dark:bg-neutral-800 font-medium">
+                      <tr className="bg-gray-50 dark:bg-neutral-700 font-medium">
                         <td colSpan={6} className="p-3 text-right">Total:</td>
                         <td className="p-3 text-right">
                           {fmtCurrency(filteredBills.reduce((s, b) => s + (b.total || 0), 0))}
@@ -662,7 +662,7 @@ export default function DataManagementPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50 dark:bg-neutral-800">
+                    <tr className="border-b bg-gray-50 dark:bg-neutral-700">
                       <th className="p-3 text-left w-10">
                         <button onClick={toggleAllOrders} className="text-gray-400 dark:text-neutral-500 hover:text-gray-700">
                           {selectedOrders.size === filteredOrders.length && filteredOrders.length > 0
@@ -703,7 +703,7 @@ export default function DataManagementPage() {
                       return (
                         <tr
                           key={order.id}
-                          className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-800 ${selectedOrders.has(order.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
+                          className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-600 ${selectedOrders.has(order.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
                         >
                           <td className="p-3">
                             <Checkbox
@@ -842,7 +842,7 @@ export default function DataManagementPage() {
                 <div className="border rounded-lg overflow-x-auto max-h-[400px] overflow-y-auto">
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10">
-                      <tr className="border-b bg-gray-50 dark:bg-neutral-800">
+                      <tr className="border-b bg-gray-50 dark:bg-neutral-700">
                         <th className="p-2 text-left w-10">
                           <button onClick={toggleAllBulkBills} className="text-gray-400 dark:text-neutral-500 hover:text-gray-700">
                             {selectedBulkBills.size === bulkBills.length && bulkBills.length > 0
@@ -866,7 +866,7 @@ export default function DataManagementPage() {
                         return (
                           <tr
                             key={bill.id}
-                            className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-800 ${selectedBulkBills.has(bill.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
+                            className={`border-b hover:bg-gray-50 dark:hover:bg-neutral-600 ${selectedBulkBills.has(bill.id) ? 'bg-red-50 dark:bg-red-900/30' : ''}`}
                           >
                             <td className="p-2">
                               <Checkbox
@@ -893,7 +893,7 @@ export default function DataManagementPage() {
                                   bill.payment_mode === 'cash' ? 'border-green-300 text-green-700' :
                                   bill.payment_mode === 'upi' ? 'border-blue-300 text-blue-700' :
                                   bill.payment_mode === 'card' ? 'border-purple-300 text-purple-700' :
-                                  'border-gray-300 dark:border-neutral-600'
+                                  'border-gray-300 dark:border-neutral-500'
                                 }`}
                               >
                                 {bill.payment_mode || 'N/A'}
@@ -908,7 +908,7 @@ export default function DataManagementPage() {
                     </tbody>
                     {bulkBills.length > 0 && (
                       <tfoot>
-                        <tr className="bg-gray-50 dark:bg-neutral-800 font-medium">
+                        <tr className="bg-gray-50 dark:bg-neutral-700 font-medium">
                           <td colSpan={4} className="p-2 text-right">Selected Total:</td>
                           <td className="p-2 text-right">
                             {fmtCurrency(bulkBills.filter(b => selectedBulkBills.has(b.id)).reduce((s, b) => s + Number(b.total), 0))}

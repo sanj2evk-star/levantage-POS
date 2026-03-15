@@ -382,19 +382,19 @@ export default function EODPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-center">
+                <div className="bg-gray-50 dark:bg-neutral-700 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 dark:text-neutral-400 mb-1">Total Sales</p>
                   <p className="text-xl font-bold">₹{summary.totalSales.toFixed(0)}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-center">
+                <div className="bg-gray-50 dark:bg-neutral-700 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 dark:text-neutral-400 mb-1">Total Orders</p>
                   <p className="text-xl font-bold">{summary.totalOrders}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-center">
+                <div className="bg-gray-50 dark:bg-neutral-700 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 dark:text-neutral-400 mb-1">Refunds</p>
                   <p className="text-xl font-bold text-red-600">₹{summary.refundTotal.toFixed(0)}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-center">
+                <div className="bg-gray-50 dark:bg-neutral-700 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 dark:text-neutral-400 mb-1">Outstanding</p>
                   <p className="text-xl font-bold text-orange-600">₹{summary.outstandingTotal.toFixed(0)}</p>
                 </div>
@@ -562,7 +562,7 @@ export default function EODPage() {
                       ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'
                       : shortSurplus > 0
                         ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
-                        : 'bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'
+                        : 'bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600'
                   )}
                 >
                   <span className="font-semibold">
@@ -662,7 +662,7 @@ export default function EODPage() {
                                 onClick={() =>
                                   setExpandedClosingId(isExpanded ? null : c.id)
                                 }
-                                className="w-full flex items-center text-left py-2.5 px-0 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
+                                className="w-full flex items-center text-left py-2.5 px-0 hover:bg-gray-50 dark:hover:bg-neutral-600 transition-colors"
                               >
                                 <span className="flex-1 grid grid-cols-9 items-center text-sm">
                                   <span className="font-medium">
@@ -687,7 +687,7 @@ export default function EODPage() {
                                           ? 'border-red-300 text-red-600'
                                           : Number(c.short_surplus) > 0
                                             ? 'border-green-300 text-green-600'
-                                            : 'border-gray-300 dark:border-neutral-600 text-gray-600 dark:text-neutral-400'
+                                            : 'border-gray-300 dark:border-neutral-500 text-gray-600 dark:text-neutral-400'
                                       )}
                                     >
                                       {Number(c.short_surplus) < 0
@@ -712,7 +712,7 @@ export default function EODPage() {
 
                               {/* Expanded details */}
                               {isExpanded && (
-                                <div className="px-4 pb-4 bg-gray-50 dark:bg-neutral-800 border-t">
+                                <div className="px-4 pb-4 bg-gray-50 dark:bg-neutral-700 border-t">
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
                                     {/* Denomination breakdown */}
                                     <div>
@@ -816,7 +816,7 @@ export default function EODPage() {
                 This action cannot be undone.
               </p>
 
-              <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-gray-50 dark:bg-neutral-700 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500 dark:text-neutral-400">Total Sales</span>
                   <span className="font-bold">₹{summary.totalSales.toFixed(2)}</span>

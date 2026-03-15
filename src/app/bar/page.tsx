@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/use-auth'
 import { KOTEntry, OrderItem, Order } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +10,6 @@ import {
   Wine,
   Clock,
   CheckCircle2,
-  LogOut,
   RefreshCw,
   Volume2,
   VolumeX,
@@ -31,7 +29,6 @@ interface KOTWithDetails extends KOTEntry {
 }
 
 export default function BarPage() {
-  const { profile, isLoading, signOut } = useAuth()
   const [kots, setKots] = useState<KOTWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -155,7 +152,7 @@ export default function BarPage() {
     loadKOTs()
   }
 
-  if (isLoading || loading) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-900">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
@@ -196,9 +193,6 @@ export default function BarPage() {
           </Button>
           <Button variant="ghost" size="icon" onClick={loadKOTs} className="text-gray-300">
             <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={signOut} className="text-gray-300">
-            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </header>

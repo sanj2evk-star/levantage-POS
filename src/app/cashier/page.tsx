@@ -1394,6 +1394,55 @@ export default function CashierPage() {
               </div>
             </div>
 
+            {/* Unsettled Orders — bill printed, table freed, pending settlement */}
+            {unsettledOrders.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <h2 className="font-bold text-lg text-amber-800">Pending Settlement</h2>
+                  <Badge className="bg-amber-100 text-amber-700 border-0 text-sm">
+                    {unsettledOrders.length}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2.5">
+                  {unsettledOrders.map(uo => {
+                    const elapsedMin = Math.floor((Date.now() - new Date(uo.createdAt).getTime()) / 60000)
+                    return (
+                      <div
+                        key={uo.orderId}
+                        className="relative p-2 rounded-xl text-center border-2 min-h-[85px] min-w-0 transition-all bg-amber-600 border-amber-700 cursor-pointer hover:bg-amber-700 active:scale-[0.97]"
+                        onClick={() => openUnsettledBilling(uo.orderId)}
+                      >
+                        {/* Reprint badge */}
+                        {uo.billPrintCount > 1 && (
+                          <div className="absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold z-10 bg-red-500 text-white">
+                            <Printer className="h-3 w-3" />
+                            <span>{uo.billPrintCount}</span>
+                          </div>
+                        )}
+                        <p className="text-2xl font-bold text-white">
+                          {getTableDisplayName({ number: uo.tableNumber, section: uo.tableSection } as any)}
+                        </p>
+                        <div className="mt-0.5 space-y-0.5">
+                          <p className="text-lg font-bold text-white">
+                            ₹{uo.total.toLocaleString('en-IN')}
+                          </p>
+                          <p className="text-sm text-white/70 font-medium">
+                            {elapsedMin < 1 ? '<1m' : elapsedMin < 60 ? `${elapsedMin}m` : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`}
+                          </p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openUnsettledBilling(uo.orderId) }}
+                            className="w-full flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded-lg px-1.5 py-1.5 text-xs font-bold transition-colors active:scale-95"
+                          >
+                            <Check className="h-3.5 w-3.5 shrink-0" /> Settle
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {groupTablesByDisplayGroup(tables).map(group => {
               const occupiedCount = group.tables.filter(t => t.status === 'occupied').length
               const runningCount = group.tables.filter(t => {
@@ -1518,54 +1567,7 @@ export default function CashierPage() {
               )
             })}
 
-            {/* Unsettled Orders — bill printed, table freed, pending settlement */}
-            {unsettledOrders.length > 0 && (
-              <div className="mt-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <h2 className="font-bold text-lg text-amber-800">Pending Settlement</h2>
-                  <Badge className="bg-amber-100 text-amber-700 border-0 text-sm">
-                    {unsettledOrders.length}
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2.5">
-                  {unsettledOrders.map(uo => {
-                    const elapsedMin = Math.floor((Date.now() - new Date(uo.createdAt).getTime()) / 60000)
-                    return (
-                      <div
-                        key={uo.orderId}
-                        className="relative p-2 rounded-xl text-center border-2 min-h-[85px] min-w-0 transition-all bg-amber-600 border-amber-700 cursor-pointer hover:bg-amber-700 active:scale-[0.97]"
-                        onClick={() => openUnsettledBilling(uo.orderId)}
-                      >
-                        {/* Reprint badge */}
-                        {uo.billPrintCount > 1 && (
-                          <div className="absolute -top-1.5 -right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-bold z-10 bg-red-500 text-white">
-                            <Printer className="h-3 w-3" />
-                            <span>{uo.billPrintCount}</span>
-                          </div>
-                        )}
-                        <p className="text-2xl font-bold text-white">
-                          {getTableDisplayName({ number: uo.tableNumber, section: uo.tableSection } as any)}
-                        </p>
-                        <div className="mt-0.5 space-y-0.5">
-                          <p className="text-lg font-bold text-white">
-                            ₹{uo.total.toLocaleString('en-IN')}
-                          </p>
-                          <p className="text-sm text-white/70 font-medium">
-                            {elapsedMin < 1 ? '<1m' : elapsedMin < 60 ? `${elapsedMin}m` : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`}
-                          </p>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openUnsettledBilling(uo.orderId) }}
-                            className="w-full flex items-center justify-center gap-1 bg-white/30 hover:bg-white/50 text-white rounded-lg px-1.5 py-1.5 text-xs font-bold transition-colors active:scale-95"
-                          >
-                            <Check className="h-3.5 w-3.5 shrink-0" /> Settle
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+            {/* Unsettled orders section removed from here — moved above table groups */}
           </div>
         )}
 

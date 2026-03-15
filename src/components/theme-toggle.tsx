@@ -2,13 +2,25 @@
 
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
-import { Sun, Moon } from "lucide-react"
+import { Sun, Moon, Monitor } from "lucide-react"
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
+
+  // Cycle: light → dark → system → light
+  const nextTheme = () => {
+    if (theme === "light") setTheme("dark")
+    else if (theme === "dark") setTheme("system")
+    else setTheme("light")
+  }
+
+  const label =
+    theme === "dark" ? "Dark mode (click for auto)"
+    : theme === "system" ? "Auto mode (click for light)"
+    : "Light mode (click for dark)"
 
   if (!mounted) {
     return (
@@ -20,15 +32,17 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
 
   return (
     <button
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={nextTheme}
       className={`p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-neutral-600 ${className}`}
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      aria-label={label}
+      title={label}
     >
       {theme === "dark" ? (
-        <Sun className="h-5 w-5 text-amber-400" />
+        <Moon className="h-5 w-5 text-blue-400" />
+      ) : theme === "system" ? (
+        <Monitor className="h-5 w-5 text-amber-500 dark:text-amber-400" />
       ) : (
-        <Moon className="h-5 w-5 text-gray-600 dark:text-neutral-400" />
+        <Sun className="h-5 w-5 text-amber-500" />
       )}
     </button>
   )

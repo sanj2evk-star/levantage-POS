@@ -225,6 +225,8 @@ export default function CashierPage() {
     const occupiedTables = currentTables.filter(t => t.current_order_id)
     if (occupiedTables.length === 0) {
       setTableOrderInfo(new Map())
+      // All tables free — clear stale printed flags
+      setPrintedTables(new Set())
       return
     }
 
@@ -271,6 +273,29 @@ export default function CashierPage() {
         })
       })
       setTableOrderInfo(infoMap)
+
+      // Clean up printedTables: if a table's current order has billPrintCount === 0
+      // (i.e. a new order replaced the printed one), remove the stale flag
+      setPrintedTables(prev => {
+        if (prev.size === 0) return prev
+        const next = new Set(prev)
+        let changed = false
+        for (const tableId of prev) {
+          const table = occupiedTables.find(t => t.id === tableId)
+          if (table) {
+            const info = infoMap.get(table.current_order_id!)
+            if (info && info.billPrintCount === 0 && !info.hasBill) {
+              next.delete(tableId)
+              changed = true
+            }
+          } else {
+            // Table is no longer occupied — remove stale flag
+            next.delete(tableId)
+            changed = true
+          }
+        }
+        return changed ? next : prev
+      })
     }
   }, [])
 

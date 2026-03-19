@@ -239,17 +239,10 @@ export default function CashierPage() {
   }, [])
 
   const loadTableOrderInfo = useCallback(async (currentTables: TableType[]) => {
-    const occupiedTables = currentTables.filter(t => t.current_order_id)
-    if (occupiedTables.length === 0) {
-      setTableOrderInfo(new Map())
-      // All tables free — clear stale printed flags
-      setPrintedTables(new Set())
-      return
-    }
-
-    const occupiedTableIds = occupiedTables.map(t => t.id)
+    const allTableIds = currentTables.map(t => t.id)
     const supabase = createClient()
-    // Query ALL active orders for occupied tables (not just current_order_id)
+    // Query ALL active orders for ALL tables — catches orphaned orders
+    // where table was freed but order is still active
     const { data } = await supabase
       .from('orders')
       .select(`
@@ -258,10 +251,8 @@ export default function CashierPage() {
         waiter:profiles!waiter_id(name),
         bill:bills(id, payment_status, total)
       `)
-      .in('table_id', occupiedTableIds)
+      .in('table_id', allTableIds)
       .in('status', ['pending', 'preparing', 'ready', 'served'])
-
-    console.log('[TableOrderInfo] Query returned', data?.length ?? 0, 'orders for', occupiedTableIds.length, 'tables')
     if (data) {
       // Group orders by table_id
       const ordersByTable = new Map<string, any[]>()
@@ -333,22 +324,21 @@ export default function CashierPage() {
       }
       setTableOrderInfo(infoMap)
 
-      // Clean up printedTables: if a table's current order has billPrintCount === 0
+      // Clean up printedTables: if a table's order has billPrintCount === 0
       // (i.e. a new order replaced the printed one), remove the stale flag
       setPrintedTables(prev => {
         if (prev.size === 0) return prev
         const next = new Set(prev)
         let changed = false
         for (const tableId of prev) {
-          const table = occupiedTables.find(t => t.id === tableId)
-          if (table) {
-            const info = infoMap.get(tableId)
-            if (info && info.billPrintCount === 0 && !info.hasBill) {
+          const info = infoMap.get(tableId)
+          if (info) {
+            if (info.billPrintCount === 0 && !info.hasBill) {
               next.delete(tableId)
               changed = true
             }
           } else {
-            // Table is no longer occupied — remove stale flag
+            // Table has no active orders — remove stale flag
             next.delete(tableId)
             changed = true
           }
@@ -1571,14 +1561,12 @@ export default function CashierPage() {
             )}
 
             {groupTablesByDisplayGroup(tables).map(group => {
-              const occupiedCount = group.tables.filter(t => t.status === 'occupied').length
+              const occupiedCount = group.tables.filter(t => t.status === 'occupied' || tableOrderInfo.has(t.id)).length
               const runningCount = group.tables.filter(t => {
-                if (t.status !== 'occupied' || !t.current_order_id) return false
                 const inf = tableOrderInfo.get(t.id)
                 return inf && !inf.hasBill
               }).length
               const billedCount = group.tables.filter(t => {
-                if (t.status !== 'occupied' || !t.current_order_id) return false
                 const inf = tableOrderInfo.get(t.id)
                 return inf?.hasBill && inf.billStatus !== 'paid'
               }).length
@@ -1595,8 +1583,8 @@ export default function CashierPage() {
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2.5">
                     {group.tables.map(table => {
-                      const isOccupied = table.status === 'occupied'
-                      const info = table.status === 'occupied' ? tableOrderInfo.get(table.id) : null
+                      const info = tableOrderInfo.get(table.id) || null
+                      const isOccupied = table.status === 'occupied' || !!info
                       const elapsedMin = info ? Math.floor((Date.now() - new Date(info.createdAt).getTime()) / 60000) : null
                       const isPrinted = printedTables.has(table.id) || (info?.billPrintCount || 0) > 0
 

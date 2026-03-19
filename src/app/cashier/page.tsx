@@ -261,6 +261,7 @@ export default function CashierPage() {
       .in('table_id', occupiedTableIds)
       .in('status', ['pending', 'preparing', 'ready', 'served'])
 
+    console.log('[TableOrderInfo] Query returned', data?.length ?? 0, 'orders for', occupiedTableIds.length, 'tables')
     if (data) {
       // Group orders by table_id
       const ordersByTable = new Map<string, any[]>()

@@ -24,6 +24,8 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient()
+            // Clear any stale session to prevent race with background token refresh
+            await supabase.auth.signOut()
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,

@@ -670,10 +670,12 @@ export default function CashierPage() {
 
   // Open billing dialog for a table
   async function openTableBilling(table: TableType) {
-    if (!table.current_order_id || table.status !== 'occupied') return
+    const info = tableOrderInfo.get(table.id)
+    if (!info) return
 
     const supabase = createClient()
-    const { data: orderData, error: orderError } = await supabase
+    // Fetch ALL active orders for this table
+    const { data: allOrders } = await supabase
       .from('orders')
       .select(`
         id, order_number, status, order_type, created_at, table_id, waiter_id, notes, service_charge_removed, bill_print_count,
@@ -686,13 +688,27 @@ export default function CashierPage() {
           gst_percent, gst_amount, service_charge, service_charge_removed,
           discount_amount, discount_type, discount_reason)
       `)
-      .eq('id', table.current_order_id)
-      .single()
+      .eq('table_id', table.id)
+      .in('status', ['pending', 'preparing', 'ready', 'served'])
+      .order('created_at', { ascending: true })
 
-    if (orderData) {
+    if (allOrders && allOrders.length > 0) {
+      // Merge all orders into the primary order for billing
+      const primary = allOrders[0] as any
+      if (allOrders.length > 1) {
+        // Combine items from all orders into the primary
+        const mergedItems = allOrders.flatMap((o: any) => o.items || [])
+        primary.items = mergedItems
+        // If any order has service_charge_removed, apply it
+        primary.service_charge_removed = allOrders.some((o: any) => o.service_charge_removed)
+        // Sum bill_print_count
+        primary.bill_print_count = Math.max(...allOrders.map((o: any) => o.bill_print_count || 0))
+        // Track all order IDs for settlement
+        primary._allOrderIds = allOrders.map((o: any) => o.id)
+      }
       const processed = {
-        ...orderData,
-        bill: Array.isArray(orderData.bill) ? orderData.bill[0] || null : orderData.bill,
+        ...primary,
+        bill: Array.isArray(primary.bill) ? primary.bill[0] || null : primary.bill,
       } as unknown as OrderWithDetails
       setBillingOrder(processed)
       setBillingDialogOpen(true)
@@ -918,11 +934,13 @@ export default function CashierPage() {
 
   // Quick print customer preview from table card
   async function handleQuickPrint(table: TableType) {
-    if (!table.current_order_id) return
+    const info = tableOrderInfo.get(table.id)
+    if (!info) return
     setQuickPrintingTableId(table.id)
     try {
       const supabase = createClient()
-      const { data: orderData } = await supabase
+      // Fetch ALL active orders for this table (not just current_order_id)
+      const { data: allOrders } = await supabase
         .from('orders')
         .select(`
           id, order_number, order_type, waiter_id, service_charge_removed, bill_print_count,
@@ -931,43 +949,43 @@ export default function CashierPage() {
           bill:bills(id, total, subtotal, gst_amount, service_charge, service_charge_removed, discount_amount, discount_type, discount_reason),
           waiter:profiles!waiter_id(name)
         `)
-        .eq('id', table.current_order_id)
-        .single()
+        .eq('table_id', table.id)
+        .in('status', ['pending', 'preparing', 'ready', 'served'])
+        .order('created_at', { ascending: true })
 
-      if (!orderData) { toast.error('Could not load order'); return }
+      if (!allOrders || allOrders.length === 0) { toast.error('Could not load order'); return }
 
-      const existBill = Array.isArray(orderData.bill) ? orderData.bill[0] : orderData.bill
-      const activeItems = (orderData.items || []).filter((i: any) => !i.is_cancelled)
-      const waiterName = (orderData as any).waiter?.name || null
+      // Combine items from ALL orders into one bill
+      const allActiveItems: any[] = []
+      let combinedScRemoved = false
+      allOrders.forEach((order: any) => {
+        const items = (order.items || []).filter((i: any) => !i.is_cancelled)
+        allActiveItems.push(...items)
+        if (order.service_charge_removed) combinedScRemoved = true
+      })
 
-      let subtotal: number, gstAmt: number, sc: number, tot: number
-      let scRemoved = false, discAmt = 0, discType = 'none', discReason = ''
+      const primaryOrder = allOrders[0]
+      const waiterName = (primaryOrder as any).waiter?.name || null
 
-      if (existBill) {
-        subtotal = Number(existBill.subtotal)
-        gstAmt = Number(existBill.gst_amount)
-        sc = Number(existBill.service_charge)
-        scRemoved = existBill.service_charge_removed
-        discAmt = Number(existBill.discount_amount)
-        discType = existBill.discount_type
-        discReason = existBill.discount_reason || ''
-        tot = Number(existBill.total)
-      } else {
-        const orderScRemoved = (orderData as any).service_charge_removed ?? false
-        subtotal = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
-        sc = Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
-        scRemoved = orderScRemoved
-        gstAmt = Math.round(subtotal * GST_PERCENT / 100 * 100) / 100
-        const effectiveSC = scRemoved ? 0 : sc
-        tot = Math.round((subtotal + effectiveSC + gstAmt) * 100) / 100
-      }
+      // Calculate totals from combined items (ignore individual bills — this is a unified preview)
+      const subtotal = allActiveItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
+      const sc = Math.round(subtotal * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+      const gstAmt = Math.round(subtotal * GST_PERCENT / 100 * 100) / 100
+      const effectiveSC = combinedScRemoved ? 0 : sc
+      const tot = Math.round((subtotal + effectiveSC + gstAmt) * 100) / 100
+
+      // Use most recent order number for display
+      const latestOrder = allOrders[allOrders.length - 1]
+      const orderLabel = allOrders.length > 1
+        ? `${primaryOrder.order_number} (+${allOrders.length - 1})`
+        : primaryOrder.order_number
 
       await printBill({
         billNumber: 'PREVIEW',
-        orderNumber: orderData.order_number,
-        tableName: orderData.table ? getTableDisplayName(orderData.table as any) : null,
-        orderType: orderData.order_type as 'dine_in' | 'takeaway',
-        items: activeItems.map((i: any) => ({
+        orderNumber: orderLabel,
+        tableName: primaryOrder.table ? getTableDisplayName(primaryOrder.table as any) : null,
+        orderType: primaryOrder.order_type as 'dine_in' | 'takeaway',
+        items: allActiveItems.map((i: any) => ({
           name: i.menu_item?.name || 'Unknown',
           quantity: i.quantity,
           unitPrice: i.unit_price,
@@ -976,43 +994,44 @@ export default function CashierPage() {
         gstPercent: GST_PERCENT,
         gstAmount: gstAmt,
         serviceCharge: sc,
-        serviceChargeRemoved: scRemoved,
-        discountAmount: discAmt,
-        discountType: discType,
-        discountReason: discReason || undefined,
+        serviceChargeRemoved: combinedScRemoved,
+        discountAmount: 0,
+        discountType: 'none',
         total: tot,
         paymentMode: 'preview',
         cashierName: profile?.name || null,
         waiterName,
       })
 
-      // Track print count for Hawkeye reprint flagging
-      const currentPrintCount = (orderData as any).bill_print_count || 0
-      const newPrintCount = currentPrintCount + 1
-      await supabase.from('orders')
-        .update({ bill_print_count: newPrintCount })
-        .eq('id', orderData.id)
+      // Track print count on ALL orders for Hawkeye reprint flagging
+      let isReprint = false
+      for (const order of allOrders) {
+        const currentPrintCount = (order as any).bill_print_count || 0
+        if (currentPrintCount >= 1) isReprint = true
+        await supabase.from('orders')
+          .update({ bill_print_count: currentPrintCount + 1 })
+          .eq('id', order.id)
+      }
 
-      // If this is a reprint (already printed before), flag in Hawkeye
-      if (currentPrintCount >= 1) {
+      // If this is a reprint, flag in Hawkeye
+      if (isReprint) {
         const { data: { user } } = await supabase.auth.getUser()
-        const tableName = orderData.table ? getTableDisplayName(orderData.table as any) : 'Unknown'
+        const tableName = primaryOrder.table ? getTableDisplayName(primaryOrder.table as any) : 'Unknown'
         await supabase.from('audit_logs').insert({
           action: 'bill_reprint',
-          order_id: orderData.id,
+          order_id: latestOrder.id,
           performed_by: user?.id || null,
           details: {
-            order_number: orderData.order_number,
+            order_numbers: allOrders.map((o: any) => o.order_number),
             table: tableName,
             total: tot,
-            print_count: newPrintCount,
             reason: 'Preview reprinted from table card',
           },
         })
       }
 
       setPrintedTables(prev => new Set(prev).add(table.id))
-      toast.success(currentPrintCount >= 1 ? 'Bill reprinted (flagged)' : 'Customer copy printed')
+      toast.success(isReprint ? 'Bill reprinted (flagged)' : 'Customer copy printed')
     } catch {
       toast.error('Print failed — check printer')
     } finally {

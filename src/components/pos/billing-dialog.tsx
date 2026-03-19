@@ -238,8 +238,9 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
   discountAmount = Math.min(discountAmount, subtotal)
 
   // GST is on food value only (subtotal - discount), NOT including service charge
+  // NC bills have zero GST (no charge = no tax)
   const taxableAmount = Math.max(subtotal - discountAmount, 0)
-  const gstAmount = Math.round(taxableAmount * GST_PERCENT / 100 * 100) / 100
+  const gstAmount = paymentMode === 'nc' ? 0 : Math.round(taxableAmount * GST_PERCENT / 100 * 100) / 100
   // Total = food value + service charge + GST
   const total = Math.max(Math.round((taxableAmount + serviceCharge + gstAmount) * 100) / 100, 0)
 
@@ -410,7 +411,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     const supabase = createClient()
 
     try {
-      const { data: billNum } = await supabase.rpc('generate_bill_number')
+      const { data: billNum, error: billNumError } = await supabase.rpc('generate_bill_number')
+      if (billNumError) {
+        console.error('Bill number generation failed:', billNumError)
+      }
 
       const { data: bill, error: billError } = await supabase
         .from('bills')
@@ -427,7 +431,7 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
           total,
           payment_mode: paymentMode as PaymentMode,
           payment_status: 'paid',
-          bill_number: billNum || `BILL-${Date.now()}`,
+          bill_number: billNum || String(Date.now()),
         })
         .select()
         .single()
@@ -474,18 +478,29 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         })
       }
 
-      await supabase
-        .from('orders')
-        .update({ status: 'completed' })
-        .eq('id', order.id)
-
-      // Only free table if it still has this order (not if a new order has taken over)
-      if (order.table_id) {
+      // Complete ALL orders for this table (handles merged multi-order billing)
+      const allOrderIds = (order as any)._allOrderIds || [order.id]
+      for (const oid of allOrderIds) {
         await supabase
-          .from('tables')
-          .update({ status: 'available', current_order_id: null })
-          .eq('id', order.table_id)
-          .eq('current_order_id', order.id)
+          .from('orders')
+          .update({ status: 'completed' })
+          .eq('id', oid)
+      }
+
+      // Check if any active orders remain on this table before freeing
+      if (order.table_id) {
+        const { data: remaining } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('table_id', order.table_id)
+          .in('status', ['pending', 'preparing', 'ready', 'served'])
+          .limit(1)
+        if (!remaining || remaining.length === 0) {
+          await supabase
+            .from('tables')
+            .update({ status: 'available', current_order_id: null })
+            .eq('id', order.table_id)
+        }
       }
 
       printBill({
@@ -630,19 +645,29 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
         .update({ payment_status: 'paid', payment_mode: newPaymentMode })
         .eq('id', existingBill.id)
 
-      // Complete the order
-      await supabase
-        .from('orders')
-        .update({ status: 'completed' })
-        .eq('id', order.id)
-
-      // Free the table only if it still has this order (not if a new order has taken over)
-      if (order.table_id) {
+      // Complete ALL orders for this table (handles merged multi-order billing)
+      const allOrderIds = (order as any)._allOrderIds || [order.id]
+      for (const oid of allOrderIds) {
         await supabase
-          .from('tables')
-          .update({ status: 'available', current_order_id: null })
-          .eq('id', order.table_id)
-          .eq('current_order_id', order.id)
+          .from('orders')
+          .update({ status: 'completed' })
+          .eq('id', oid)
+      }
+
+      // Check if any active orders remain on this table before freeing
+      if (order.table_id) {
+        const { data: remaining } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('table_id', order.table_id)
+          .in('status', ['pending', 'preparing', 'ready', 'served'])
+          .limit(1)
+        if (!remaining || remaining.length === 0) {
+          await supabase
+            .from('tables')
+            .update({ status: 'available', current_order_id: null })
+            .eq('id', order.table_id)
+        }
       }
 
       // Audit log
@@ -964,7 +989,10 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
     setScPinDialogOpen(false)
     setScPinVerifying(false)
     setScPin('')
-    toast.success('Service charge removed')
+    toast.success('Service charge removed — printing updated bill')
+
+    // Auto-print preview bill with SC removed
+    setTimeout(() => printPreviewBill(), 300)
   }
 
   // If bill already exists, show bill details
@@ -1455,6 +1483,14 @@ export function BillingDialog({ order, open, onClose, onBillSettled, onAddItems,
                         if (pm.mode === 'nc') {
                           setPaymentMode('nc'); setSplitPayments([]); setReferenceNumber(''); setCashReceived('')
                           setNcReason(''); setNcPin(''); setNcAuthorized(false)
+                          // Auto-remove SC for NC bills
+                          if (!serviceChargeRemoved) {
+                            setServiceChargeRemoved(true)
+                            if (order?.id) {
+                              const sb = createClient()
+                              sb.from('orders').update({ service_charge_removed: true }).eq('id', order.id)
+                            }
+                          }
                           return
                         }
                         if (pm.mode === 'split') {

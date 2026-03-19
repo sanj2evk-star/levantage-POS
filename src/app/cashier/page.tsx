@@ -1065,10 +1065,10 @@ export default function CashierPage() {
 
   // Helper: table card style based on status + bill
   function getTableCardStyle(table: TableType, info: TableOrderInfo | null | undefined): string {
-    if (table.status === 'available') {
+    if (table.status === 'available' && !info) {
       return 'border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 shadow-sm dark:shadow-neutral-800/50 cursor-default'
     }
-    if (table.status === 'reserved') {
+    if (table.status === 'reserved' && !info) {
       return 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 opacity-80 cursor-default'
     }
     // occupied — dark filled cards for active tables
@@ -1085,8 +1085,8 @@ export default function CashierPage() {
   }
 
   function getTableNumberColor(table: TableType, info: TableOrderInfo | null | undefined): string {
-    if (table.status === 'available') return 'text-gray-400 dark:text-neutral-500'
-    if (table.status === 'reserved') return 'text-yellow-800'
+    if (table.status === 'available' && !info) return 'text-gray-400 dark:text-neutral-500'
+    if (table.status === 'reserved' && !info) return 'text-yellow-800'
     // Active tables have dark bg, so use white text
     return 'text-white'
   }

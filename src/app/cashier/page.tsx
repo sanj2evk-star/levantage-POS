@@ -60,6 +60,19 @@ type CashierTab = 'tables' | 'live_orders' | 'day_close'
 type LiveOrderFilter = 'all' | 'dine_in' | 'takeaway'
 type LiveOrderStatusFilter = 'all' | 'pending' | 'preparing' | 'ready' | 'served'
 
+interface TableOrderEntry {
+  orderId: string
+  orderNumber: string
+  itemCount: number
+  total: number
+  createdAt: string
+  status: string
+  waiterName: string | null
+  hasBill: boolean
+  billStatus: 'pending' | 'paid' | 'partial' | null
+  billPrintCount: number
+}
+
 interface TableOrderInfo {
   orderId: string
   orderNumber: string
@@ -71,6 +84,9 @@ interface TableOrderInfo {
   hasBill: boolean
   billStatus: 'pending' | 'paid' | 'partial' | null
   billPrintCount: number
+  // Multiple orders support
+  orders: TableOrderEntry[]
+  orderCount: number
 }
 
 interface LiveOrder extends OrderWithDetails {
@@ -231,48 +247,89 @@ export default function CashierPage() {
       return
     }
 
-    const occupiedIds = occupiedTables.map(t => t.current_order_id!)
+    const occupiedTableIds = occupiedTables.map(t => t.id)
     const supabase = createClient()
+    // Query ALL active orders for occupied tables (not just current_order_id)
     const { data } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, created_at, waiter_id, service_charge_removed, bill_print_count,
+        id, order_number, status, created_at, waiter_id, service_charge_removed, bill_print_count, table_id,
         items:order_items(quantity, total_price, is_cancelled),
         waiter:profiles!waiter_id(name),
         bill:bills(id, payment_status, total)
       `)
-      .in('id', occupiedIds)
+      .in('table_id', occupiedTableIds)
+      .in('status', ['pending', 'preparing', 'ready', 'served'])
 
     if (data) {
-      const infoMap = new Map<string, TableOrderInfo>()
+      // Group orders by table_id
+      const ordersByTable = new Map<string, any[]>()
       data.forEach((order: any) => {
-        const activeItems = (order.items || []).filter((i: any) => !i.is_cancelled)
-        const billData = Array.isArray(order.bill) ? order.bill[0] : order.bill
-        // If bill exists, use bill.total (already includes GST + SC + discount)
-        // Otherwise compute full total with GST + SC
-        let fullTotal: number
-        if (billData?.total) {
-          fullTotal = Number(billData.total)
-        } else {
-          const sub = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
-          const scRemoved = order.service_charge_removed ?? false
-          const sc = scRemoved ? 0 : Math.round(sub * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
-          const gst = Math.round(sub * GST_PERCENT / 100 * 100) / 100
-          fullTotal = Math.round((sub + sc + gst) * 100) / 100
-        }
-        infoMap.set(order.id, {
-          orderId: order.id,
-          orderNumber: order.order_number,
-          itemCount: activeItems.reduce((s: number, i: any) => s + i.quantity, 0),
-          total: fullTotal,
-          createdAt: order.created_at,
-          status: order.status,
-          waiterName: order.waiter?.name || null,
-          hasBill: !!billData,
-          billStatus: billData?.payment_status || null,
-          billPrintCount: order.bill_print_count || 0,
-        })
+        const tid = order.table_id
+        if (!ordersByTable.has(tid)) ordersByTable.set(tid, [])
+        ordersByTable.get(tid)!.push(order)
       })
+
+      // Build info map keyed by table_id
+      const infoMap = new Map<string, TableOrderInfo>()
+      for (const [tableId, orders] of ordersByTable) {
+        const entries: TableOrderEntry[] = orders.map((order: any) => {
+          const activeItems = (order.items || []).filter((i: any) => !i.is_cancelled)
+          const billData = Array.isArray(order.bill) ? order.bill[0] : order.bill
+          let fullTotal: number
+          if (billData?.total) {
+            fullTotal = Number(billData.total)
+          } else {
+            const sub = activeItems.reduce((s: number, i: any) => s + Number(i.total_price), 0)
+            const scRemoved = order.service_charge_removed ?? false
+            const sc = scRemoved ? 0 : Math.round(sub * SERVICE_CHARGE_PERCENT / 100 * 100) / 100
+            const gst = Math.round(sub * GST_PERCENT / 100 * 100) / 100
+            fullTotal = Math.round((sub + sc + gst) * 100) / 100
+          }
+          return {
+            orderId: order.id,
+            orderNumber: order.order_number,
+            itemCount: activeItems.reduce((s: number, i: any) => s + i.quantity, 0),
+            total: fullTotal,
+            createdAt: order.created_at,
+            status: order.status,
+            waiterName: order.waiter?.name || null,
+            hasBill: !!billData,
+            billStatus: billData?.payment_status || null,
+            billPrintCount: order.bill_print_count || 0,
+          }
+        })
+
+        // Sort by created_at descending — newest first (this is the "primary" order)
+        entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        const primary = entries[0]
+
+        // Aggregate totals across all orders
+        const combinedTotal = Math.round(entries.reduce((s, e) => s + e.total, 0) * 100) / 100
+        const combinedItems = entries.reduce((s, e) => s + e.itemCount, 0)
+        const anyHasBill = entries.some(e => e.hasBill)
+        const anyPrinted = entries.some(e => e.billPrintCount > 0)
+        // Use earliest order's createdAt for elapsed time
+        const earliestCreated = entries[entries.length - 1].createdAt
+        // Bill status: if any bill is unpaid, show that; if all paid, show paid
+        const allPaid = anyHasBill && entries.filter(e => e.hasBill).every(e => e.billStatus === 'paid')
+        const aggBillStatus = anyHasBill ? (allPaid ? 'paid' as const : entries.find(e => e.hasBill && e.billStatus !== 'paid')?.billStatus || 'pending' as const) : null
+
+        infoMap.set(tableId, {
+          orderId: primary.orderId,
+          orderNumber: primary.orderNumber,
+          itemCount: combinedItems,
+          total: combinedTotal,
+          createdAt: earliestCreated,
+          status: primary.status,
+          waiterName: primary.waiterName,
+          hasBill: anyHasBill,
+          billStatus: aggBillStatus,
+          billPrintCount: anyPrinted ? Math.max(...entries.map(e => e.billPrintCount)) : 0,
+          orders: entries,
+          orderCount: entries.length,
+        })
+      }
       setTableOrderInfo(infoMap)
 
       // Clean up printedTables: if a table's current order has billPrintCount === 0
@@ -284,7 +341,7 @@ export default function CashierPage() {
         for (const tableId of prev) {
           const table = occupiedTables.find(t => t.id === tableId)
           if (table) {
-            const info = infoMap.get(table.current_order_id!)
+            const info = infoMap.get(tableId)
             if (info && info.billPrintCount === 0 && !info.hasBill) {
               next.delete(tableId)
               changed = true
@@ -1516,12 +1573,12 @@ export default function CashierPage() {
               const occupiedCount = group.tables.filter(t => t.status === 'occupied').length
               const runningCount = group.tables.filter(t => {
                 if (t.status !== 'occupied' || !t.current_order_id) return false
-                const inf = tableOrderInfo.get(t.current_order_id)
+                const inf = tableOrderInfo.get(t.id)
                 return inf && !inf.hasBill
               }).length
               const billedCount = group.tables.filter(t => {
                 if (t.status !== 'occupied' || !t.current_order_id) return false
-                const inf = tableOrderInfo.get(t.current_order_id)
+                const inf = tableOrderInfo.get(t.id)
                 return inf?.hasBill && inf.billStatus !== 'paid'
               }).length
 
@@ -1538,7 +1595,7 @@ export default function CashierPage() {
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2.5">
                     {group.tables.map(table => {
                       const isOccupied = table.status === 'occupied'
-                      const info = table.current_order_id ? tableOrderInfo.get(table.current_order_id) : null
+                      const info = table.status === 'occupied' ? tableOrderInfo.get(table.id) : null
                       const elapsedMin = info ? Math.floor((Date.now() - new Date(info.createdAt).getTime()) / 60000) : null
                       const isPrinted = printedTables.has(table.id) || (info?.billPrintCount || 0) > 0
 
@@ -1570,6 +1627,9 @@ export default function CashierPage() {
                                   elapsedMin < 60 ? `${elapsedMin}m` :
                                   `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`
                                 ) : ''}
+                                {info.orderCount > 1 && (
+                                  <span className="ml-1 text-yellow-300">({info.orderCount} orders)</span>
+                                )}
                               </p>
                               {/* Action buttons: Print+View or Save */}
                               {info.billStatus === 'paid' ? (
@@ -2080,7 +2140,7 @@ export default function CashierPage() {
             <button
               onClick={() => {
                 if (!transferSourceTable) return
-                const info = transferSourceTable.current_order_id ? tableOrderInfo.get(transferSourceTable.current_order_id) : null
+                const info = transferSourceTable.status === 'occupied' ? tableOrderInfo.get(transferSourceTable.id) : null
                 if (info?.hasBill) {
                   toast.error('Cannot move items after bill is created')
                   return
@@ -2196,7 +2256,7 @@ export default function CashierPage() {
                           if (t.status === 'available') return true
                           // Allow occupied tables without a bill
                           if (t.status === 'occupied' && t.current_order_id) {
-                            const info = tableOrderInfo.get(t.current_order_id)
+                            const info = tableOrderInfo.get(t.id)
                             if (info?.hasBill) return false
                             return true
                           }
@@ -2417,7 +2477,7 @@ export default function CashierPage() {
                                   if (kotDetailOrder.table_id && t.id === kotDetailOrder.table_id) return false
                                   if (t.status === 'available') return true
                                   if (t.status === 'occupied' && t.current_order_id) {
-                                    const info = tableOrderInfo.get(t.current_order_id)
+                                    const info = tableOrderInfo.get(t.id)
                                     if (info?.hasBill) return false
                                     return true
                                   }

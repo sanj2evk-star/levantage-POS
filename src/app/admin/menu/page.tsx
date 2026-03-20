@@ -47,6 +47,7 @@ import {
   ChevronDown,
   ChevronUp,
   Package,
+  Download,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -330,6 +331,40 @@ export default function MenuManagement() {
     }
   }
 
+  function downloadMenuAsCSV() {
+    const rows: string[] = []
+    rows.push(['Category', 'Item Name', 'Price (₹)', 'Veg/Non-Veg', 'Station', 'Active', 'Description'].join(','))
+
+    const sortedCategories = [...categories].sort((a, b) => a.display_order - b.display_order)
+    for (const cat of sortedCategories) {
+      const items = menuItems
+        .filter(item => item.category_id === cat.id)
+        .sort((a, b) => a.name.localeCompare(b.name))
+
+      for (const item of items) {
+        const escape = (s: string) => `"${(s || '').replace(/"/g, '""')}"`
+        rows.push([
+          escape(cat.name),
+          escape(item.name),
+          item.price.toString(),
+          item.is_veg ? 'Veg' : 'Non-Veg',
+          item.station || 'kitchen',
+          item.is_active ? 'Yes' : 'No',
+          escape(item.description || ''),
+        ].join(','))
+      }
+    }
+
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `levantage-menu-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Menu downloaded')
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -349,6 +384,10 @@ export default function MenuManagement() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={downloadMenuAsCSV}>
+            <Download className="h-4 w-4 mr-1.5" />
+            Download
+          </Button>
           <Button variant="outline" size="sm" onClick={openNewCategory}>
             <Plus className="h-4 w-4 mr-1.5" />
             Category

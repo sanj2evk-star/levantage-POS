@@ -55,6 +55,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { PrintMonitorBanner } from '@/components/shared/print-monitor-banner'
 
 type CashierTab = 'tables' | 'live_orders' | 'day_close'
 type LiveOrderFilter = 'all' | 'dine_in' | 'takeaway'
@@ -1504,6 +1505,9 @@ export default function CashierPage() {
           )}
         </div>
       </header>
+
+      {/* Print failure/stale job warning */}
+      <PrintMonitorBanner />
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">

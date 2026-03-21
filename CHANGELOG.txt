@@ -2,6 +2,16 @@
                     LeVantage POS — Change Log
 ===============================================================================
 
+v1.2.1 — 2026-03-21
+--------------------
+- Print Monitor v1.1: red warning banner on cashier dashboard for failed/stuck print jobs
+- Print Monitor v1.1: proxy-down heuristic when 3+ jobs are stuck
+- Print Monitor v1.1: "last updated" timestamp on banner
+- Print Monitor v1.1: latest failure summary visible without expanding
+- Print Monitor v1.1: dismiss is now UI-only (localStorage) — failed jobs preserved in DB
+- Print Monitor v1.1: retry creates fresh pending job, original untouched
+- Payment Tap Guard: already existed in billing dialog (settling guard) — confirmed safe
+
 v1.2.0 — 2026-03-21
 --------------------
 - Added "Download Menu" button in Admin > Menu Management (exports CSV)

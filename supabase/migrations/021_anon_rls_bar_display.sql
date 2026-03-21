@@ -1,0 +1,12 @@
+-- Anon RLS policies for bar display (created but currently unused
+-- since bar page requires login). Kept for reference if we
+-- switch back to public access in the future.
+--
+-- These were already executed on the production database:
+-- CREATE POLICY "Anon can view KOTs" ON public.kot_entries FOR SELECT TO anon USING (true);
+-- CREATE POLICY "Anon can update KOTs" ON public.kot_entries FOR UPDATE TO anon USING (true);
+-- CREATE POLICY "Anon can view orders" ON public.orders FOR SELECT TO anon USING (true);
+-- CREATE POLICY "Anon can view order items" ON public.order_items FOR SELECT TO anon USING (true);
+-- CREATE POLICY "Anon can update order items" ON public.order_items FOR UPDATE TO anon USING (true);
+-- CREATE POLICY "Anon can view tables" ON public.tables FOR SELECT TO anon USING (true);
+-- CREATE POLICY "Anon can view profiles" ON public.profiles FOR SELECT TO anon USING (true);

@@ -24,8 +24,8 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient()
-            // Clear any stale session to prevent race with background token refresh
-            await supabase.auth.signOut()
+      // Clear any stale local session (local-only to avoid blocking network call)
+      await supabase.auth.signOut({ scope: 'local' })
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,

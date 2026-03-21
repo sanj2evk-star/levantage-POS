@@ -1,0 +1,35 @@
+===============================================================================
+                    LeVantage POS — Change Log
+===============================================================================
+
+v1.2.0 — 2026-03-21
+--------------------
+- Added "Download Menu" button in Admin > Menu Management (exports CSV)
+- Bar display: added business day filter — only shows today's KOTs
+- Kitchen display: added business day filter — only shows today's KOTs
+- (Cafe display already had this filter)
+- Old stale KOTs no longer clutter display screens; each day starts fresh
+
+v1.1.0 — 2026-03-20
+--------------------
+- Table cards now show aggregated totals from ALL active orders on a table
+- Orphaned orders (table freed but order still active) now visible on dashboard
+- Print preview combines all orders for the table into one unified bill
+- Billing dialog merges all table orders so cashier sees complete bill
+- Table only freed when ALL orders are settled, not just one
+
+v1.0.0 — 2026-03-20
+--------------------
+- Initial production baseline
+- Full POS with menu grid, cart, order placement
+- Cashier dashboard with table view and live orders
+- Waiter mobile app (table selection → menu → order)
+- Kitchen Display System (KDS) with realtime updates and station filtering
+- Bar/Mocktail display with realtime KOT updates
+- KOT printing to 4 Epson ethernet printers (billing, kitchen, cafe, bar)
+- Billing with GST, service charge, split bills, NC orders, refunds
+- Admin panel: menu CRUD, table management, staff management, settings
+- Public QR menu (read-only)
+- Multi-section support: Ground Floor, First Floor, Coffee Section
+- Zomato/Swiggy payment mode support
+- Business day boundary support for EOD reports

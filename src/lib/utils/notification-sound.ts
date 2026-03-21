@@ -58,10 +58,30 @@ export function playFoodReadySound() {
   playTone(ctx, 880.0, now + 0.24, 0.3, 0.3)    // A5
 }
 
+/** Distinct bar/cafe notification — lower tone to distinguish from kitchen */
+export function playBarNewOrderSound() {
+  const ctx = getAudioContext()
+  if (!ctx) return
+  const now = ctx.currentTime
+  playTone(ctx, 440.0, now, 0.15, 0.25)        // A4
+  playTone(ctx, 554.37, now + 0.15, 0.25, 0.25) // C#5
+}
+
 /** Unlock AudioContext — must be called from a user interaction (click) */
 export function unlockAudio() {
   const ctx = getAudioContext()
   if (ctx && ctx.state === 'suspended') {
     ctx.resume()
   }
+}
+
+/** Keep audio context alive on mobile browsers that suspend it */
+export function startAudioKeepAlive(_interval?: number): () => void {
+  const id = setInterval(() => {
+    const ctx = getAudioContext()
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume()
+    }
+  }, _interval ?? 20000)
+  return () => clearInterval(id)
 }

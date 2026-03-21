@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { playNewOrderSound, unlockAudio } from '@/lib/utils/notification-sound'
 import { getTableDisplayName } from '@/lib/utils/table-display'
+import { getBusinessDayRange, getCurrentBusinessDate, loadDayBoundaryHour } from '@/lib/utils/business-day'
 
 interface KOTWithDetails extends KOTEntry {
   order: Order & {
@@ -79,6 +80,11 @@ export default function KitchenPage() {
   const loadKOTs = useCallback(async () => {
     const supabase = createClient()
 
+    // Only show KOTs from the current business day (fresh start each day)
+    const bh = await loadDayBoundaryHour(supabase)
+    const bizDate = getCurrentBusinessDate(bh)
+    const { start: dayStart, end: dayEnd } = getBusinessDayRange(bizDate, bh)
+
     let query = supabase
       .from('kot_entries')
       .select(`
@@ -93,6 +99,8 @@ export default function KitchenPage() {
         )
       `)
       .in('status', ['pending', 'preparing'])
+      .gte('created_at', dayStart)
+      .lte('created_at', dayEnd)
       .order('created_at', { ascending: true })
 
     if (activeStation !== 'all') {
